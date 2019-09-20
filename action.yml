@@ -1,10 +1,15 @@
-name: 'Your name here'
+name: "gradle"
 description: 'Provide a description here'
 author: 'Your name or organization here'
+
+# TODO build scan link as an output
+# https://help.github.com/en/articles/metadata-syntax-for-github-actions#outputs
+
 inputs:
-  myInput:              # change this
-    description: 'input description here'
-    default: 'default value if applicable'
+  args:
+    description: Gradle command line arguments, see gradle --help
+    required: false
+
 runs:
   using: 'node12'
   main: 'lib/main.js'
