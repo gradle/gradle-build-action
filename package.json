@@ -1,7 +1,6 @@
 {
   "name": "gradle-command-action",
-  "version": "0.0.0",
-  "private": true,
+  "version": "1.0.0",
   "description": "Execute Gradle Command Line",
   "main": "lib/main.js",
   "scripts": {
@@ -10,14 +9,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/javascript-template.git"
+    "url": "git+https://github.com/eskatos/gradle-command-action.git"
   },
   "keywords": [
+    "github",
     "actions",
-    "node",
-    "setup"
+    "github-actions",
+    "gradle"
   ],
-  "author": "YourNameOrOrganization",
+  "author": "Paul Merlin <paul@nosphere.org>",
   "license": "MIT",
   "dependencies": {
     "@actions/core": "1.1.1",
