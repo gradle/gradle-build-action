@@ -2,6 +2,7 @@
 
 This Github Action can be used to run arbitrary Gradle commands on any platform supported by Github Actions.
 
+You might also be interested by the related [Gradle Plugin](https://github.com/eskatos/gradle-github-actions-plugin) that allows your build to easily get Github Actions environment and tag Gradle Build Scans accordingly.
 
 ## Usage
 
