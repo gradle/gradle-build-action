@@ -1,15 +1,34 @@
-name: "gradle"
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: "Gradle Command"
+description: 'Execute Gradle Command Line'
+author: 'Paul Merlin <paul@nospere.org>'
 
-# TODO build scan link as an output
-# https://help.github.com/en/articles/metadata-syntax-for-github-actions#outputs
+# https://help.github.com/en/articles/metadata-syntax-for-github-actions
 
 inputs:
-  args:
+  wrapper-directory:
+    description: Path to the Gradle Wrapper directory
+    required: false
+  gradle-executable:
+    description: Path to the Gradle executable
+    required: false
+  gradle-version:
+    description: Gradle version to use
+    required: false
+  build-root-directory:
+    description: Path to the root directory of the build
+    required: false
+  arguments:
     description: Gradle command line arguments, see gradle --help
     required: false
+
+outputs:
+  build-scan-url:
+    description: Link to the build scan if any
 
 runs:
   using: 'node12'
   main: 'lib/main.js'
+
+branding:
+  icon: 'box'
+  color: 'gray-dark'

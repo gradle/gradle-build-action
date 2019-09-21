@@ -1,9 +1,123 @@
-# Create a JavaScript Action using TypeScript
+# Execute Gradle commands in Github Actions workflows
 
-This template offers an easy way to get started writing a JavaScript action with TypeScript compile time support, unit testing with Jest and using the GitHub Actions Toolkit.
+This Github Action can be used to run arbitrary Gradle commands on any platform supported by Github Actions.
 
-## Getting Started
 
-See the walkthrough located [here](https://github.com/actions/toolkit/blob/master/docs/typescript-action.md).
+## Usage
 
-In addition to walking your through how to create an action, it also provides strategies for versioning, releasing and referencing your actions.
+The following workflow will run `gradle build` using the wrapper from the repository on ubuntu, macos and windows:
+
+```yaml
+// .github/workflows/gradle-build-pr.yml
+name: Run Gradle on PRs
+on: pull-request
+jobs:
+  gradle:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-java@v1
+      with:
+        java-version: 11
+    - uses: eskatos/gradle-command-action@v1
+      with:
+        arguments: build
+```
+
+## Gradle arguments
+
+The `arguments` input can used to pass arbitrary arguments to the `gradle` command line.
+
+Here are some valid examples:
+```yaml
+arguments: build
+arguments: check --scan
+arguments: some arbitrary tasks
+arguments: build -PgradleProperty=foo
+arguments: build -DsystemProperty=bar
+....
+```
+
+See `gradle --help` for more information.
+
+If you need to pass environment variables, simply use the Github Actions workflow syntax:
+
+```yaml
+- uses: eskatos/gradle-command-action@v1
+  env:
+    CI: true
+```
+
+## Run a build from a different directory
+
+```yaml
+- uses: eskatos/gradle-command-action@v1
+  with:
+    build-root-directory: some/subdirectory
+```
+
+## Use a Gradle wrapper from a different directory:
+ 
+```yaml
+ - uses: eskatos/gradle-command-action@v1
+   with:
+     wrapper-directory: path/to/wrapper-directory
+ ```
+
+## Use a specific `gradle` executable
+
+```yaml
+ - uses: eskatos/gradle-command-action@v1
+   with:
+     gradle-executable: path/to/gradle
+```
+
+## Setup and use a declared Gradle version:
+
+```yaml
+ - uses: eskatos/gradle-command-action@v1
+   with:
+     gradle-version: 5.6.2
+```
+
+`gradle-version` can be set to any valid Gradle version.
+
+Moreover, you can use the following aliases:
+
+| Alias | Selects |
+| --- |---|
+| `current`      | The current [stable release](https://gradle.org/install/) |
+| `rc`      | The current [release candidate](https://gradle.org/release-candidate/) if any, otherwise fallback to `current` |
+| `nightly` | The latest [nightly](https://gradle.org/nightly/), fails if none. |
+| `release-nightly` | The latest [release nightly](https://gradle.org/release-nightly/), fails if none.      |
+
+This can be handy to automatically test your build with the next Gradle version once a release candidate is out:
+
+```yaml
+// .github/workflows/test-gradle-rc.yml
+name: Test latest Gradle RC
+on:
+  schedule:
+    - cron: 0 0 * * * # daily
+jobs:
+  gradle-rc:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-java@v1
+      with:
+        java-version: 11
+    - uses: eskatos/gradle-command-action@v1
+      with:
+        gradle-version: rc
+        arguments: build --dry-run # just test build configuration
+```
+
+# Build scans
+
+If your build publishes a [build scan](https://gradle.com/build-scans/) the `gradle-command-action` action will emit the link to the published build scan as an output named `build-scan-url`.
+
+You can then use that link in subsequent actions of your workflow.
