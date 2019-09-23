@@ -1,9 +1,11 @@
-export function wrapperFilename() {
-    const isWindows = process.platform === "win32";
-    return isWindows ? "gradlew.bat" : "gradlew";
+const IS_WINDOWS = process.platform === "win32";
+
+
+export function wrapperFilename(): string {
+    return IS_WINDOWS ? "gradlew.bat" : "gradlew";
 }
 
-export function installScriptFilename() {
-    const isWindows = process.platform === "win32";
-    return isWindows ? "gradle.bat" : "gradle";
+
+export function installScriptFilename(): string {
+    return IS_WINDOWS ? "gradle.bat" : "gradle";
 }

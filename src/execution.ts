@@ -4,10 +4,11 @@ import * as exec from "@actions/exec";
 export async function execute(executable: string, root: string, argv: string[]): Promise<BuildResult> {
 
     let publishing = false;
-    let buildScanLink: any = null;
+    let buildScanUrl: string | undefined;
 
-    await exec.exec(executable, argv, {
+    const status: number = await exec.exec(executable, argv, {
         cwd: root,
+        ignoreReturnCode: true,
         listeners: {
             stdline: (line: string) => {
                 if (line.startsWith("Publishing build scan...")) {
@@ -17,24 +18,25 @@ export async function execute(executable: string, root: string, argv: string[]):
                     publishing = false
                 }
                 if (publishing && line.startsWith("http")) {
-                    buildScanLink = line.trim();
+                    buildScanUrl = line.trim();
                     publishing = false
                 }
             }
         }
     });
 
-    if (buildScanLink != null) {
-        return new BuildResultImpl(buildScanLink.toString());
-    }
-    return new BuildResultImpl(null as unknown as string);
+    return new BuildResultImpl(status, buildScanUrl);
 }
 
 export interface BuildResult {
-    buildScanUrl: string
+    readonly status: number
+    readonly buildScanUrl?: string
 }
 
 class BuildResultImpl implements BuildResult {
-    constructor(readonly buildScanUrl: string) {
+    constructor(
+        readonly status: number,
+        readonly buildScanUrl?: string
+    ) {
     }
 }

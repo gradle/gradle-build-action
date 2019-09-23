@@ -2,10 +2,13 @@
 
 This Github Action can be used to run arbitrary Gradle commands on any platform supported by Github Actions.
 
+You might also be interested by the related [Gradle Plugin](https://github.com/eskatos/gradle-github-actions-plugin) that allows your build to easily get Github Actions environment and tag Gradle Build Scans accordingly.
 
 ## Usage
 
-The following workflow will run `gradle build` using the wrapper from the repository on ubuntu, macos and windows:
+The following workflow will run `gradle build` using the wrapper from the repository on ubuntu, macos and windows. The only prerequisite is to have Java installed, you can define the version you need to run the build using the `actions/setup-java` action.
+
+
 
 ```yaml
 // .github/workflows/gradle-build-pr.yml
@@ -94,7 +97,7 @@ Moreover, you can use the following aliases:
 | `nightly` | The latest [nightly](https://gradle.org/nightly/), fails if none. |
 | `release-nightly` | The latest [release nightly](https://gradle.org/release-nightly/), fails if none.      |
 
-This can be handy to automatically test your build with the next Gradle version once a release candidate is out:
+This can be handy to, for example, automatically test your build with the next Gradle version once a release candidate is out:
 
 ```yaml
 // .github/workflows/test-gradle-rc.yml

@@ -9,8 +9,12 @@ import * as toolCache from "@actions/tool-cache";
 import * as gradlew from "./gradlew";
 
 
+const httpc = new httpm.HttpClient("eskatos/gradle-command-action");
+const gradleVersionsBaseUrl = "https://services.gradle.org/versions";
+
+
 /**
- * @return Gradle executable
+ * @return Gradle executable path
  */
 export async function gradleVersion(gradleVersion: string): Promise<string> {
     switch (gradleVersion) {
@@ -28,9 +32,6 @@ export async function gradleVersion(gradleVersion: string): Promise<string> {
 }
 
 
-const gradleVersionsBaseUrl = "https://services.gradle.org/versions";
-
-
 async function gradleCurrent(): Promise<string> {
     const json = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/current`);
     return provisionGradle(json.version, json.downloadUrl);
@@ -39,7 +40,7 @@ async function gradleCurrent(): Promise<string> {
 
 async function gradleReleaseCandidate(): Promise<string> {
     const json = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-candidate`);
-    if (json != null) {
+    if (json) {
         return provisionGradle(json.version, json.downloadUrl);
     }
     return gradleCurrent();
@@ -60,39 +61,32 @@ async function gradleReleaseNightly(): Promise<string> {
 
 async function gradle(version: string): Promise<string> {
     const declaration = await findGradleVersionDeclaration(version);
-    if (declaration == null) {
+    if (!declaration) {
         throw new Error(`Gradle version ${version} does not exists`);
     }
     return provisionGradle(declaration.version, declaration.downloadUrl);
 }
 
 
-async function gradleVersionDeclaration(url: string): Promise<any | null> {
-    const httpc = new httpm.HttpClient("gradle-github-action");
-    const response = await httpc.get(url);
-    const body = await response.readBody();
-    const json = JSON.parse(body);
-    return (json == null || json.version == null || json.version.length <= 0)
-        ? null
-        : json
+async function gradleVersionDeclaration(url: string): Promise<any | undefined> {
+    const json: any = await httpGetJson(url);
+    return (json.version && json.version.length > 0) ? json : undefined
 }
 
 
-async function findGradleVersionDeclaration(version: string): Promise<any | null> {
-    const httpc = new httpm.HttpClient("gradle-github-action");
-    const response = await httpc.get(`${gradleVersionsBaseUrl}/all`);
-    const body = await response.readBody();
-    const json = JSON.parse(body);
-    const found = json.find(entry => {
-        return entry.version == version;
+async function findGradleVersionDeclaration(version: string): Promise<any | undefined> {
+    const json: any = await httpGetJson(`${gradleVersionsBaseUrl}/all`);
+    const found: any = json.find((entry: any) => {
+        return entry.version === version;
     });
-    return found != undefined ? found : null
+    return found ? found : undefined
 }
+
 
 async function provisionGradle(version: string, url: string): Promise<string> {
 
     const cachedInstall: string = toolCache.find("gradle", version);
-    if (cachedInstall != null && cachedInstall.length > 0) {
+    if (cachedInstall.length > 0) {
         const cachedExecutable = executableFrom(cachedInstall);
         core.info(`Provisioned Gradle executable ${cachedExecutable}`);
         return cachedExecutable;
@@ -130,9 +124,15 @@ function executableFrom(installDir: string): string {
 }
 
 
+async function httpGetJson(url: string): Promise<any> {
+    const response = await httpc.get(url);
+    const body = await response.readBody();
+    return JSON.parse(body);
+}
+
+
 async function httpDownload(url: string, path: string): Promise<void> {
     return new Promise<void>(function (resolve, reject) {
-        const httpc = new httpm.HttpClient("gradle-github-action");
         const writeStream = fs.createWriteStream(path);
         httpc.get(url).then(response => {
             response.message.pipe(writeStream)
