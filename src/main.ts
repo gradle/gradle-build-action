@@ -8,7 +8,7 @@ import * as provision from "./provision";
 
 
 // Invoked by Github Actions
-async function run() {
+export async function run() {
     try {
 
         const baseDirectory = process.env[`GITHUB_WORKSPACE`] || "";
@@ -19,8 +19,12 @@ async function run() {
             parseCommandLineArguments()
         );
 
-        if (result.buildScanUrl != null) {
+        if (result.buildScanUrl) {
             core.setOutput("build-scan-url", result.buildScanUrl);
+        }
+
+        if (result.status != 0) {
+            core.setFailed(`Gradle process exited with status ${result.status}`)
         }
 
     } catch (error) {
