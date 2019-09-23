@@ -11,7 +11,7 @@ The following workflow will run `gradle build` using the wrapper from the reposi
 
 
 ```yaml
-// .github/workflows/gradle-build-pr.yml
+# .github/workflows/gradle-build-pr.yml
 name: Run Gradle on PRs
 on: pull-request
 jobs:
@@ -100,7 +100,7 @@ Moreover, you can use the following aliases:
 This can be handy to, for example, automatically test your build with the next Gradle version once a release candidate is out:
 
 ```yaml
-// .github/workflows/test-gradle-rc.yml
+# .github/workflows/test-gradle-rc.yml
 name: Test latest Gradle RC
 on:
   schedule:
@@ -128,7 +128,7 @@ You can then use that link in subsequent actions of your workflow.
 For example:
 
 ```yaml
-// .github/workflows/gradle-build-pr.yml
+# .github/workflows/gradle-build-pr.yml
 name: Run Gradle on PRs
 on: pull-request
 jobs:
