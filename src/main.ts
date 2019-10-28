@@ -40,7 +40,7 @@ async function resolveGradleExecutable(baseDirectory: string): Promise<string> {
 
     const gradleVersion = inputOrNull("gradle-version");
     if (gradleVersion != null) {
-        return path.resolve(provision.gradleVersion(gradleVersion))
+        return path.resolve(await provision.gradleVersion(gradleVersion))
     }
 
     const gradleExecutable = inputOrNull("gradle-executable");
