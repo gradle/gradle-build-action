@@ -40,12 +40,12 @@ async function resolveGradleExecutable(baseDirectory: string): Promise<string> {
 
     const gradleVersion = inputOrNull("gradle-version");
     if (gradleVersion != null) {
-        return provision.gradleVersion(gradleVersion)
+        return path.resolve(provision.gradleVersion(gradleVersion))
     }
 
     const gradleExecutable = inputOrNull("gradle-executable");
     if (gradleExecutable != null) {
-        return path.join(baseDirectory, gradleExecutable)
+        return path.resolve(baseDirectory, gradleExecutable)
     }
 
     const wrapperDirectory = inputOrNull("wrapper-directory");
@@ -53,13 +53,15 @@ async function resolveGradleExecutable(baseDirectory: string): Promise<string> {
         ? path.join(baseDirectory, wrapperDirectory)
         : baseDirectory;
 
-    return path.join(executableDirectory, gradlew.wrapperFilename());
+    return path.resolve(executableDirectory, gradlew.wrapperFilename());
 }
 
 
 function resolveBuildRootDirectory(baseDirectory: string): string {
     let buildRootDirectory = inputOrNull("build-root-directory");
-    return buildRootDirectory == null ? baseDirectory : path.join(baseDirectory, buildRootDirectory);
+    return buildRootDirectory == null
+        ? path.resolve(baseDirectory)
+        : path.resolve(baseDirectory, buildRootDirectory);
 }
 
 

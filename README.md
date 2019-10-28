@@ -11,7 +11,7 @@ The following workflow will run `gradle build` using the wrapper from the reposi
 
 
 ```yaml
-// .github/workflows/gradle-build-pr.yml
+# .github/workflows/gradle-build-pr.yml
 name: Run Gradle on PRs
 on: pull-request
 jobs:
@@ -100,7 +100,7 @@ Moreover, you can use the following aliases:
 This can be handy to, for example, automatically test your build with the next Gradle version once a release candidate is out:
 
 ```yaml
-// .github/workflows/test-gradle-rc.yml
+# .github/workflows/test-gradle-rc.yml
 name: Test latest Gradle RC
 on:
   schedule:
@@ -124,3 +124,30 @@ jobs:
 If your build publishes a [build scan](https://gradle.com/build-scans/) the `gradle-command-action` action will emit the link to the published build scan as an output named `build-scan-url`.
 
 You can then use that link in subsequent actions of your workflow.
+
+For example:
+
+```yaml
+# .github/workflows/gradle-build-pr.yml
+name: Run Gradle on PRs
+on: pull-request
+jobs:
+  gradle:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-java@v1
+      with:
+        java-version: 11
+    - uses: eskatos/gradle-command-action@v1
+      with:
+        arguments: build
+      id: gradle
+    - uses: example/action-that-comments-on-the-pr@v0
+      if: failure()
+      with:
+        comment: Build failed ${{ steps.gradle.outputs.build-scan-url }}
+```
