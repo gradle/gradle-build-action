@@ -39,7 +39,7 @@ run();
 async function resolveGradleExecutable(baseDirectory: string): Promise<string> {
 
     const gradleVersion = inputOrNull("gradle-version");
-    if (gradleVersion != null) {
+    if (gradleVersion != null && gradleVersion != "wrapper") {
         return path.resolve(await provision.gradleVersion(gradleVersion))
     }
 
