@@ -92,6 +92,7 @@ Moreover, you can use the following aliases:
 
 | Alias | Selects |
 | --- |---|
+| `wrapper`      | The Gradle wrapper's version (default, useful for matrix builds) |
 | `current`      | The current [stable release](https://gradle.org/install/) |
 | `rc`      | The current [release candidate](https://gradle.org/release-candidate/) if any, otherwise fallback to `current` |
 | `nightly` | The latest [nightly](https://gradle.org/nightly/), fails if none. |
