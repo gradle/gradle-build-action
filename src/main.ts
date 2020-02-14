@@ -7,7 +7,7 @@ import * as gradlew from "./gradlew";
 import * as provision from "./provision";
 
 
-// Invoked by Github Actions
+// Invoked by GitHub Actions
 export async function run() {
     try {
 
