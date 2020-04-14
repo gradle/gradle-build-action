@@ -13,7 +13,7 @@ The following workflow will run `gradle build` using the wrapper from the reposi
 ```yaml
 # .github/workflows/gradle-build-pr.yml
 name: Run Gradle on PRs
-on: pull-request
+on: pull_request
 jobs:
   gradle:
     strategy:
