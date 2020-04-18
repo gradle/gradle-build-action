@@ -131,7 +131,7 @@ For example:
 ```yaml
 # .github/workflows/gradle-build-pr.yml
 name: Run Gradle on PRs
-on: pull-request
+on: pull_request
 jobs:
   gradle:
     strategy:
