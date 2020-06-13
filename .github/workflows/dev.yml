@@ -1,0 +1,35 @@
+name: dev
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Build
+      run: |
+        npm install
+        npm run all
+    - name: Test wrapper
+      uses: ./
+      with:
+        wrapper-directory: __tests__/data/basic
+        build-root-directory: __tests__/data/basic
+        arguments: help
+    - name: Test dist download
+      uses: ./
+      with:
+        gradle-version: 6.5
+        build-root-directory: __tests__/data/basic
+        arguments: help
+    - name: Check for uncommitted changes
+      # Ensure no changes, but ignore node_modules dir since dev/fresh ci deps installed.
+      run: |
+        git diff --exit-code --stat -- . ':!node_modules' \
+        || (echo "##[error] found changed files after build. please 'npm run all'" \
+                 "and check in all changes" \
+            && exit 1)

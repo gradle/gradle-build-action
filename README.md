@@ -1,19 +1,19 @@
-# Execute Gradle commands in Github Actions workflows
+# Execute Gradle commands in GitHub Actions workflows
 
-This Github Action can be used to run arbitrary Gradle commands on any platform supported by Github Actions.
+This GitHub Action can be used to run arbitrary Gradle commands on any platform supported by GitHub Actions.
 
-You might also be interested by the related [Gradle Plugin](https://github.com/eskatos/gradle-github-actions-plugin) that allows your build to easily get Github Actions environment and tag Gradle Build Scans accordingly.
+You might also be interested by the related [Gradle Plugin](https://github.com/eskatos/gradle-github-actions-plugin) that allows your build to easily get GitHub Actions environment and tag Gradle Build Scans accordingly.
 
 ## Usage
 
-The following workflow will run `gradle build` using the wrapper from the repository on ubuntu, macos and windows. The only prerequisite is to have Java installed, you can define the version you need to run the build using the `actions/setup-java` action.
+The following workflow will run `./gradlew build` using the wrapper from the repository on ubuntu, macos and windows. The only prerequisite is to have Java installed, you can define the version you need to run the build using the `actions/setup-java` action.
 
 
 
 ```yaml
 # .github/workflows/gradle-build-pr.yml
 name: Run Gradle on PRs
-on: pull-request
+on: pull_request
 jobs:
   gradle:
     strategy:
@@ -46,7 +46,7 @@ arguments: build -DsystemProperty=bar
 
 See `gradle --help` for more information.
 
-If you need to pass environment variables, simply use the Github Actions workflow syntax:
+If you need to pass environment variables, simply use the GitHub Actions workflow syntax:
 
 ```yaml
 - uses: eskatos/gradle-command-action@v1
@@ -131,7 +131,7 @@ For example:
 ```yaml
 # .github/workflows/gradle-build-pr.yml
 name: Run Gradle on PRs
-on: pull-request
+on: pull_request
 jobs:
   gradle:
     strategy:

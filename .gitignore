@@ -2,10 +2,6 @@ __tests__/runner/*
 !lib/
 !node_modules
 
-.idea
-*.iml
-__tests__/runner/*
-
 # Rest pulled from https://github.com/github/gitignore/blob/master/Node.gitignore
 # Logs
 logs
@@ -94,3 +90,14 @@ typings/
 
 # DynamoDB Local files
 .dynamodb/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Ignore built ts files
+__tests__/runner/*
+# lib/**/*
+
+.idea/
+*.iml
