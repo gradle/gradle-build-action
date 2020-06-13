@@ -141,16 +141,18 @@ async function httpGetString(url: string): Promise<string> {
 }
 
 async function httpDownload(url: string, localPath: string): Promise<void> {
-    const writeStream = fs.createWriteStream(localPath)
-    try {
-        const response = await httpc.get(url)
-        response.message.pipe(writeStream)
-        return new Promise<void>(function (resolve) {
-            resolve()
-        })
-    } finally {
-        writeStream.close()
-    }
+    const response = await httpc.get(url)
+    return new Promise<void>(function (resolve, reject) {
+        const writeStream = fs.createWriteStream(localPath)
+        response.message
+            .pipe(writeStream)
+            .on('close', () => {
+                resolve()
+            })
+            .on('error', err => {
+                reject(err)
+            })
+    })
 }
 
 async function extractZip(zip: string, destination: string): Promise<void> {
