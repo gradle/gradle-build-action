@@ -19,3 +19,10 @@ jobs:
         wrapper-directory: __tests__/data/basic
         build-root-directory: __tests__/data/basic
         arguments: help
+    - name: Check for uncommitted changes
+      # Ensure no changes, but ignore node_modules dir since dev/fresh ci deps installed.
+      run: |
+        git diff --exit-code --stat -- . ':!node_modules' \
+        || (echo "##[error] found changed files after build. please 'npm run all'" \
+                 "and check in all changes" \
+            && exit 1)
