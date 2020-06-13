@@ -6,7 +6,7 @@ You might also be interested by the related [Gradle Plugin](https://github.com/e
 
 ## Usage
 
-The following workflow will run `gradle build` using the wrapper from the repository on ubuntu, macos and windows. The only prerequisite is to have Java installed, you can define the version you need to run the build using the `actions/setup-java` action.
+The following workflow will run `./gradlew build` using the wrapper from the repository on ubuntu, macos and windows. The only prerequisite is to have Java installed, you can define the version you need to run the build using the `actions/setup-java` action.
 
 
 

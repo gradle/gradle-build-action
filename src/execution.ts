@@ -1,31 +1,33 @@
-import * as exec from "@actions/exec";
+import * as exec from '@actions/exec'
 
-
-export async function execute(executable: string, root: string, argv: string[]): Promise<BuildResult> {
-
-    let publishing = false;
-    let buildScanUrl: string | undefined;
+export async function execute(
+    executable: string,
+    root: string,
+    argv: string[]
+): Promise<BuildResult> {
+    let publishing = false
+    let buildScanUrl: string | undefined
 
     const status: number = await exec.exec(executable, argv, {
         cwd: root,
         ignoreReturnCode: true,
         listeners: {
             stdline: (line: string) => {
-                if (line.startsWith("Publishing build scan...")) {
-                    publishing = true;
+                if (line.startsWith('Publishing build scan...')) {
+                    publishing = true
                 }
-                if (publishing && line.length == 0) {
+                if (publishing && line.length === 0) {
                     publishing = false
                 }
-                if (publishing && line.startsWith("http")) {
-                    buildScanUrl = line.trim();
+                if (publishing && line.startsWith('http')) {
+                    buildScanUrl = line.trim()
                     publishing = false
                 }
             }
         }
-    });
+    })
 
-    return new BuildResultImpl(status, buildScanUrl);
+    return new BuildResultImpl(status, buildScanUrl)
 }
 
 export interface BuildResult {
@@ -34,9 +36,5 @@ export interface BuildResult {
 }
 
 class BuildResultImpl implements BuildResult {
-    constructor(
-        readonly status: number,
-        readonly buildScanUrl?: string
-    ) {
-    }
+    constructor(readonly status: number, readonly buildScanUrl?: string) {}
 }
