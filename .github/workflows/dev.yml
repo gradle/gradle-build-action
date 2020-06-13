@@ -14,10 +14,16 @@ jobs:
       run: |
         npm install
         npm run all
-    - name: Test
+    - name: Test wrapper
       uses: ./
       with:
         wrapper-directory: __tests__/data/basic
+        build-root-directory: __tests__/data/basic
+        arguments: help
+    - name: Test dist download
+      uses: ./
+      with:
+        gradle-version: 6.5
         build-root-directory: __tests__/data/basic
         arguments: help
     - name: Check for uncommitted changes
