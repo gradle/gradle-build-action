@@ -1,6 +1,7 @@
 {
   "name": "gradle-command-action",
   "version": "1.0.0",
+  "private": true,
   "description": "Execute Gradle Command Line",
   "main": "lib/main.js",
   "scripts": {
@@ -47,6 +48,6 @@
     "js-yaml": "3.14.0",
     "prettier": "2.0.5",
     "ts-jest": "26.1.0",
-    "typescript": "3.9.5"
+    "typescript": "3.8.3"
   }
 }
