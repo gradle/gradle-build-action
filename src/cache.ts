@@ -1,11 +1,18 @@
 import * as core from '@actions/core'
+import * as path from 'path'
 
 export async function restoreCachedWrapperDist(
     executableDirectory: string
 ): Promise<void> {
-    core.saveState('GC_WRAPPER_BASE_DIR', executableDirectory)
+    core.saveState('WRAPPER_BASE_DIR', executableDirectory)
+    core.info(`WRAPPER_BASE_DIR = ${core.getState('WRAPPER_BASE_DIR')}`)
+    const wrapperProperties = path.join(
+        executableDirectory,
+        'gradle/wrapper/gradle-wrapper.properties'
+    )
+    core.info(`wrapper properties = ${wrapperProperties}`)
 }
 
 export async function cacheWrapperDist(): Promise<void> {
-    core.info(`GC_WRAPPER_BASE_DIR = ${core.getState('GC_WRAPPER_BASE_DIR')}`)
+    core.info(`WRAPPER_BASE_DIR = ${core.getState('WRAPPER_BASE_DIR')}`)
 }
