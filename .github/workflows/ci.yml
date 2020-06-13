@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - run: |
+        npm install
+        npm run all
     - uses: ./
       with:
         build-root-directory: __tests__/data/basic
