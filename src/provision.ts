@@ -30,57 +30,59 @@ export async function gradleVersion(version: string): Promise<string> {
 }
 
 async function gradleCurrent(): Promise<string> {
-    const json = await gradleVersionDeclaration(
+    const versionInfo = await gradleVersionDeclaration(
         `${gradleVersionsBaseUrl}/current`
     )
-    return provisionGradle(json.version, json.downloadUrl)
+    return provisionGradle(versionInfo.version, versionInfo.downloadUrl)
 }
 
 async function gradleReleaseCandidate(): Promise<string> {
-    const json = await gradleVersionDeclaration(
+    const versionInfo = await gradleVersionDeclaration(
         `${gradleVersionsBaseUrl}/release-candidate`
     )
-    if (json) {
-        return provisionGradle(json.version, json.downloadUrl)
+    if (versionInfo) {
+        return provisionGradle(versionInfo.version, versionInfo.downloadUrl)
     }
     return gradleCurrent()
 }
 
 async function gradleNightly(): Promise<string> {
-    const json = await gradleVersionDeclaration(
+    const versionInfo = await gradleVersionDeclaration(
         `${gradleVersionsBaseUrl}/nightly`
     )
-    return provisionGradle(json.version, json.downloadUrl)
+    return provisionGradle(versionInfo.version, versionInfo.downloadUrl)
 }
 
 async function gradleReleaseNightly(): Promise<string> {
-    const json = await gradleVersionDeclaration(
+    const versionInfo = await gradleVersionDeclaration(
         `${gradleVersionsBaseUrl}/release-nightly`
     )
-    return provisionGradle(json.version, json.downloadUrl)
+    return provisionGradle(versionInfo.version, versionInfo.downloadUrl)
 }
 
 async function gradle(version: string): Promise<string> {
-    const declaration = await findGradleVersionDeclaration(version)
-    if (!declaration) {
+    const versionInfo = await findGradleVersionDeclaration(version)
+    if (!versionInfo) {
         throw new Error(`Gradle version ${version} does not exists`)
     }
-    return provisionGradle(declaration.version, declaration.downloadUrl)
+    return provisionGradle(versionInfo.version, versionInfo.downloadUrl)
 }
 
-async function gradleVersionDeclaration(url: string): Promise<any | undefined> {
-    const json: any = await httpGetJson(url)
-    return json.version && json.version.length > 0 ? json : undefined
+async function gradleVersionDeclaration(
+    url: string
+): Promise<GradleVersionInfo> {
+    return await httpGetGradleVersion(url)
 }
 
 async function findGradleVersionDeclaration(
     version: string
-): Promise<any | undefined> {
-    const json: any = await httpGetJson(`${gradleVersionsBaseUrl}/all`)
-    const found: any = json.find((entry: any) => {
+): Promise<GradleVersionInfo | undefined> {
+    const gradleVersions = await httpGetGradleVersions(
+        `${gradleVersionsBaseUrl}/all`
+    )
+    return gradleVersions.find((entry: GradleVersionInfo) => {
         return entry.version === version
     })
-    return found ? found : undefined
 }
 
 async function provisionGradle(version: string, url: string): Promise<string> {
@@ -123,10 +125,19 @@ function executableFrom(installDir: string): string {
     return path.join(installDir, 'bin', `${gradlew.installScriptFilename()}`)
 }
 
-async function httpGetJson(url: string): Promise<any> {
+async function httpGetGradleVersion(url: string): Promise<GradleVersionInfo> {
+    return JSON.parse(await httpGetString(url))
+}
+
+async function httpGetGradleVersions(
+    url: string
+): Promise<GradleVersionInfo[]> {
+    return JSON.parse(await httpGetString(url))
+}
+
+async function httpGetString(url: string): Promise<string> {
     const response = await httpc.get(url)
-    const body = await response.readBody()
-    return JSON.parse(body)
+    return response.readBody()
 }
 
 async function httpDownload(url: string, localPath: string): Promise<void> {
@@ -161,4 +172,9 @@ async function extractZip(zip: string, destination: string): Promise<void> {
                 reject(err)
             })
     })
+}
+
+interface GradleVersionInfo {
+    version: string
+    downloadUrl: string
 }
