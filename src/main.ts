@@ -56,9 +56,11 @@ async function resolveGradleExecutable(baseDirectory: string): Promise<string> {
 
 function resolveBuildRootDirectory(baseDirectory: string): string {
     const buildRootDirectory = inputOrNull('build-root-directory')
-    return buildRootDirectory === null
-        ? path.resolve(baseDirectory)
-        : path.resolve(baseDirectory, buildRootDirectory)
+    const resolvedBuildRootDirectory =
+        buildRootDirectory === null
+            ? path.resolve(baseDirectory)
+            : path.resolve(baseDirectory, buildRootDirectory)
+    return resolvedBuildRootDirectory
 }
 
 function parseCommandLineArguments(): string[] {
