@@ -11,8 +11,10 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: ./
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Test
+      uses: ./
       with:
         wrapper-directory: __tests__/data/basic
         build-root-directory: __tests__/data/basic

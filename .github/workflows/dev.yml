@@ -8,11 +8,14 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - run: |
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Build
+      run: |
         npm install
         npm run all
-    - uses: ./
+    - name: Test
+      uses: ./
       with:
         wrapper-directory: __tests__/data/basic
         build-root-directory: __tests__/data/basic
