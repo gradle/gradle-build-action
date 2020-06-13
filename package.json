@@ -9,7 +9,7 @@
     "lint": "eslint src/**/*.ts",
     "build": "ncc build src/main.ts --out dist/main --minify && ncc build src/post.ts --out dist/post --minify",
     "test": "jest",
-    "all": "npm run format && npm run build && npm test"
+    "all": "npm run format && npm run lint && npm run build && npm test"
   },
   "repository": {
     "type": "git",
