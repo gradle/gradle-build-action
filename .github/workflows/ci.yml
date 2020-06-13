@@ -20,5 +20,6 @@ jobs:
         npm run all
     - uses: ./
       with:
+        wrapper-directory: __tests__/data/basic
         build-root-directory: __tests__/data/basic
         arguments: help
