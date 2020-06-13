@@ -1,0 +1,19 @@
+ # make sure the action works on a clean machine without building
+name: prod
+
+on:
+  push:
+    branches:
+      - master
+      - 'releases/*'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: ./
+      with:
+        wrapper-directory: __tests__/data/basic
+        build-root-directory: __tests__/data/basic
+        arguments: help
