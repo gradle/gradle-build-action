@@ -9,11 +9,13 @@ const WRAPPER_CACHE_PATH = 'WRAPPER_CACHE_PATH'
 const WRAPPER_CACHE_RESULT = 'WRAPPER_CACHE_RESULT'
 
 export async function restoreCachedWrapperDist(
-    executableDirectory: string
+    gradlewDirectory: string | null
 ): Promise<void> {
+    if (gradlewDirectory == null) return
+
     const wrapperSlug = extractGradleWrapperSlugFrom(
         path.join(
-            path.resolve(executableDirectory),
+            path.resolve(gradlewDirectory),
             'gradle/wrapper/gradle-wrapper.properties'
         )
     )

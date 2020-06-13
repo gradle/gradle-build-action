@@ -40,18 +40,23 @@ async function resolveGradleExecutable(baseDirectory: string): Promise<string> {
 
     const gradleExecutable = inputOrNull('gradle-executable')
     if (gradleExecutable !== null) {
+        if (gradleExecutable.endsWith(gradlew.wrapperFilename())) {
+            await cache.restoreCachedWrapperDist(
+                path.resolve(gradleExecutable, '..')
+            )
+        }
         return path.resolve(baseDirectory, gradleExecutable)
     }
 
     const wrapperDirectory = inputOrNull('wrapper-directory')
-    const executableDirectory =
+    const gradlewDirectory =
         wrapperDirectory !== null
             ? path.join(baseDirectory, wrapperDirectory)
             : baseDirectory
 
-    await cache.restoreCachedWrapperDist(executableDirectory)
+    await cache.restoreCachedWrapperDist(gradlewDirectory)
 
-    return path.resolve(executableDirectory, gradlew.wrapperFilename())
+    return path.resolve(gradlewDirectory, gradlew.wrapperFilename())
 }
 
 function resolveBuildRootDirectory(baseDirectory: string): string {
