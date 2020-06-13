@@ -40,7 +40,7 @@ module.exports =
 /******/ 	// the startup function
 /******/ 	function startup() {
 /******/ 		// Load entry module and return exports
-/******/ 		return __webpack_require__(198);
+/******/ 		return __webpack_require__(131);
 /******/ 	};
 /******/ 	// initialize runtime
 /******/ 	runtime(__webpack_require__);
@@ -345,65 +345,6 @@ function copyFile(srcFile, destFile, force) {
     });
 }
 //# sourceMappingURL=io.js.map
-
-/***/ }),
-
-/***/ 8:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const exec = __importStar(__webpack_require__(986));
-function execute(executable, root, argv) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let publishing = false;
-        let buildScanUrl;
-        const status = yield exec.exec(executable, argv, {
-            cwd: root,
-            ignoreReturnCode: true,
-            listeners: {
-                stdline: (line) => {
-                    if (line.startsWith("Publishing build scan...")) {
-                        publishing = true;
-                    }
-                    if (publishing && line.length == 0) {
-                        publishing = false;
-                    }
-                    if (publishing && line.startsWith("http")) {
-                        buildScanUrl = line.trim();
-                        publishing = false;
-                    }
-                }
-            }
-        });
-        return new BuildResultImpl(status, buildScanUrl);
-    });
-}
-exports.execute = execute;
-class BuildResultImpl {
-    constructor(status, buildScanUrl) {
-        this.status = status;
-        this.buildScanUrl = buildScanUrl;
-    }
-}
-
 
 /***/ }),
 
@@ -1297,7 +1238,7 @@ Promise.spawn = function (generatorFunction) {
 
 var Promise = __webpack_require__(440);
 var Stream = __webpack_require__(794);
-var Buffer = __webpack_require__(131);
+var Buffer = __webpack_require__(657);
 
 // Backwards compatibility for node versions < 8
 if (!Stream.Writable || !Stream.Writable.prototype.destroy)
@@ -2774,20 +2715,87 @@ module.exports = require("child_process");
 /***/ }),
 
 /***/ 131:
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
-var Buffer = __webpack_require__(293).Buffer;
+"use strict";
 
-// Backwards compatibility for node versions < 8
-if (Buffer.from === undefined) {
-  Buffer.from = function (a, b, c) {
-    return new Buffer(a, b, c)
-  };
-
-  Buffer.alloc = Buffer.from;
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const core = __importStar(__webpack_require__(470));
+const path = __importStar(__webpack_require__(622));
+const string_argv_1 = __webpack_require__(982);
+const execution = __importStar(__webpack_require__(169));
+const gradlew = __importStar(__webpack_require__(317));
+const provision = __importStar(__webpack_require__(286));
+function run() {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const baseDirectory = process.env[`GITHUB_WORKSPACE`] || "";
+            let result = yield execution.execute(yield resolveGradleExecutable(baseDirectory), resolveBuildRootDirectory(baseDirectory), parseCommandLineArguments());
+            if (result.buildScanUrl) {
+                core.setOutput("build-scan-url", result.buildScanUrl);
+            }
+            if (result.status != 0) {
+                core.setFailed(`Gradle process exited with status ${result.status}`);
+            }
+        }
+        catch (error) {
+            core.setFailed(error.message);
+        }
+    });
+}
+exports.run = run;
+run();
+function resolveGradleExecutable(baseDirectory) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const gradleVersion = inputOrNull("gradle-version");
+        if (gradleVersion != null && gradleVersion != "wrapper") {
+            return path.resolve(yield provision.gradleVersion(gradleVersion));
+        }
+        const gradleExecutable = inputOrNull("gradle-executable");
+        if (gradleExecutable != null) {
+            return path.resolve(baseDirectory, gradleExecutable);
+        }
+        const wrapperDirectory = inputOrNull("wrapper-directory");
+        const executableDirectory = wrapperDirectory != null
+            ? path.join(baseDirectory, wrapperDirectory)
+            : baseDirectory;
+        return path.resolve(executableDirectory, gradlew.wrapperFilename());
+    });
+}
+function resolveBuildRootDirectory(baseDirectory) {
+    let buildRootDirectory = inputOrNull("build-root-directory");
+    return buildRootDirectory == null
+        ? path.resolve(baseDirectory)
+        : path.resolve(baseDirectory, buildRootDirectory);
+}
+function parseCommandLineArguments() {
+    const input = inputOrNull("arguments");
+    return input == null ? [] : string_argv_1.parseArgsStringToArgv(input);
+}
+function inputOrNull(name) {
+    const inputString = core.getInput(name);
+    if (inputString.length == 0) {
+        return null;
+    }
+    return inputString;
 }
 
-module.exports = Buffer;
 
 /***/ }),
 
@@ -3155,6 +3163,120 @@ exports.debug = debug; // for test
 
 /***/ }),
 
+/***/ 143:
+/***/ (function(__unusedmodule, exports) {
+
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+// NOTE: These type checking functions intentionally don't use `instanceof`
+// because it is fragile and can be easily faked with `Object.create()`.
+
+function isArray(arg) {
+  if (Array.isArray) {
+    return Array.isArray(arg);
+  }
+  return objectToString(arg) === '[object Array]';
+}
+exports.isArray = isArray;
+
+function isBoolean(arg) {
+  return typeof arg === 'boolean';
+}
+exports.isBoolean = isBoolean;
+
+function isNull(arg) {
+  return arg === null;
+}
+exports.isNull = isNull;
+
+function isNullOrUndefined(arg) {
+  return arg == null;
+}
+exports.isNullOrUndefined = isNullOrUndefined;
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+exports.isNumber = isNumber;
+
+function isString(arg) {
+  return typeof arg === 'string';
+}
+exports.isString = isString;
+
+function isSymbol(arg) {
+  return typeof arg === 'symbol';
+}
+exports.isSymbol = isSymbol;
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
+exports.isUndefined = isUndefined;
+
+function isRegExp(re) {
+  return objectToString(re) === '[object RegExp]';
+}
+exports.isRegExp = isRegExp;
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+exports.isObject = isObject;
+
+function isDate(d) {
+  return objectToString(d) === '[object Date]';
+}
+exports.isDate = isDate;
+
+function isError(e) {
+  return (objectToString(e) === '[object Error]' || e instanceof Error);
+}
+exports.isError = isError;
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+exports.isFunction = isFunction;
+
+function isPrimitive(arg) {
+  return arg === null ||
+         typeof arg === 'boolean' ||
+         typeof arg === 'number' ||
+         typeof arg === 'string' ||
+         typeof arg === 'symbol' ||  // ES6 symbol
+         typeof arg === 'undefined';
+}
+exports.isPrimitive = isPrimitive;
+
+exports.isBuffer = Buffer.isBuffer;
+
+function objectToString(o) {
+  return Object.prototype.toString.call(o);
+}
+
+
+/***/ }),
+
 /***/ 149:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -3206,6 +3328,65 @@ Promise.prototype.settle = function () {
 
 /***/ }),
 
+/***/ 169:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const exec = __importStar(__webpack_require__(986));
+function execute(executable, root, argv) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let publishing = false;
+        let buildScanUrl;
+        const status = yield exec.exec(executable, argv, {
+            cwd: root,
+            ignoreReturnCode: true,
+            listeners: {
+                stdline: (line) => {
+                    if (line.startsWith("Publishing build scan...")) {
+                        publishing = true;
+                    }
+                    if (publishing && line.length == 0) {
+                        publishing = false;
+                    }
+                    if (publishing && line.startsWith("http")) {
+                        buildScanUrl = line.trim();
+                        publishing = false;
+                    }
+                }
+            }
+        });
+        return new BuildResultImpl(status, buildScanUrl);
+    });
+}
+exports.execute = execute;
+class BuildResultImpl {
+    constructor(status, buildScanUrl) {
+        this.status = status;
+        this.buildScanUrl = buildScanUrl;
+    }
+}
+
+
+/***/ }),
+
 /***/ 194:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -3216,7 +3397,7 @@ var Stream = __webpack_require__(794);
 var binary = __webpack_require__(479);
 var zlib = __webpack_require__(761);
 var parseExtraField = __webpack_require__(474);
-var Buffer = __webpack_require__(131);
+var Buffer = __webpack_require__(657);
 var parseDateTime = __webpack_require__(287);
 
 // Backwards compatibility for node versions < 8
@@ -3333,91 +3514,6 @@ module.exports = function unzip(source,offset,_password, directoryVars) {
 
   return entry;
 };
-
-
-/***/ }),
-
-/***/ 198:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const core = __importStar(__webpack_require__(470));
-const path = __importStar(__webpack_require__(622));
-const string_argv_1 = __webpack_require__(982);
-const execution = __importStar(__webpack_require__(8));
-const gradlew = __importStar(__webpack_require__(923));
-const provision = __importStar(__webpack_require__(265));
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const baseDirectory = process.env[`GITHUB_WORKSPACE`] || "";
-            let result = yield execution.execute(yield resolveGradleExecutable(baseDirectory), resolveBuildRootDirectory(baseDirectory), parseCommandLineArguments());
-            if (result.buildScanUrl) {
-                core.setOutput("build-scan-url", result.buildScanUrl);
-            }
-            if (result.status != 0) {
-                core.setFailed(`Gradle process exited with status ${result.status}`);
-            }
-        }
-        catch (error) {
-            core.setFailed(error.message);
-        }
-    });
-}
-exports.run = run;
-run();
-function resolveGradleExecutable(baseDirectory) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const gradleVersion = inputOrNull("gradle-version");
-        if (gradleVersion != null && gradleVersion != "wrapper") {
-            return path.resolve(yield provision.gradleVersion(gradleVersion));
-        }
-        const gradleExecutable = inputOrNull("gradle-executable");
-        if (gradleExecutable != null) {
-            return path.resolve(baseDirectory, gradleExecutable);
-        }
-        const wrapperDirectory = inputOrNull("wrapper-directory");
-        const executableDirectory = wrapperDirectory != null
-            ? path.join(baseDirectory, wrapperDirectory)
-            : baseDirectory;
-        return path.resolve(executableDirectory, gradlew.wrapperFilename());
-    });
-}
-function resolveBuildRootDirectory(baseDirectory) {
-    let buildRootDirectory = inputOrNull("build-root-directory");
-    return buildRootDirectory == null
-        ? path.resolve(baseDirectory)
-        : path.resolve(baseDirectory, buildRootDirectory);
-}
-function parseCommandLineArguments() {
-    const input = inputOrNull("arguments");
-    return input == null ? [] : string_argv_1.parseArgsStringToArgv(input);
-}
-function inputOrNull(name) {
-    const inputString = core.getInput(name);
-    if (inputString.length == 0) {
-        return null;
-    }
-    return inputString;
-}
 
 
 /***/ }),
@@ -3753,7 +3849,7 @@ function _isUint8Array(obj) {
 /*</replacement>*/
 
 /*<replacement>*/
-var util = Object.create(__webpack_require__(286));
+var util = Object.create(__webpack_require__(143));
 util.inherits = __webpack_require__(689);
 /*</replacement>*/
 
@@ -4860,7 +4956,7 @@ var Duplex;
 Writable.WritableState = WritableState;
 
 /*<replacement>*/
-var util = Object.create(__webpack_require__(286));
+var util = Object.create(__webpack_require__(143));
 util.inherits = __webpack_require__(689);
 /*</replacement>*/
 
@@ -7148,180 +7244,6 @@ module.exports = Array.isArray || function (arr) {
 
 /***/ }),
 
-/***/ 265:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const fs = __importStar(__webpack_require__(747));
-const path = __importStar(__webpack_require__(622));
-const httpm = __importStar(__webpack_require__(874));
-const unzip = __importStar(__webpack_require__(360));
-const core = __importStar(__webpack_require__(470));
-const io = __importStar(__webpack_require__(1));
-const toolCache = __importStar(__webpack_require__(533));
-const gradlew = __importStar(__webpack_require__(923));
-const httpc = new httpm.HttpClient("eskatos/gradle-command-action");
-const gradleVersionsBaseUrl = "https://services.gradle.org/versions";
-function gradleVersion(gradleVersion) {
-    return __awaiter(this, void 0, void 0, function* () {
-        switch (gradleVersion) {
-            case "current":
-                return gradleCurrent();
-            case "rc":
-                return gradleReleaseCandidate();
-            case "nightly":
-                return gradleNightly();
-            case "release-nightly":
-                return gradleReleaseNightly();
-            default:
-                return gradle(gradleVersion);
-        }
-    });
-}
-exports.gradleVersion = gradleVersion;
-function gradleCurrent() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const json = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/current`);
-        return provisionGradle(json.version, json.downloadUrl);
-    });
-}
-function gradleReleaseCandidate() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const json = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-candidate`);
-        if (json) {
-            return provisionGradle(json.version, json.downloadUrl);
-        }
-        return gradleCurrent();
-    });
-}
-function gradleNightly() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const json = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/nightly`);
-        return provisionGradle(json.version, json.downloadUrl);
-    });
-}
-function gradleReleaseNightly() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const json = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-nightly`);
-        return provisionGradle(json.version, json.downloadUrl);
-    });
-}
-function gradle(version) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const declaration = yield findGradleVersionDeclaration(version);
-        if (!declaration) {
-            throw new Error(`Gradle version ${version} does not exists`);
-        }
-        return provisionGradle(declaration.version, declaration.downloadUrl);
-    });
-}
-function gradleVersionDeclaration(url) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const json = yield httpGetJson(url);
-        return (json.version && json.version.length > 0) ? json : undefined;
-    });
-}
-function findGradleVersionDeclaration(version) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const json = yield httpGetJson(`${gradleVersionsBaseUrl}/all`);
-        const found = json.find((entry) => {
-            return entry.version === version;
-        });
-        return found ? found : undefined;
-    });
-}
-function provisionGradle(version, url) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const cachedInstall = toolCache.find("gradle", version);
-        if (cachedInstall.length > 0) {
-            const cachedExecutable = executableFrom(cachedInstall);
-            core.info(`Provisioned Gradle executable ${cachedExecutable}`);
-            return cachedExecutable;
-        }
-        const home = process.env["HOME"] || "";
-        const tmpdir = path.join(home, "gradle-provision-tmpdir");
-        const downloadsDir = path.join(tmpdir, "downloads");
-        const installsDir = path.join(tmpdir, "installs");
-        yield io.mkdirP(downloadsDir);
-        yield io.mkdirP(installsDir);
-        core.info(`Downloading ${url}`);
-        const downloadPath = path.join(downloadsDir, `gradle-${version}-bin.zip`);
-        yield httpDownload(url, downloadPath);
-        core.info(`Downloaded at ${downloadPath}, size ${fs.statSync(downloadPath).size}`);
-        yield extractZip(downloadPath, installsDir);
-        const installDir = path.join(installsDir, `gradle-${version}`);
-        core.info(`Extracted in ${installDir}`);
-        const executable = executableFrom(installDir);
-        fs.chmodSync(executable, "755");
-        core.info(`Provisioned Gradle executable ${executable}`);
-        toolCache.cacheDir(installDir, "gradle", version);
-        return executable;
-    });
-}
-function executableFrom(installDir) {
-    return path.join(installDir, "bin", `${gradlew.installScriptFilename()}`);
-}
-function httpGetJson(url) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const response = yield httpc.get(url);
-        const body = yield response.readBody();
-        return JSON.parse(body);
-    });
-}
-function httpDownload(url, path) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return new Promise(function (resolve, reject) {
-            const writeStream = fs.createWriteStream(path);
-            httpc.get(url).then(response => {
-                response.message.pipe(writeStream)
-                    .on("close", () => {
-                    resolve();
-                })
-                    .on("error", err => {
-                    reject(err);
-                });
-            }).catch(reason => {
-                reject(reason);
-            });
-        });
-    });
-}
-function extractZip(zip, destination) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return new Promise(function (resolve, reject) {
-            fs.createReadStream(zip)
-                .pipe(unzip.Extract({ "path": destination }))
-                .on("close", () => {
-                resolve();
-            })
-                .on("error", err => {
-                reject(err);
-            });
-        });
-    });
-}
-
-
-/***/ }),
-
 /***/ 266:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -8335,114 +8257,174 @@ module.exports = NoopStream;
 /***/ }),
 
 /***/ 286:
-/***/ (function(__unusedmodule, exports) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
+"use strict";
 
-// NOTE: These type checking functions intentionally don't use `instanceof`
-// because it is fragile and can be easily faked with `Object.create()`.
-
-function isArray(arg) {
-  if (Array.isArray) {
-    return Array.isArray(arg);
-  }
-  return objectToString(arg) === '[object Array]';
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const fs = __importStar(__webpack_require__(747));
+const path = __importStar(__webpack_require__(622));
+const httpm = __importStar(__webpack_require__(874));
+const unzip = __importStar(__webpack_require__(360));
+const core = __importStar(__webpack_require__(470));
+const io = __importStar(__webpack_require__(1));
+const toolCache = __importStar(__webpack_require__(533));
+const gradlew = __importStar(__webpack_require__(317));
+const httpc = new httpm.HttpClient("eskatos/gradle-command-action");
+const gradleVersionsBaseUrl = "https://services.gradle.org/versions";
+function gradleVersion(gradleVersion) {
+    return __awaiter(this, void 0, void 0, function* () {
+        switch (gradleVersion) {
+            case "current":
+                return gradleCurrent();
+            case "rc":
+                return gradleReleaseCandidate();
+            case "nightly":
+                return gradleNightly();
+            case "release-nightly":
+                return gradleReleaseNightly();
+            default:
+                return gradle(gradleVersion);
+        }
+    });
 }
-exports.isArray = isArray;
-
-function isBoolean(arg) {
-  return typeof arg === 'boolean';
+exports.gradleVersion = gradleVersion;
+function gradleCurrent() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const json = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/current`);
+        return provisionGradle(json.version, json.downloadUrl);
+    });
 }
-exports.isBoolean = isBoolean;
-
-function isNull(arg) {
-  return arg === null;
+function gradleReleaseCandidate() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const json = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-candidate`);
+        if (json) {
+            return provisionGradle(json.version, json.downloadUrl);
+        }
+        return gradleCurrent();
+    });
 }
-exports.isNull = isNull;
-
-function isNullOrUndefined(arg) {
-  return arg == null;
+function gradleNightly() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const json = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/nightly`);
+        return provisionGradle(json.version, json.downloadUrl);
+    });
 }
-exports.isNullOrUndefined = isNullOrUndefined;
-
-function isNumber(arg) {
-  return typeof arg === 'number';
+function gradleReleaseNightly() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const json = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-nightly`);
+        return provisionGradle(json.version, json.downloadUrl);
+    });
 }
-exports.isNumber = isNumber;
-
-function isString(arg) {
-  return typeof arg === 'string';
+function gradle(version) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const declaration = yield findGradleVersionDeclaration(version);
+        if (!declaration) {
+            throw new Error(`Gradle version ${version} does not exists`);
+        }
+        return provisionGradle(declaration.version, declaration.downloadUrl);
+    });
 }
-exports.isString = isString;
-
-function isSymbol(arg) {
-  return typeof arg === 'symbol';
+function gradleVersionDeclaration(url) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const json = yield httpGetJson(url);
+        return (json.version && json.version.length > 0) ? json : undefined;
+    });
 }
-exports.isSymbol = isSymbol;
-
-function isUndefined(arg) {
-  return arg === void 0;
+function findGradleVersionDeclaration(version) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const json = yield httpGetJson(`${gradleVersionsBaseUrl}/all`);
+        const found = json.find((entry) => {
+            return entry.version === version;
+        });
+        return found ? found : undefined;
+    });
 }
-exports.isUndefined = isUndefined;
-
-function isRegExp(re) {
-  return objectToString(re) === '[object RegExp]';
+function provisionGradle(version, url) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const cachedInstall = toolCache.find("gradle", version);
+        if (cachedInstall.length > 0) {
+            const cachedExecutable = executableFrom(cachedInstall);
+            core.info(`Provisioned Gradle executable ${cachedExecutable}`);
+            return cachedExecutable;
+        }
+        const home = process.env["HOME"] || "";
+        const tmpdir = path.join(home, "gradle-provision-tmpdir");
+        const downloadsDir = path.join(tmpdir, "downloads");
+        const installsDir = path.join(tmpdir, "installs");
+        yield io.mkdirP(downloadsDir);
+        yield io.mkdirP(installsDir);
+        core.info(`Downloading ${url}`);
+        const downloadPath = path.join(downloadsDir, `gradle-${version}-bin.zip`);
+        yield httpDownload(url, downloadPath);
+        core.info(`Downloaded at ${downloadPath}, size ${fs.statSync(downloadPath).size}`);
+        yield extractZip(downloadPath, installsDir);
+        const installDir = path.join(installsDir, `gradle-${version}`);
+        core.info(`Extracted in ${installDir}`);
+        const executable = executableFrom(installDir);
+        fs.chmodSync(executable, "755");
+        core.info(`Provisioned Gradle executable ${executable}`);
+        toolCache.cacheDir(installDir, "gradle", version);
+        return executable;
+    });
 }
-exports.isRegExp = isRegExp;
-
-function isObject(arg) {
-  return typeof arg === 'object' && arg !== null;
+function executableFrom(installDir) {
+    return path.join(installDir, "bin", `${gradlew.installScriptFilename()}`);
 }
-exports.isObject = isObject;
-
-function isDate(d) {
-  return objectToString(d) === '[object Date]';
+function httpGetJson(url) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const response = yield httpc.get(url);
+        const body = yield response.readBody();
+        return JSON.parse(body);
+    });
 }
-exports.isDate = isDate;
-
-function isError(e) {
-  return (objectToString(e) === '[object Error]' || e instanceof Error);
+function httpDownload(url, path) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise(function (resolve, reject) {
+            const writeStream = fs.createWriteStream(path);
+            httpc.get(url).then(response => {
+                response.message.pipe(writeStream)
+                    .on("close", () => {
+                    resolve();
+                })
+                    .on("error", err => {
+                    reject(err);
+                });
+            }).catch(reason => {
+                reject(reason);
+            });
+        });
+    });
 }
-exports.isError = isError;
-
-function isFunction(arg) {
-  return typeof arg === 'function';
-}
-exports.isFunction = isFunction;
-
-function isPrimitive(arg) {
-  return arg === null ||
-         typeof arg === 'boolean' ||
-         typeof arg === 'number' ||
-         typeof arg === 'string' ||
-         typeof arg === 'symbol' ||  // ES6 symbol
-         typeof arg === 'undefined';
-}
-exports.isPrimitive = isPrimitive;
-
-exports.isBuffer = Buffer.isBuffer;
-
-function objectToString(o) {
-  return Object.prototype.toString.call(o);
+function extractZip(zip, destination) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise(function (resolve, reject) {
+            fs.createReadStream(zip)
+                .pipe(unzip.Extract({ "path": destination }))
+                .on("close", () => {
+                resolve();
+            })
+                .on("error", err => {
+                reject(err);
+            });
+        });
+    });
 }
 
 
@@ -8912,6 +8894,25 @@ Promise.prototype.catchReturn = function (value) {
     }
 };
 };
+
+
+/***/ }),
+
+/***/ 317:
+/***/ (function(__unusedmodule, exports) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const IS_WINDOWS = process.platform === "win32";
+function wrapperFilename() {
+    return IS_WINDOWS ? "gradlew.bat" : "gradlew";
+}
+exports.wrapperFilename = wrapperFilename;
+function installScriptFilename() {
+    return IS_WINDOWS ? "gradle.bat" : "gradle";
+}
+exports.installScriptFilename = installScriptFilename;
 
 
 /***/ }),
@@ -9629,7 +9630,7 @@ var PullStream = __webpack_require__(887);
 var NoopStream = __webpack_require__(277);
 var BufferStream = __webpack_require__(29);
 var parseExtraField = __webpack_require__(474);
-var Buffer = __webpack_require__(131);
+var Buffer = __webpack_require__(657);
 var parseDateTime = __webpack_require__(287);
 
 // Backwards compatibility for node versions < 8
@@ -17434,6 +17435,24 @@ module.exports = {
 
 /***/ }),
 
+/***/ 657:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+var Buffer = __webpack_require__(293).Buffer;
+
+// Backwards compatibility for node versions < 8
+if (Buffer.from === undefined) {
+  Buffer.from = function (a, b, c) {
+    return new Buffer(a, b, c)
+  };
+
+  Buffer.alloc = Buffer.from;
+}
+
+module.exports = Buffer;
+
+/***/ }),
+
 /***/ 658:
 /***/ (function(module) {
 
@@ -18043,7 +18062,7 @@ var unzip = __webpack_require__(194);
 var Promise = __webpack_require__(440);
 var BufferStream = __webpack_require__(29);
 var parseExtraField = __webpack_require__(474);
-var Buffer = __webpack_require__(131);
+var Buffer = __webpack_require__(657);
 var path = __webpack_require__(622);
 var Writer = __webpack_require__(311).Writer;
 var parseDateTime = __webpack_require__(287);
@@ -20198,83 +20217,6 @@ module.exports = require("zlib");
 
 /***/ }),
 
-/***/ 779:
-/***/ (function(module) {
-
-"use strict";
-
-module.exports = function(Promise) {
-var longStackTraces = false;
-var contextStack = [];
-
-Promise.prototype._promiseCreated = function() {};
-Promise.prototype._pushContext = function() {};
-Promise.prototype._popContext = function() {return null;};
-Promise._peekContext = Promise.prototype._peekContext = function() {};
-
-function Context() {
-    this._trace = new Context.CapturedTrace(peekContext());
-}
-Context.prototype._pushContext = function () {
-    if (this._trace !== undefined) {
-        this._trace._promiseCreated = null;
-        contextStack.push(this._trace);
-    }
-};
-
-Context.prototype._popContext = function () {
-    if (this._trace !== undefined) {
-        var trace = contextStack.pop();
-        var ret = trace._promiseCreated;
-        trace._promiseCreated = null;
-        return ret;
-    }
-    return null;
-};
-
-function createContext() {
-    if (longStackTraces) return new Context();
-}
-
-function peekContext() {
-    var lastIndex = contextStack.length - 1;
-    if (lastIndex >= 0) {
-        return contextStack[lastIndex];
-    }
-    return undefined;
-}
-Context.CapturedTrace = null;
-Context.create = createContext;
-Context.deactivateLongStackTraces = function() {};
-Context.activateLongStackTraces = function() {
-    var Promise_pushContext = Promise.prototype._pushContext;
-    var Promise_popContext = Promise.prototype._popContext;
-    var Promise_PeekContext = Promise._peekContext;
-    var Promise_peekContext = Promise.prototype._peekContext;
-    var Promise_promiseCreated = Promise.prototype._promiseCreated;
-    Context.deactivateLongStackTraces = function() {
-        Promise.prototype._pushContext = Promise_pushContext;
-        Promise.prototype._popContext = Promise_popContext;
-        Promise._peekContext = Promise_PeekContext;
-        Promise.prototype._peekContext = Promise_peekContext;
-        Promise.prototype._promiseCreated = Promise_promiseCreated;
-        longStackTraces = false;
-    };
-    longStackTraces = true;
-    Promise.prototype._pushContext = Context.prototype._pushContext;
-    Promise.prototype._popContext = Context.prototype._popContext;
-    Promise._peekContext = Promise.prototype._peekContext = peekContext;
-    Promise.prototype._promiseCreated = function() {
-        var ctx = this._peekContext();
-        if (ctx && ctx._promiseCreated == null) ctx._promiseCreated = this;
-    };
-};
-return Context;
-};
-
-
-/***/ }),
-
 /***/ 780:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -21403,7 +21345,7 @@ var objectKeys = Object.keys || function (obj) {
 module.exports = Duplex;
 
 /*<replacement>*/
-var util = Object.create(__webpack_require__(286));
+var util = Object.create(__webpack_require__(143));
 util.inherits = __webpack_require__(689);
 /*</replacement>*/
 
@@ -22549,7 +22491,7 @@ module.exports = PassThrough;
 var Transform = __webpack_require__(925);
 
 /*<replacement>*/
-var util = Object.create(__webpack_require__(286));
+var util = Object.create(__webpack_require__(143));
 util.inherits = __webpack_require__(689);
 /*</replacement>*/
 
@@ -22660,7 +22602,7 @@ if (isES5) {
 var Stream = __webpack_require__(794);
 var Promise = __webpack_require__(440);
 var util = __webpack_require__(669);
-var Buffer = __webpack_require__(131);
+var Buffer = __webpack_require__(657);
 var strFunction = 'function';
 
 // Backwards compatibility for node versions < 8
@@ -22921,20 +22863,78 @@ module.exports = __webpack_require__(669).deprecate;
 /***/ }),
 
 /***/ 923:
-/***/ (function(__unusedmodule, exports) {
+/***/ (function(module) {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
-const IS_WINDOWS = process.platform === "win32";
-function wrapperFilename() {
-    return IS_WINDOWS ? "gradlew.bat" : "gradlew";
+module.exports = function(Promise) {
+var longStackTraces = false;
+var contextStack = [];
+
+Promise.prototype._promiseCreated = function() {};
+Promise.prototype._pushContext = function() {};
+Promise.prototype._popContext = function() {return null;};
+Promise._peekContext = Promise.prototype._peekContext = function() {};
+
+function Context() {
+    this._trace = new Context.CapturedTrace(peekContext());
 }
-exports.wrapperFilename = wrapperFilename;
-function installScriptFilename() {
-    return IS_WINDOWS ? "gradle.bat" : "gradle";
+Context.prototype._pushContext = function () {
+    if (this._trace !== undefined) {
+        this._trace._promiseCreated = null;
+        contextStack.push(this._trace);
+    }
+};
+
+Context.prototype._popContext = function () {
+    if (this._trace !== undefined) {
+        var trace = contextStack.pop();
+        var ret = trace._promiseCreated;
+        trace._promiseCreated = null;
+        return ret;
+    }
+    return null;
+};
+
+function createContext() {
+    if (longStackTraces) return new Context();
 }
-exports.installScriptFilename = installScriptFilename;
+
+function peekContext() {
+    var lastIndex = contextStack.length - 1;
+    if (lastIndex >= 0) {
+        return contextStack[lastIndex];
+    }
+    return undefined;
+}
+Context.CapturedTrace = null;
+Context.create = createContext;
+Context.deactivateLongStackTraces = function() {};
+Context.activateLongStackTraces = function() {
+    var Promise_pushContext = Promise.prototype._pushContext;
+    var Promise_popContext = Promise.prototype._popContext;
+    var Promise_PeekContext = Promise._peekContext;
+    var Promise_peekContext = Promise.prototype._peekContext;
+    var Promise_promiseCreated = Promise.prototype._promiseCreated;
+    Context.deactivateLongStackTraces = function() {
+        Promise.prototype._pushContext = Promise_pushContext;
+        Promise.prototype._popContext = Promise_popContext;
+        Promise._peekContext = Promise_PeekContext;
+        Promise.prototype._peekContext = Promise_peekContext;
+        Promise.prototype._promiseCreated = Promise_promiseCreated;
+        longStackTraces = false;
+    };
+    longStackTraces = true;
+    Promise.prototype._pushContext = Context.prototype._pushContext;
+    Promise.prototype._popContext = Context.prototype._popContext;
+    Promise._peekContext = Promise.prototype._peekContext = peekContext;
+    Promise.prototype._promiseCreated = function() {
+        var ctx = this._peekContext();
+        if (ctx && ctx._promiseCreated == null) ctx._promiseCreated = this;
+    };
+};
+return Context;
+};
 
 
 /***/ }),
@@ -23013,7 +23013,7 @@ module.exports = Transform;
 var Duplex = __webpack_require__(831);
 
 /*<replacement>*/
-var util = Object.create(__webpack_require__(286));
+var util = Object.create(__webpack_require__(143));
 util.inherits = __webpack_require__(689);
 /*</replacement>*/
 
@@ -25802,7 +25802,7 @@ var tryConvertToPromise = __webpack_require__(377)(Promise, INTERNAL);
 var PromiseArray =
     __webpack_require__(246)(Promise, INTERNAL,
                                tryConvertToPromise, apiRejection, Proxyable);
-var Context = __webpack_require__(779)(Promise);
+var Context = __webpack_require__(923)(Promise);
  /*jshint unused:false*/
 var createContext = Context.create;
 var debug = __webpack_require__(272)(Promise, Context);

@@ -27,7 +27,7 @@ outputs:
 
 runs:
   using: 'node12'
-  main: 'lib/main.js'
+  main: 'dist/main/index.js'
 
 branding:
   icon: 'box'
