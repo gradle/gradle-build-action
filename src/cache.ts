@@ -4,7 +4,7 @@ import * as path from 'path'
 export async function restoreCachedWrapperDist(
     executableDirectory: string
 ): Promise<void> {
-    core.saveState('WRAPPER_BASE_DIR', executableDirectory)
+    core.saveState('WRAPPER_BASE_DIR', path.resolve(executableDirectory))
     core.info(`WRAPPER_BASE_DIR = ${core.getState('WRAPPER_BASE_DIR')}`)
     const wrapperProperties = path.join(
         executableDirectory,
