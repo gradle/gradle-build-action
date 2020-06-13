@@ -14,8 +14,8 @@ const gradleVersionsBaseUrl = 'https://services.gradle.org/versions'
 /**
  * @return Gradle executable path
  */
-export async function gradleVersion(gradleVersion: string): Promise<string> {
-    switch (gradleVersion) {
+export async function gradleVersion(version: string): Promise<string> {
+    switch (version) {
         case 'current':
             return gradleCurrent()
         case 'rc':
@@ -25,7 +25,7 @@ export async function gradleVersion(gradleVersion: string): Promise<string> {
         case 'release-nightly':
             return gradleReleaseNightly()
         default:
-            return gradle(gradleVersion)
+            return gradle(version)
     }
 }
 
@@ -129,9 +129,9 @@ async function httpGetJson(url: string): Promise<any> {
     return JSON.parse(body)
 }
 
-async function httpDownload(url: string, path: string): Promise<void> {
+async function httpDownload(url: string, localPath: string): Promise<void> {
     return new Promise<void>(function (resolve, reject) {
-        const writeStream = fs.createWriteStream(path)
+        const writeStream = fs.createWriteStream(localPath)
         httpc
             .get(url)
             .then(response => {

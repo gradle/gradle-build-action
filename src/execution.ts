@@ -16,7 +16,7 @@ export async function execute(
                 if (line.startsWith('Publishing build scan...')) {
                     publishing = true
                 }
-                if (publishing && line.length == 0) {
+                if (publishing && line.length === 0) {
                     publishing = false
                 }
                 if (publishing && line.startsWith('http')) {
