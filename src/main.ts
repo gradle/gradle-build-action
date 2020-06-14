@@ -2,7 +2,7 @@ import * as core from '@actions/core'
 import * as path from 'path'
 import {parseArgsStringToArgv} from 'string-argv'
 
-import * as cache from './cache'
+import * as cacheWrapper from './cache-wrapper'
 import * as execution from './execution'
 import * as gradlew from './gradlew'
 import * as provision from './provision'
@@ -41,7 +41,7 @@ async function resolveGradleExecutable(baseDirectory: string): Promise<string> {
     const gradleExecutable = inputOrNull('gradle-executable')
     if (gradleExecutable !== null) {
         if (gradleExecutable.endsWith(gradlew.wrapperFilename())) {
-            await cache.restoreCachedWrapperDist(
+            await cacheWrapper.restoreCachedWrapperDist(
                 path.resolve(gradleExecutable, '..')
             )
         }
@@ -54,7 +54,7 @@ async function resolveGradleExecutable(baseDirectory: string): Promise<string> {
             ? path.join(baseDirectory, wrapperDirectory)
             : baseDirectory
 
-    await cache.restoreCachedWrapperDist(gradlewDirectory)
+    await cacheWrapper.restoreCachedWrapperDist(gradlewDirectory)
 
     return path.resolve(gradlewDirectory, gradlew.wrapperFilename())
 }
