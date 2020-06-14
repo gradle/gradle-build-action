@@ -21,7 +21,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: actions/setup-java@v1
       with:
         java-version: 11
@@ -83,7 +83,7 @@ If you need to pass environment variables, simply use the GitHub Actions workflo
 ```yaml
  - uses: eskatos/gradle-command-action@v1
    with:
-     gradle-version: 5.6.2
+     gradle-version: 6.5
 ```
 
 `gradle-version` can be set to any valid Gradle version.
@@ -110,7 +110,7 @@ jobs:
   gradle-rc:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: actions/setup-java@v1
       with:
         java-version: 11
@@ -139,7 +139,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: actions/setup-java@v1
       with:
         java-version: 11
