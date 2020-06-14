@@ -2,6 +2,7 @@ import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 import * as path from 'path'
 import * as fs from 'fs'
+import * as os from 'os'
 
 const WRAPPER_CACHE_KEY = 'WRAPPER_CACHE_KEY'
 const WRAPPER_CACHE_PATH = 'WRAPPER_CACHE_PATH'
@@ -20,7 +21,7 @@ export async function restoreCachedWrapperDist(
 
     const wrapperCacheKey = `wrapper-${wrapperSlug}`
     const wrapperCachePath = path.join(
-        process.env.HOME!,
+        os.homedir(),
         `.gradle/wrapper/dists/gradle-${wrapperSlug}`
     )
 

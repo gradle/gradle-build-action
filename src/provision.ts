@@ -1,4 +1,5 @@
 import * as fs from 'fs'
+import * as os from 'os'
 import * as path from 'path'
 import * as httpm from 'typed-rest-client/HttpClient'
 import * as unzip from 'unzipper'
@@ -93,7 +94,7 @@ async function provisionGradle(version: string, url: string): Promise<string> {
         return cachedExecutable
     }
 
-    const home = process.env['HOME'] || ''
+    const home = os.homedir()
     const tmpdir = path.join(home, 'gradle-provision-tmpdir')
     const downloadsDir = path.join(tmpdir, 'downloads')
     const installsDir = path.join(tmpdir, 'installs')
