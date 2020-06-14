@@ -9,7 +9,10 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
@@ -25,10 +28,3 @@ jobs:
         gradle-version: 6.5
         build-root-directory: __tests__/data/basic
         arguments: help
-    - name: Check for uncommitted changes
-      # Ensure no changes, but ignore node_modules dir since dev/fresh ci deps installed.
-      run: |
-        git diff --exit-code --stat -- . ':!node_modules' \
-        || (echo "##[error] found changed files after build. please 'npm run all'" \
-                 "and check in all changes" \
-            && exit 1)
