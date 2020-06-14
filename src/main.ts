@@ -2,6 +2,7 @@ import * as core from '@actions/core'
 import * as path from 'path'
 import {parseArgsStringToArgv} from 'string-argv'
 
+import * as github from './github-utils'
 import * as cacheWrapper from './cache-wrapper'
 import * as execution from './execution'
 import * as gradlew from './gradlew'
@@ -33,12 +34,12 @@ export async function run(): Promise<void> {
 run()
 
 async function resolveGradleExecutable(baseDirectory: string): Promise<string> {
-    const gradleVersion = inputOrNull('gradle-version')
+    const gradleVersion = github.inputOrNull('gradle-version')
     if (gradleVersion !== null && gradleVersion !== 'wrapper') {
         return path.resolve(await provision.gradleVersion(gradleVersion))
     }
 
-    const gradleExecutable = inputOrNull('gradle-executable')
+    const gradleExecutable = github.inputOrNull('gradle-executable')
     if (gradleExecutable !== null) {
         if (gradleExecutable.endsWith(gradlew.wrapperFilename())) {
             await cacheWrapper.restoreCachedWrapperDist(
@@ -48,7 +49,7 @@ async function resolveGradleExecutable(baseDirectory: string): Promise<string> {
         return path.resolve(baseDirectory, gradleExecutable)
     }
 
-    const wrapperDirectory = inputOrNull('wrapper-directory')
+    const wrapperDirectory = github.inputOrNull('wrapper-directory')
     const gradlewDirectory =
         wrapperDirectory !== null
             ? path.join(baseDirectory, wrapperDirectory)
@@ -60,7 +61,7 @@ async function resolveGradleExecutable(baseDirectory: string): Promise<string> {
 }
 
 function resolveBuildRootDirectory(baseDirectory: string): string {
-    const buildRootDirectory = inputOrNull('build-root-directory')
+    const buildRootDirectory = github.inputOrNull('build-root-directory')
     const resolvedBuildRootDirectory =
         buildRootDirectory === null
             ? path.resolve(baseDirectory)
@@ -69,14 +70,6 @@ function resolveBuildRootDirectory(baseDirectory: string): string {
 }
 
 function parseCommandLineArguments(): string[] {
-    const input = inputOrNull('arguments')
+    const input = github.inputOrNull('arguments')
     return input === null ? [] : parseArgsStringToArgv(input)
-}
-
-function inputOrNull(name: string): string | null {
-    const inputString = core.getInput(name)
-    if (inputString.length === 0) {
-        return null
-    }
-    return inputString
 }
