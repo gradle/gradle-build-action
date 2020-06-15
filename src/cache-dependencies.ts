@@ -73,8 +73,7 @@ export async function cacheDependencies(): Promise<void> {
     }
 
     const locksDeleted = tryDeleteFiles([
-        path.resolve(cachePath, 'modules-2.lock'),
-        path.resolve(cachePath, 'gc.properties')
+        path.resolve(cachePath, 'modules-2.lock')
     ])
     if (!locksDeleted) {
         core.warning(
