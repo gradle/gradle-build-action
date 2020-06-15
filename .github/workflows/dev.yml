@@ -22,10 +22,14 @@ jobs:
       with:
         wrapper-directory: __tests__/data/basic
         build-root-directory: __tests__/data/basic
-        arguments: help
+        dependencies-cache-enabled: true
+        configuration-cache-enabled: true
+        arguments: test
     - name: Test dist download
       uses: ./
       with:
-        gradle-version: 6.5
+        gradle-version: 6.6-milestone-1
         build-root-directory: __tests__/data/basic
-        arguments: help
+        dependencies-cache-enabled: true
+        configuration-cache-enabled: true
+        arguments: test --configuration-cache

@@ -8,8 +8,6 @@ You might also be interested by the related [Gradle Plugin](https://github.com/e
 
 The following workflow will run `./gradlew build` using the wrapper from the repository on ubuntu, macos and windows. The only prerequisite is to have Java installed, you can define the version you need to run the build using the `actions/setup-java` action.
 
-
-
 ```yaml
 # .github/workflows/gradle-build-pr.yml
 name: Run Gradle on PRs
@@ -21,7 +19,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: actions/setup-java@v1
       with:
         java-version: 11
@@ -83,7 +81,7 @@ If you need to pass environment variables, simply use the GitHub Actions workflo
 ```yaml
  - uses: eskatos/gradle-command-action@v1
    with:
-     gradle-version: 5.6.2
+     gradle-version: 6.5
 ```
 
 `gradle-version` can be set to any valid Gradle version.
@@ -110,7 +108,7 @@ jobs:
   gradle-rc:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: actions/setup-java@v1
       with:
         java-version: 11
@@ -120,7 +118,68 @@ jobs:
         arguments: build --dry-run # just test build configuration
 ```
 
-# Build scans
+## Caching
+
+This action provides 3 levels of caching to help speed up your GitHub Actions:
+
+- `wrapper` caches the local [wrapper](https://docs.gradle.org/current/userguide/gradle_wrapper.html) installation, saving time downloading and unpacking Gradle distributions ;
+- `dependencies` caches the [dependencies](https://docs.gradle.org/current/userguide/dependency_resolution.html#sub:cache_copy), saving time downloading dependencies ;
+- `configuration` caches the [build configuration](https://docs.gradle.org/nightly/userguide/configuration_cache.html), saving time configuring the build.
+
+Only the first one, caching the wrapper installation, is enabled by default.
+Future versions of this action will enable all caching by default.
+
+You can control which level is enabled as follows:
+
+```yaml
+wrapper-cache-enabled: true
+dependencies-cache-enabled: true
+configuration-cache-enabled: true
+```
+
+The wrapper installation cache is simple and can't be configured further.
+
+The dependencies and configuration cache will compute a cache key in a best effort manner.
+Keep reading to learn how to better control how they work.
+
+### Configuring the dependencies and configuration caches
+
+Both the dependencies and configuration caches use the same default configuration:
+
+They use the following inputs to calculate the cache key:
+```text
+
+
+```
+
+They restore cached state even if there isn't an exact match.
+
+If the defaults don't suit your needs you can override them with the following inputs:
+
+```yaml
+dependencies-cache-key: |
+  **/gradle.properties
+  gradle/dependency-locking/**
+dependencies-cache-exact: true
+configuration-cache-key: |
+  **/gradle.properties
+  gradle/dependency-locking/**
+configuration-cache-exact: true
+```
+
+Coming up with a good cache key isn't trivial and depends on your build.
+The above example isn't realistic.
+Stick to the defaults unless you know what you are doing.
+
+If you happen to use Gradle [dependency locking](https://docs.gradle.org/current/userguide/dependency_locking.html) you can make the dependencies cache more precise with the following configuration:
+
+```yaml
+dependencies-cache-enabled: true
+dependencies-cache-key: gradle/dependency-locking/**
+dependencies-cache-exact: true
+```
+
+## Build scans
 
 If your build publishes a [build scan](https://gradle.com/build-scans/) the `gradle-command-action` action will emit the link to the published build scan as an output named `build-scan-url`.
 
@@ -139,7 +198,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: actions/setup-java@v1
       with:
         java-version: 11
