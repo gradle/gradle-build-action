@@ -18,6 +18,8 @@ export async function restoreCachedDependencies(
     const cachePath = path.resolve(os.homedir(), '.gradle/caches/modules-2')
     core.saveState(DEPENDENCIES_CACHE_PATH, cachePath)
 
+    const inputCacheExact = github.inputBoolean('dependencies-cache-exact')
+
     const inputCacheKeyGlobs = github.inputArrayOrNull('dependencies-cache-key')
     const cacheKeyGlobs = inputCacheKeyGlobs
         ? inputCacheKeyGlobs
@@ -33,9 +35,11 @@ export async function restoreCachedDependencies(
     const cacheKey = `${cacheKeyPrefix}${hash}`
     core.saveState(DEPENDENCIES_CACHE_KEY, cacheKey)
 
-    const cacheResult = await cache.restoreCache([cachePath], cacheKey, [
-        cacheKeyPrefix
-    ])
+    const cacheResult = await cache.restoreCache(
+        [cachePath],
+        cacheKey,
+        inputCacheExact ? [] : [cacheKeyPrefix]
+    )
     core.saveState(DEPENDENCIES_CACHE_RESULT, cacheResult)
 }
 

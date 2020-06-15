@@ -16,3 +16,9 @@ export function inputArrayOrNull(name: string): string[] | null {
         .map(s => s.trim())
         .filter(s => s !== '')
 }
+
+export function inputBoolean(name: string, defaultValue = false): boolean {
+    const string = inputOrNull(name)
+    if (!string) return defaultValue
+    return string === 'true'
+}
