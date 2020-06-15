@@ -12,9 +12,10 @@ export async function hashFiles(
     followSymbolicLinks = false
 ): Promise<string | null> {
     let hasMatch = false
-    const result = crypto.createHash('sha256')
+    type FileHashes = Record<string, Buffer>
+    const hashes: FileHashes = {}
     for await (const globPattern of globs) {
-        const globMatch = `${baseDir}/${globPattern}`
+        const globMatch = `${baseDir}${path.sep}${globPattern}`
         const globber = await glob.create(globMatch, {followSymbolicLinks})
         for await (const file of globber.globGenerator()) {
             // console.log(file)
@@ -29,12 +30,15 @@ export async function hashFiles(
             const hash = crypto.createHash('sha256')
             const pipeline = util.promisify(stream.pipeline)
             await pipeline(fs.createReadStream(file), hash)
-            result.write(hash.digest())
-            if (!hasMatch) {
-                hasMatch = true
-            }
+            hashes[path.relative(baseDir, file)] = hash.digest()
+            hasMatch = true
         }
     }
+    if (!hasMatch) return null
+    const result = crypto.createHash('sha256')
+    for (const file of Object.keys(hashes).sort()) {
+        result.update(hashes[file])
+    }
     result.end()
-    return hasMatch ? result.digest('hex') : null
+    return result.digest('hex')
 }
