@@ -21,16 +21,7 @@ export async function restoreCachedDependencies(
     core.saveState(DEPENDENCIES_CACHE_PATH, cachePath)
 
     const inputCacheExact = github.inputBoolean('dependencies-cache-exact')
-
-    const inputCacheKeyGlobs = github.inputArrayOrNull('dependencies-cache-key')
-    const cacheKeyGlobs = inputCacheKeyGlobs
-        ? inputCacheKeyGlobs
-        : [
-              '**/*.gradle',
-              '**/*.gradle.kts',
-              '**/gradle.properties',
-              'gradle/**'
-          ]
+    const cacheKeyGlobs = inputCacheKeyGlobs('dependencies-cache-key')
 
     const hash = await crypto.hashFiles(rootDir, cacheKeyGlobs)
     const cacheKeyPrefix = 'dependencies-'
@@ -97,7 +88,7 @@ export async function cacheDependencies(): Promise<void> {
     return
 }
 
-function tryDeleteFiles(filePaths: string[]): boolean {
+export function tryDeleteFiles(filePaths: string[]): boolean {
     let failure = false
     for (const filePath of filePaths) {
         if (fs.existsSync(filePath)) {
@@ -113,4 +104,16 @@ function tryDeleteFiles(filePaths: string[]): boolean {
 
 function isDependenciesCacheDisabled(): boolean {
     return !github.inputBoolean('dependencies-cache-enabled', false)
+}
+
+export function inputCacheKeyGlobs(input: string): string[] {
+    const inputValue = github.inputArrayOrNull(input)
+    return inputValue
+        ? inputValue
+        : [
+              '**/*.gradle',
+              '**/*.gradle.kts',
+              '**/gradle.properties',
+              'gradle/**'
+          ]
 }

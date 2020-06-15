@@ -32,6 +32,15 @@ inputs:
   dependencies-cache-exact:
     description: Whether to restore only if exact match, default to 'false'
     required: false
+  configuration-cache-enabled:
+    description: Whether caching build configuration is enabled or not, default to 'false'
+    required: false
+  configuration-cache-key:
+    description: Globs of files to hash in the build root directory, separated by new lines, use best-effort if unset
+    required: false
+  configuration-cache-exact:
+    description: Whether to restore only if exact match, default to 'false'
+    required: false
 
 outputs:
   build-scan-url:

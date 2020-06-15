@@ -1,5 +1,6 @@
 import * as exec from '@actions/exec'
 import * as cacheDependencies from './cache-dependencies'
+import * as cacheConfiguration from './cache-configuration'
 
 export async function execute(
     executable: string,
@@ -7,6 +8,7 @@ export async function execute(
     argv: string[]
 ): Promise<BuildResult> {
     await cacheDependencies.restoreCachedDependencies(root)
+    await cacheConfiguration.restoreCachedConfiguration(root)
 
     let publishing = false
     let buildScanUrl: string | undefined
