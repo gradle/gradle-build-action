@@ -20,6 +20,9 @@ inputs:
   arguments:
     description: Gradle command line arguments, see gradle --help
     required: false
+  dependencies-cache-enabled:
+    description: Whether caching dependencies is enabled or not, default to 'true'
+    required: false
   dependencies-cache-key:
     description: Globs of files to hash in the build root directory, separated by new lines, use best-effort if unset
     required: false

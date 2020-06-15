@@ -15,6 +15,8 @@ const DEPENDENCIES_CACHE_RESULT = 'DEPENDENCIES_CACHE_RESULT'
 export async function restoreCachedDependencies(
     rootDir: string
 ): Promise<void> {
+    if (isDependenciesCacheDisabled()) return
+
     const cachePath = path.resolve(os.homedir(), '.gradle/caches/modules-2')
     core.saveState(DEPENDENCIES_CACHE_PATH, cachePath)
 
@@ -52,6 +54,8 @@ export async function restoreCachedDependencies(
 }
 
 export async function cacheDependencies(): Promise<void> {
+    if (isDependenciesCacheDisabled()) return
+
     const cachePath = core.getState(DEPENDENCIES_CACHE_PATH)
     const cacheKey = core.getState(DEPENDENCIES_CACHE_KEY)
     const cacheResult = core.getState(DEPENDENCIES_CACHE_RESULT)
@@ -106,4 +110,8 @@ function tryDeleteFiles(filePaths: string[]): boolean {
         }
     }
     return !failure
+}
+
+function isDependenciesCacheDisabled(): boolean {
+    return !github.inputBoolean('dependencies-cache-enabled', true)
 }
