@@ -147,11 +147,15 @@ Keep reading to learn how to better control how they work.
 Both the dependencies and configuration caches use the same default configuration:
 
 They use the following inputs to calculate the cache key:
+
 ```text
-
-
+**/*.gradle
+**/*.gradle.kts
+**/gradle.properties
+gradle/**
 ```
 
+This is a good enough approximation.
 They restore cached state even if there isn't an exact match.
 
 If the defaults don't suit your needs you can override them with the following inputs:

@@ -30,6 +30,7 @@ export async function restoreCachedWrapperDist(
         os.homedir(),
         `.gradle/wrapper/dists/gradle-${wrapperSlug}`
     )
+    if (fs.existsSync(wrapperCachePath)) return
 
     core.saveState(WRAPPER_CACHE_KEY, wrapperCacheKey)
     core.saveState(WRAPPER_CACHE_PATH, wrapperCachePath)
