@@ -30,3 +30,11 @@ jobs:
         dependencies-cache-enabled: true
         configuration-cache-enabled: true
         arguments: test --configuration-cache
+    - name: Stop Gradle daemon
+      uses: ./
+      with:
+        gradle-version: 6.6-milestone-1
+        build-root-directory: __tests__/data/basic
+        dependencies-cache-enabled: true
+        configuration-cache-enabled: true
+        arguments: --stop
