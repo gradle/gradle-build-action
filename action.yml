@@ -24,7 +24,7 @@ inputs:
     description: Globs of files to hash in the build root directory, separated by new lines, use best-effort if unset
     required: false
   dependencies-cache-exact:
-    description: Wether to restore only if exact match, default to 'false'
+    description: Whether to restore only if exact match, default to 'false'
     required: false
 
 outputs:
