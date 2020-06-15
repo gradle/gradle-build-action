@@ -112,5 +112,5 @@ function tryDeleteFiles(filePaths: string[]): boolean {
 }
 
 function isDependenciesCacheDisabled(): boolean {
-    return !github.inputBoolean('dependencies-cache-enabled', true)
+    return !github.inputBoolean('dependencies-cache-enabled', false)
 }
