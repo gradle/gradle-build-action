@@ -1,19 +1,25 @@
-import * as core from '@actions/core'
-import * as cache from '@actions/cache'
 import * as path from 'path'
 import * as fs from 'fs'
 import * as os from 'os'
+
+import * as core from '@actions/core'
+import * as cache from '@actions/cache'
+
+import * as github from './github-utils'
 
 const WRAPPER_CACHE_KEY = 'WRAPPER_CACHE_KEY'
 const WRAPPER_CACHE_PATH = 'WRAPPER_CACHE_PATH'
 const WRAPPER_CACHE_RESULT = 'WRAPPER_CACHE_RESULT'
 
 export async function restoreCachedWrapperDist(
-    executableDirectory: string
+    gradlewDirectory: string | null
 ): Promise<void> {
+    if (isWrapperCacheDisabled()) return
+    if (gradlewDirectory == null) return
+
     const wrapperSlug = extractGradleWrapperSlugFrom(
         path.join(
-            path.resolve(executableDirectory),
+            path.resolve(gradlewDirectory),
             'gradle/wrapper/gradle-wrapper.properties'
         )
     )
@@ -46,11 +52,13 @@ export async function restoreCachedWrapperDist(
 }
 
 export async function cacheWrapperDist(): Promise<void> {
+    if (isWrapperCacheDisabled()) return
+
     const cacheKey = core.getState(WRAPPER_CACHE_KEY)
     const cachePath = core.getState(WRAPPER_CACHE_PATH)
     const cacheResult = core.getState(WRAPPER_CACHE_RESULT)
 
-    if (!cachePath) {
+    if (!cachePath || !fs.existsSync(cachePath)) {
         core.debug('No wrapper installation to cache.')
         return
     }
@@ -94,4 +102,8 @@ export function extractGradleWrapperSlugFromDistUri(
     const regex = /.*gradle-(.*-(bin|all))\.zip/
     const match = distUri.match(regex)
     return match ? match[1] : null
+}
+
+function isWrapperCacheDisabled(): boolean {
+    return !github.inputBoolean('wrapper-cache-enabled', true)
 }
