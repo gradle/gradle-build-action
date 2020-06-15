@@ -21,10 +21,10 @@ jobs:
       with:
         wrapper-directory: __tests__/data/basic
         build-root-directory: __tests__/data/basic
-        arguments: help
+        arguments: test
     - name: Test dist download
       uses: ./
       with:
         gradle-version: 6.5
         build-root-directory: __tests__/data/basic
-        arguments: help
+        arguments: test

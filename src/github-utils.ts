@@ -7,3 +7,12 @@ export function inputOrNull(name: string): string | null {
     }
     return inputString
 }
+
+export function inputArrayOrNull(name: string): string[] | null {
+    const string = inputOrNull(name)
+    if (!string) return null
+    return string
+        .split('\n')
+        .map(s => s.trim())
+        .filter(s => s !== '')
+}

@@ -52,7 +52,7 @@ export async function cacheWrapperDist(): Promise<void> {
     const cachePath = core.getState(WRAPPER_CACHE_PATH)
     const cacheResult = core.getState(WRAPPER_CACHE_RESULT)
 
-    if (!cachePath) {
+    if (!cachePath || !fs.existsSync(cachePath)) {
         core.debug('No wrapper installation to cache.')
         return
     }
