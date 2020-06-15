@@ -77,7 +77,7 @@ export async function cacheDependencies(): Promise<void> {
     ])
     if (!locksDeleted) {
         core.warning(
-            'Unable to delete dependencies lock files, try using --no-daemon, not saving cache.'
+            'Unable to delete dependencies lock files, try using --no-daemon or stopping the daemon last if you have several Gradle steps, not saving cache.'
         )
         return
     }
