@@ -40,7 +40,15 @@ export async function restoreCachedDependencies(
         cacheKey,
         inputCacheExact ? [] : [cacheKeyPrefix]
     )
+
+    if (!cacheResult) {
+        core.info('Dependencies cache not found, expect dependencies download.')
+        return
+    }
+
     core.saveState(DEPENDENCIES_CACHE_RESULT, cacheResult)
+    core.info(`Dependencies restored from cache key: ${cacheResult}`)
+    return
 }
 
 export async function cacheDependencies(): Promise<void> {
