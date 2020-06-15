@@ -68,6 +68,17 @@ export async function cacheDependencies(): Promise<void> {
         return
     }
 
+    const locksDeleted = tryDeleteFiles([
+        path.resolve(cachePath, 'modules-2.lock'),
+        path.resolve(cachePath, 'gc.properties')
+    ])
+    if (!locksDeleted) {
+        core.warning(
+            'Unable to delete dependencies lock files, try using --no-daemon, not saving cache.'
+        )
+        return
+    }
+
     try {
         await cache.saveCache([cachePath], cacheKey)
     } catch (error) {
@@ -81,4 +92,18 @@ export async function cacheDependencies(): Promise<void> {
     }
 
     return
+}
+
+function tryDeleteFiles(filePaths: string[]): boolean {
+    let failure = false
+    for (const filePath of filePaths) {
+        if (fs.existsSync(filePath)) {
+            try {
+                fs.unlinkSync(filePath)
+            } catch (error) {
+                failure = true
+            }
+        }
+    }
+    return !failure
 }
