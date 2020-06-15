@@ -22,6 +22,7 @@ jobs:
         wrapper-directory: __tests__/data/basic
         build-root-directory: __tests__/data/basic
         dependencies-cache-enabled: true
+        configuration-cache-enabled: true
         arguments: test
     - name: Test dist download
       uses: ./
@@ -29,4 +30,5 @@ jobs:
         gradle-version: 6.5
         build-root-directory: __tests__/data/basic
         dependencies-cache-enabled: true
+        configuration-cache-enabled: true
         arguments: test
