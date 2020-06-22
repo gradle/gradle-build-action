@@ -19,6 +19,7 @@ export async function restoreCachedConfiguration(
     if (isConfigurationCacheDisabled()) return
 
     const cachePath = path.resolve(rootDir, '.gradle/configuration-cache')
+    if (fs.existsSync(cachePath)) return
     core.saveState(CONFIGURATION_CACHE_PATH, cachePath)
 
     const inputCacheExact = github.inputBoolean('configuration-cache-exact')

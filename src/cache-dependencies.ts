@@ -18,6 +18,7 @@ export async function restoreCachedDependencies(
     if (isDependenciesCacheDisabled()) return
 
     const cachePath = path.resolve(os.homedir(), '.gradle/caches/modules-2')
+    if (fs.existsSync(cachePath)) return
     core.saveState(DEPENDENCIES_CACHE_PATH, cachePath)
 
     const inputCacheExact = github.inputBoolean('dependencies-cache-exact')
