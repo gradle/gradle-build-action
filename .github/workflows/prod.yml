@@ -25,7 +25,7 @@ jobs:
     - name: Test dist download
       uses: ./
       with:
-        gradle-version: 6.6-milestone-1
+        gradle-version: rc
         build-root-directory: __tests__/data/basic
         dependencies-cache-enabled: true
         configuration-cache-enabled: true
@@ -33,7 +33,7 @@ jobs:
     - name: Stop Gradle daemon
       uses: ./
       with:
-        gradle-version: 6.6-milestone-1
+        gradle-version: rc
         build-root-directory: __tests__/data/basic
         dependencies-cache-enabled: true
         configuration-cache-enabled: true
