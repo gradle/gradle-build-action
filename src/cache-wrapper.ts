@@ -26,7 +26,7 @@ export async function restoreCachedWrapperDist(
     if (!wrapperSlug) return
 
     const wrapperCacheKey = `wrapper-${wrapperSlug}`
-    const wrapperCachePath = path.join(
+    const wrapperCachePath = path.resolve(
         os.homedir(),
         `.gradle/wrapper/dists/gradle-${wrapperSlug}`
     )
@@ -35,21 +35,30 @@ export async function restoreCachedWrapperDist(
     core.saveState(WRAPPER_CACHE_KEY, wrapperCacheKey)
     core.saveState(WRAPPER_CACHE_PATH, wrapperCachePath)
 
-    const restoredKey = await cache.restoreCache(
-        [wrapperCachePath],
-        wrapperCacheKey
-    )
+    try {
+        const restoredKey = await cache.restoreCache(
+            [wrapperCachePath],
+            wrapperCacheKey
+        )
 
-    if (!restoredKey) {
+        if (!restoredKey) {
+            core.info(
+                'Wrapper installation cache not found, expect a Gradle distribution download.'
+            )
+            return
+        }
+
+        core.saveState(WRAPPER_CACHE_RESULT, restoredKey)
         core.info(
-            'Wrapper installation cache not found, expect a Gradle distribution download.'
+            `Wrapper installation restored from cache key: ${restoredKey}`
+        )
+        return
+    } catch (error) {
+        core.info(
+            `Wrapper installation cache restore failed, expect a Gradle distribution download\n  ${error}`
         )
         return
     }
-
-    core.saveState(WRAPPER_CACHE_RESULT, restoredKey)
-    core.info(`Wrapper installation restored from cache key: ${restoredKey}`)
-    return
 }
 
 export async function cacheWrapperDist(): Promise<void> {
