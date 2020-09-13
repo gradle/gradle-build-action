@@ -41,9 +41,10 @@ async function gradleReleaseCandidate(): Promise<string> {
     const versionInfo = await gradleVersionDeclaration(
         `${gradleVersionsBaseUrl}/release-candidate`
     )
-    if (versionInfo) {
+    if (versionInfo && versionInfo.version && versionInfo.downloadUrl) {
         return provisionGradle(versionInfo.version, versionInfo.downloadUrl)
     }
+    core.info('No current release-candidate found, will fallback to current')
     return gradleCurrent()
 }
 
