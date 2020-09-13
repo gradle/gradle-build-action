@@ -28,10 +28,10 @@
     "@actions/core": "1.2.5",
     "@actions/exec": "1.0.4",
     "@actions/glob": "0.1.0",
+    "@actions/http-client": "1.0.8",
     "@actions/io": "1.0.2",
     "@actions/tool-cache": "1.6.0",
     "string-argv": "0.3.1",
-    "typed-rest-client": "1.7.3",
     "unzipper": "0.10.11"
   },
   "devDependencies": {

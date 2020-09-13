@@ -1,7 +1,7 @@
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
-import * as httpm from 'typed-rest-client/HttpClient'
+import * as httpm from '@actions/http-client'
 import * as unzip from 'unzipper'
 import * as core from '@actions/core'
 import * as io from '@actions/io'
