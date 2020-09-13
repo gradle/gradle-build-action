@@ -18,11 +18,8 @@ export async function execute(
         ignoreReturnCode: true,
         listeners: {
             stdline: (line: string) => {
-                if (line.startsWith('Publishing build scan...')) {
+                if (line.includes('Publishing build scan...')) {
                     publishing = true
-                }
-                if (publishing && line.length === 0) {
-                    publishing = false
                 }
                 if (publishing && line.startsWith('http')) {
                     buildScanUrl = line.trim()
