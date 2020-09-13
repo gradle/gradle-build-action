@@ -24,30 +24,30 @@
   "author": "Paul Merlin <paul@nosphere.org>",
   "license": "MIT",
   "dependencies": {
-    "@actions/cache": "0.2.1",
-    "@actions/core": "1.2.4",
+    "@actions/cache": "1.0.2",
+    "@actions/core": "1.2.5",
     "@actions/exec": "1.0.4",
     "@actions/glob": "0.1.0",
     "@actions/io": "1.0.2",
-    "@actions/tool-cache": "1.5.5",
+    "@actions/tool-cache": "1.6.0",
     "string-argv": "0.3.1",
     "typed-rest-client": "1.7.3",
     "unzipper": "0.10.11"
   },
   "devDependencies": {
-    "@types/jest": "26.0.0",
+    "@types/jest": "26.0.13",
     "@types/node": "12.12.6",
     "@types/unzipper": "0.10.3",
-    "@typescript-eslint/parser": "3.3.0",
+    "@typescript-eslint/parser": "4.1.0",
     "@zeit/ncc": "0.22.3",
-    "eslint": "7.3.0",
-    "eslint-plugin-github": "4.0.1",
-    "eslint-plugin-jest": "23.16.0",
-    "jest": "26.0.1",
-    "jest-circus": "26.0.1",
+    "eslint": "7.9.0",
+    "eslint-plugin-github": "4.1.1",
+    "eslint-plugin-jest": "24.0.1",
+    "jest": "26.4.2",
+    "jest-circus": "26.4.2",
     "js-yaml": "3.14.0",
-    "prettier": "2.0.5",
-    "ts-jest": "26.1.1",
-    "typescript": "3.9.5"
+    "prettier": "2.1.1",
+    "ts-jest": "26.3.0",
+    "typescript": "4.0.2"
   }
 }
