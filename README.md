@@ -163,11 +163,11 @@ If the defaults don't suit your needs you can override them with the following i
 ```yaml
 dependencies-cache-key: |
   **/gradle.properties
-  gradle/dependency-locking/**
+  gradle/dependency-locks/**
 dependencies-cache-exact: true
 configuration-cache-key: |
   **/gradle.properties
-  gradle/dependency-locking/**
+  gradle/dependency-locks/**
 configuration-cache-exact: true
 ```
 
@@ -179,7 +179,7 @@ If you happen to use Gradle [dependency locking](https://docs.gradle.org/current
 
 ```yaml
 dependencies-cache-enabled: true
-dependencies-cache-key: gradle/dependency-locking/**
+dependencies-cache-key: gradle/dependency-locks/**
 dependencies-cache-exact: true
 ```
 
