@@ -210,8 +210,16 @@ jobs:
       with:
         arguments: build
       id: gradle
-    - uses: example/action-that-comments-on-the-pr@v0
-      if: failure()
+    - name: "Comment build scan url"
+      uses: actions/github-script@v3
+      if: github.event_name == 'pull_request' && failure()
       with:
-        comment: Build failed ${{ steps.gradle.outputs.build-scan-url }}
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          github.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '❌ ${{ github.workflow }} failed: ${{ steps.gradle.outputs.build-scan-url }}'
+          })
 ```
