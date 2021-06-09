@@ -22,6 +22,14 @@ jobs:
         dependencies-cache-enabled: true
         configuration-cache-enabled: true
         arguments: test
+    - name: Test explicit wrapper
+      uses: ./
+      with:
+        gradle-version: wrapper
+        build-root-directory: __tests__/data/basic
+        dependencies-cache-enabled: true
+        configuration-cache-enabled: true
+        arguments: test
     - name: Test dist download
       uses: ./
       with:
