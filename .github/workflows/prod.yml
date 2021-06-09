@@ -14,27 +14,15 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Test wrapper
+    - name: Test use Gradle wrapper
       uses: ./
       with:
         wrapper-directory: __tests__/data/basic
         build-root-directory: __tests__/data/basic
-        dependencies-cache-enabled: true
-        configuration-cache-enabled: true
         arguments: test
-    - name: Test dist download
+    - name: Test use defined Gradle version
       uses: ./
       with:
         gradle-version: rc
         build-root-directory: __tests__/data/basic
-        dependencies-cache-enabled: true
-        configuration-cache-enabled: true
-        arguments: test --configuration-cache
-    - name: Stop Gradle daemon
-      uses: ./
-      with:
-        gradle-version: rc
-        build-root-directory: __tests__/data/basic
-        dependencies-cache-enabled: true
-        configuration-cache-enabled: true
-        arguments: --stop
+        arguments: test
