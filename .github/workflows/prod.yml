@@ -22,12 +22,18 @@ jobs:
     - name: Test custom wrapper location
       uses: ./
       with:
-        build-root-directory: __tests__/samples/basic
+        build-root-directory: __tests__/samples/no-wrapper
         wrapper-directory: __tests__/samples/basic
-        arguments: test
+        arguments: help
     - name: Test use defined Gradle version
       uses: ./
       with:
+        gradle-version: 6.9
+        build-root-directory: __tests__/samples/no-wrapper
+        arguments: help
+    - name: Test use Gradle version alias
+      uses: ./
+      with:
         gradle-version: rc
-        build-root-directory: __tests__/samples/basic
-        arguments: test
+        build-root-directory: __tests__/samples/no-wrapper
+        arguments: help
