@@ -10,6 +10,9 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: windows-latest
+            script-suffix: '.bat'
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
@@ -23,5 +26,11 @@ jobs:
       uses: ./
       with:
         gradle-version: 6.9
+        build-root-directory: __tests__/samples/no-wrapper
+        arguments: help
+    - name: Test use defined Gradle executable
+      uses: ./
+      with:
+        gradle-executable: __tests__/samples/basic/gradlew${{ matrix.script-suffix }}
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help
