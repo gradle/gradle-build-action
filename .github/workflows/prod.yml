@@ -28,6 +28,12 @@ jobs:
         gradle-version: 6.9
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help
+    - name: Test use Gradle version alias
+      uses: ./
+      with:
+        gradle-version: release-candidate
+        build-root-directory: __tests__/samples/no-wrapper
+        arguments: help
     - name: Test use defined Gradle executable
       uses: ./
       with:

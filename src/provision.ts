@@ -16,7 +16,7 @@ export async function gradleVersion(version: string): Promise<string> {
     switch (version) {
         case 'current':
             return gradleCurrent()
-        case 'rc':
+        case 'release-candidate':
             return gradleReleaseCandidate()
         case 'nightly':
             return gradleNightly()
