@@ -62,6 +62,7 @@ async function resolveGradleExecutable(
             ? path.resolve(workspaceDirectory, wrapperDirectory)
             : buildRootDirectory
 
+    gradlew.validateGradleWrapper(gradlewDirectory)
     await cacheWrapper.restoreCachedWrapperDist(gradlewDirectory)
 
     return path.resolve(gradlewDirectory, gradlew.wrapperFilename())
