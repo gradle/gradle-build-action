@@ -22,6 +22,6 @@ jobs:
     - name: Test use defined Gradle version
       uses: ./
       with:
-        gradle-version: rc
-        build-root-directory: __tests__/samples/basic
-        arguments: test
+        gradle-version: 6.9
+        build-root-directory: __tests__/samples/no-wrapper
+        arguments: help
