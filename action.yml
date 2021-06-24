@@ -5,9 +5,6 @@ author: 'Paul Merlin <paul@nospere.org>'
 # https://help.github.com/en/articles/metadata-syntax-for-github-actions
 
 inputs:
-  wrapper-directory:
-    description: Path to the Gradle Wrapper directory
-    required: false
   gradle-executable:
     description: Path to the Gradle executable
     required: false

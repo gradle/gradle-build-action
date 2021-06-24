@@ -41,11 +41,13 @@ async function resolveGradleExecutable(
     workspaceDirectory: string,
     buildRootDirectory: string
 ): Promise<string> {
+    // Download and use a specified Gradle version
     const gradleVersion = github.inputOrNull('gradle-version')
     if (gradleVersion !== null && gradleVersion !== 'wrapper') {
         return path.resolve(await provision.gradleVersion(gradleVersion))
     }
 
+    // Use a Gradle executable if defined
     const gradleExecutable = github.inputOrNull('gradle-executable')
     if (gradleExecutable !== null) {
         if (gradleExecutable.endsWith(gradlew.wrapperFilename())) {
@@ -56,16 +58,10 @@ async function resolveGradleExecutable(
         return path.resolve(workspaceDirectory, gradleExecutable)
     }
 
-    const wrapperDirectory = github.inputOrNull('wrapper-directory')
-    const gradlewDirectory =
-        wrapperDirectory !== null
-            ? path.resolve(workspaceDirectory, wrapperDirectory)
-            : buildRootDirectory
-
-    gradlew.validateGradleWrapper(gradlewDirectory)
-    await cacheWrapper.restoreCachedWrapperDist(gradlewDirectory)
-
-    return path.resolve(gradlewDirectory, gradlew.wrapperFilename())
+    // By default, use the Gradle wrapper declared for the build
+    gradlew.validateGradleWrapper(buildRootDirectory)
+    await cacheWrapper.restoreCachedWrapperDist(buildRootDirectory)
+    return path.resolve(buildRootDirectory, gradlew.wrapperFilename())
 }
 
 function resolveBuildRootDirectory(baseDirectory: string): string {
