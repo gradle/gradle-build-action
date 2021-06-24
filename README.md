@@ -92,11 +92,11 @@ Moreover, you can use the following aliases:
 
 | Alias | Selects |
 | --- |---|
-| `wrapper`      | The Gradle wrapper's version (default, useful for matrix builds) |
-| `current`      | The current [stable release](https://gradle.org/install/) |
-| `rc`      | The current [release candidate](https://gradle.org/release-candidate/) if any, otherwise fallback to `current` |
-| `nightly` | The latest [nightly](https://gradle.org/nightly/), fails if none. |
-| `release-nightly` | The latest [release nightly](https://gradle.org/release-nightly/), fails if none.      |
+| `wrapper`           | The Gradle wrapper's version (default, useful for matrix builds) |
+| `current`           | The current [stable release](https://gradle.org/install/) |
+| `release-candidate` | The current [release candidate](https://gradle.org/release-candidate/) if any, otherwise fallback to `current` |
+| `nightly`           | The latest [nightly](https://gradle.org/nightly/), fails if none. |
+| `release-nightly`   | The latest [release nightly](https://gradle.org/release-nightly/), fails if none.      |
 
 This can be handy to, for example, automatically test your build with the next Gradle version once a release candidate is out:
 
@@ -116,7 +116,7 @@ jobs:
         java-version: 11
     - uses: eskatos/gradle-command-action@v1
       with:
-        gradle-version: rc
+        gradle-version: release-candidate
         arguments: build --dry-run # just test build configuration
 ```
 

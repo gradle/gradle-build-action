@@ -19,6 +19,11 @@ export async function gradleVersion(version: string): Promise<string> {
         case 'current':
             return gradleCurrent()
         case 'rc':
+            core.warning(
+                `Specifying gradle-version 'rc' has been deprecated. Use 'release-candidate' instead.`
+            )
+            return gradleReleaseCandidate()
+        case 'release-candidate':
             return gradleReleaseCandidate()
         case 'nightly':
             return gradleNightly()

@@ -31,7 +31,7 @@ jobs:
     - name: Test use Gradle version alias
       uses: ./
       with:
-        gradle-version: rc
+        gradle-version: release-candidate
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help
     - name: Test use defined Gradle executable
