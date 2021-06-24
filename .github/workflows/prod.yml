@@ -17,10 +17,17 @@ jobs:
     - name: Test wrapper
       uses: ./
       with:
-        wrapper-directory: __tests__/data/basic
         build-root-directory: __tests__/data/basic
         dependencies-cache-enabled: true
         configuration-cache-enabled: true
+        arguments: test
+    - name: Test custom wrapper location
+      uses: ./
+      with:
+        build-root-directory: __tests__/data/basic
+        wrapper-directory: __tests__/data/basic
+        dependencies-cache-enabled: false
+        configuration-cache-enabled: false
         arguments: test
     - name: Test dist download
       uses: ./
