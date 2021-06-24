@@ -11,11 +11,15 @@ import * as provision from './provision'
 // Invoked by GitHub Actions
 export async function run(): Promise<void> {
     try {
-        const baseDirectory = process.env[`GITHUB_WORKSPACE`] || ''
+        const workspaceDirectory = process.env[`GITHUB_WORKSPACE`] || ''
+        const buildRootDirectory = resolveBuildRootDirectory(workspaceDirectory)
 
         const result = await execution.execute(
-            await resolveGradleExecutable(baseDirectory),
-            resolveBuildRootDirectory(baseDirectory),
+            await resolveGradleExecutable(
+                workspaceDirectory,
+                buildRootDirectory
+            ),
+            buildRootDirectory,
             parseCommandLineArguments()
         )
 
@@ -33,7 +37,10 @@ export async function run(): Promise<void> {
 
 run()
 
-async function resolveGradleExecutable(baseDirectory: string): Promise<string> {
+async function resolveGradleExecutable(
+    workspaceDirectory: string,
+    buildRootDirectory: string
+): Promise<string> {
     const gradleVersion = github.inputOrNull('gradle-version')
     if (gradleVersion !== null && gradleVersion !== 'wrapper') {
         return path.resolve(await provision.gradleVersion(gradleVersion))
@@ -46,14 +53,14 @@ async function resolveGradleExecutable(baseDirectory: string): Promise<string> {
                 path.resolve(gradleExecutable, '..')
             )
         }
-        return path.resolve(baseDirectory, gradleExecutable)
+        return path.resolve(workspaceDirectory, gradleExecutable)
     }
 
     const wrapperDirectory = github.inputOrNull('wrapper-directory')
     const gradlewDirectory =
         wrapperDirectory !== null
-            ? path.join(baseDirectory, wrapperDirectory)
-            : baseDirectory
+            ? path.resolve(workspaceDirectory, wrapperDirectory)
+            : buildRootDirectory
 
     await cacheWrapper.restoreCachedWrapperDist(gradlewDirectory)
 

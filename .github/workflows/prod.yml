@@ -17,7 +17,6 @@ jobs:
     - name: Test use Gradle wrapper
       uses: ./
       with:
-        wrapper-directory: __tests__/data/basic
         build-root-directory: __tests__/data/basic
         arguments: test
     - name: Test use defined Gradle version
