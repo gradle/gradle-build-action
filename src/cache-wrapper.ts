@@ -7,9 +7,7 @@ import * as cache from '@actions/cache'
 
 import * as github from './github-utils'
 
-const WRAPPER_CACHE_KEY = 'WRAPPER_CACHE_KEY'
-const WRAPPER_CACHE_PATH = 'WRAPPER_CACHE_PATH'
-const WRAPPER_CACHE_RESULT = 'WRAPPER_CACHE_RESULT'
+const WRAPPER_SLUG = 'WRAPPER_SLUG'
 
 export async function restoreCachedWrapperDist(
     gradlewDirectory: string | null
@@ -17,68 +15,62 @@ export async function restoreCachedWrapperDist(
     if (isWrapperCacheDisabled()) return
     if (gradlewDirectory == null) return
 
-    const wrapperSlug = extractGradleWrapperSlugFrom(
-        path.join(
-            path.resolve(gradlewDirectory),
-            'gradle/wrapper/gradle-wrapper.properties'
+    const wrapperProperties = path.join(
+        path.resolve(gradlewDirectory),
+        'gradle/wrapper/gradle-wrapper.properties'
+    )
+    const wrapperSlug = extractGradleWrapperSlugFrom(wrapperProperties)
+    if (!wrapperSlug) {
+        core.warning(
+            `Could not calculate wrapper version from ${wrapperProperties}`
         )
-    )
-    if (!wrapperSlug) return
+        return
+    }
 
-    const wrapperCacheKey = `wrapper-${wrapperSlug}`
-    const wrapperCachePath = path.resolve(
-        os.homedir(),
-        `.gradle/wrapper/dists/gradle-${wrapperSlug}`
-    )
-    if (fs.existsSync(wrapperCachePath)) return
+    const wrapperDir = getWrapperDir(wrapperSlug)
+    const cacheKey = getCacheKey(wrapperSlug)
+    const cachePath = getCachePath(wrapperSlug)
 
-    core.saveState(WRAPPER_CACHE_KEY, wrapperCacheKey)
-    core.saveState(WRAPPER_CACHE_PATH, wrapperCachePath)
+    // Check if the wrapper has already been downloaded to Gradle User Home
+    if (fs.existsSync(wrapperDir)) return
 
     try {
-        const restoredKey = await cache.restoreCache(
-            [wrapperCachePath],
-            wrapperCacheKey
-        )
+        const restoredKey = await cache.restoreCache([cachePath], cacheKey)
 
-        if (!restoredKey) {
+        if (restoredKey) {
             core.info(
-                'Wrapper installation cache not found, expect a Gradle distribution download.'
+                `Wrapper installation restored from cache key: ${restoredKey}`
             )
-            return
+        } else {
+            core.info(
+                `Wrapper installation cache not found. Will download and cache with key: ${cacheKey}.`
+            )
+            // Save the slug to trigger caching of the downloaded wrapper
+            core.saveState(WRAPPER_SLUG, wrapperSlug)
         }
-
-        core.saveState(WRAPPER_CACHE_RESULT, restoredKey)
-        core.info(
-            `Wrapper installation restored from cache key: ${restoredKey}`
-        )
-        return
     } catch (error) {
         core.info(
-            `Wrapper installation cache restore failed, expect a Gradle distribution download\n  ${error}`
+            `Wrapper installation cache restore failed for key: ${cacheKey}.\n  ${error}`
         )
-        return
     }
 }
 
 export async function cacheWrapperDist(): Promise<void> {
     if (isWrapperCacheDisabled()) return
 
-    const cacheKey = core.getState(WRAPPER_CACHE_KEY)
-    const cachePath = core.getState(WRAPPER_CACHE_PATH)
-    const cacheResult = core.getState(WRAPPER_CACHE_RESULT)
+    const wrapperSlug = core.getState(WRAPPER_SLUG)
+    if (!wrapperSlug) return
 
-    if (!cachePath || !fs.existsSync(cachePath)) {
-        core.debug('No wrapper installation to cache.')
+    const wrapperDir = getWrapperDir(wrapperSlug)
+    const cacheKey = getCacheKey(wrapperSlug)
+    const cachePath = getCachePath(wrapperSlug)
+
+    if (!fs.existsSync(wrapperDir)) {
+        core.warning(`No wrapper installation to cache at ${wrapperDir}`)
         return
     }
 
-    if (cacheResult && cacheKey === cacheResult) {
-        core.info(
-            `Wrapper installation cache hit occurred on the cache key ${cacheKey}, not saving cache.`
-        )
-        return
-    }
+    core.info(`Will cache wrapper zip ${cachePath} with key ${cacheKey}`)
 
     try {
         await cache.saveCache([cachePath], cacheKey)
@@ -116,4 +108,22 @@ export function extractGradleWrapperSlugFromDistUri(
 
 function isWrapperCacheDisabled(): boolean {
     return !github.inputBoolean('wrapper-cache-enabled', true)
+}
+
+function getCacheKey(wrapperSlug: string): string {
+    return `wrapper-v1-${wrapperSlug}`
+}
+
+function getWrapperDir(wrapperSlug: string): string {
+    return path.resolve(
+        os.homedir(),
+        `.gradle/wrapper/dists/gradle-${wrapperSlug}`
+    )
+}
+
+function getCachePath(wrapperSlug: string): string {
+    return path.resolve(
+        os.homedir(),
+        `.gradle/wrapper/dists/gradle-${wrapperSlug}/*/gradle-${wrapperSlug}.zip`
+    )
 }
