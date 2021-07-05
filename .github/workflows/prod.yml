@@ -17,11 +17,11 @@ jobs:
     - name: Test use Gradle wrapper
       uses: ./
       with:
-        build-root-directory: __tests__/data/basic
+        build-root-directory: __tests__/samples/basic
         arguments: test
     - name: Test use defined Gradle version
       uses: ./
       with:
         gradle-version: rc
-        build-root-directory: __tests__/data/basic
+        build-root-directory: __tests__/samples/basic
         arguments: test
