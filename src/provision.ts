@@ -3,6 +3,7 @@ import * as os from 'os'
 import * as path from 'path'
 import * as httpm from '@actions/http-client'
 import * as core from '@actions/core'
+import * as cache from '@actions/cache'
 import * as toolCache from '@actions/tool-cache'
 
 import * as gradlew from './gradlew'
@@ -85,36 +86,49 @@ async function findGradleVersionDeclaration(
 }
 
 async function provisionGradle(version: string, url: string): Promise<string> {
-    const cachedInstall: string = toolCache.find('gradle', version)
-    if (cachedInstall.length > 0) {
-        const cachedExecutable = executableFrom(cachedInstall)
-        core.info(`Provisioned Gradle executable ${cachedExecutable}`)
-        return cachedExecutable
-    }
-
-    const tmpdir = path.join(os.homedir(), 'gradle-provision-tmpdir')
-
-    core.info(`Downloading ${url}`)
+    const tmpdir = path.join(os.homedir(), 'gradle-installations')
 
     const downloadPath = path.join(
         tmpdir,
         `downloads/gradle-${version}-bin.zip`
     )
-    await toolCache.downloadTool(url, downloadPath)
-    core.info(
-        `Downloaded at ${downloadPath}, size ${fs.statSync(downloadPath).size}`
-    )
+
+    const cacheKey = `gradle-${version}`
+    const restoreKey = await cache.restoreCache([downloadPath], cacheKey)
+    if (restoreKey) {
+        core.info(`Restored Gradle distribution ${cacheKey} from cache`)
+    } else {
+        core.info(
+            `Gradle distribution ${cacheKey} not found in cache. Will download and cache.`
+        )
+        await toolCache.downloadTool(url, downloadPath)
+        core.info(
+            `Downloaded ${url} to ${downloadPath} (size ${
+                fs.statSync(downloadPath).size
+            })`
+        )
+
+        try {
+            await cache.saveCache([downloadPath], cacheKey)
+        } catch (error) {
+            if (error.name === cache.ValidationError.name) {
+                throw error
+            } else if (error.name === cache.ReserveCacheError.name) {
+                core.info(error.message)
+            } else {
+                core.info(`[warning] ${error.message}`)
+            }
+        }
+    }
 
     const installsDir = path.join(tmpdir, 'installs')
     await toolCache.extractZip(downloadPath, installsDir)
     const installDir = path.join(installsDir, `gradle-${version}`)
-    core.info(`Extracted in ${installDir}`)
+    core.info(`Extracted Gradle ${version} to ${installDir}`)
 
     const executable = executableFrom(installDir)
     fs.chmodSync(executable, '755')
     core.info(`Provisioned Gradle executable ${executable}`)
-
-    toolCache.cacheDir(installDir, 'gradle', version)
 
     return executable
 }
