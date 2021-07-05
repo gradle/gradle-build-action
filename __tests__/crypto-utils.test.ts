@@ -5,7 +5,7 @@ describe('crypto-utils', () => {
     describe('can hash', () => {
         it('a directory', async () => {
             const hash = await cryptoUtils.hashFiles(
-                path.resolve('__tests__/data/basic/gradle')
+                path.resolve('__tests__/data/crypto-utils-test/gradle')
             )
             expect(hash).toBe(
                 process.platform === 'win32'
@@ -15,7 +15,7 @@ describe('crypto-utils', () => {
         })
         it('a directory with a glob', async () => {
             const hash = await cryptoUtils.hashFiles(
-                path.resolve('__tests__/data/basic/'),
+                path.resolve('__tests__/data/crypto-utils-test/'),
                 ['gradle/**']
             )
             expect(hash).toBe(
@@ -26,7 +26,7 @@ describe('crypto-utils', () => {
         })
         it('a directory with globs', async () => {
             const hash = await cryptoUtils.hashFiles(
-                path.resolve('__tests__/data/basic/'),
+                path.resolve('__tests__/data/crypto-utils-test/'),
                 ['**/*.gradle', 'gradle/**']
             )
             expect(hash).toBe(
