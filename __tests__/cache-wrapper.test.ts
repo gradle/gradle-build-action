@@ -6,7 +6,7 @@ describe('cache', () => {
         it('from wrapper properties file', async () => {
             const version = cacheWrapper.extractGradleWrapperSlugFrom(
                 path.resolve(
-                    '__tests__/data/basic/gradle/wrapper/gradle-wrapper.properties'
+                    '__tests__/data/cache-wrapper-test/gradle-wrapper.properties'
                 )
             )
             expect(version).toBe('6.6.1-bin')
