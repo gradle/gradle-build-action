@@ -7,6 +7,7 @@ import * as cache from '@actions/cache'
 import * as toolCache from '@actions/tool-cache'
 
 import * as gradlew from './gradlew'
+import * as github from './github-utils'
 
 const gradleVersionsBaseUrl = 'https://services.gradle.org/versions'
 
@@ -32,7 +33,7 @@ async function gradleCurrent(): Promise<string> {
     const versionInfo = await gradleVersionDeclaration(
         `${gradleVersionsBaseUrl}/current`
     )
-    return provisionGradle(versionInfo.version, versionInfo.downloadUrl)
+    return provisionGradle(versionInfo)
 }
 
 async function gradleReleaseCandidate(): Promise<string> {
@@ -40,7 +41,7 @@ async function gradleReleaseCandidate(): Promise<string> {
         `${gradleVersionsBaseUrl}/release-candidate`
     )
     if (versionInfo && versionInfo.version && versionInfo.downloadUrl) {
-        return provisionGradle(versionInfo.version, versionInfo.downloadUrl)
+        return provisionGradle(versionInfo)
     }
     core.info('No current release-candidate found, will fallback to current')
     return gradleCurrent()
@@ -50,14 +51,14 @@ async function gradleNightly(): Promise<string> {
     const versionInfo = await gradleVersionDeclaration(
         `${gradleVersionsBaseUrl}/nightly`
     )
-    return provisionGradle(versionInfo.version, versionInfo.downloadUrl)
+    return provisionGradle(versionInfo)
 }
 
 async function gradleReleaseNightly(): Promise<string> {
     const versionInfo = await gradleVersionDeclaration(
         `${gradleVersionsBaseUrl}/release-nightly`
     )
-    return provisionGradle(versionInfo.version, versionInfo.downloadUrl)
+    return provisionGradle(versionInfo)
 }
 
 async function gradle(version: string): Promise<string> {
@@ -65,7 +66,7 @@ async function gradle(version: string): Promise<string> {
     if (!versionInfo) {
         throw new Error(`Gradle version ${version} does not exists`)
     }
-    return provisionGradle(versionInfo.version, versionInfo.downloadUrl)
+    return provisionGradle(versionInfo)
 }
 
 async function gradleVersionDeclaration(
@@ -85,28 +86,45 @@ async function findGradleVersionDeclaration(
     })
 }
 
-async function provisionGradle(version: string, url: string): Promise<string> {
-    const tmpdir = path.join(os.homedir(), 'gradle-installations')
+async function provisionGradle(
+    versionInfo: GradleVersionInfo
+): Promise<string> {
+    const downloadPath = await downloadAndCacheGradleDistribution(versionInfo)
 
+    const installsDir = path.join(os.homedir(), 'gradle-installations/installs')
+    await toolCache.extractZip(downloadPath, installsDir)
+    const installDir = path.join(installsDir, `gradle-${versionInfo.version}`)
+    core.info(`Extracted Gradle ${versionInfo.version} to ${installDir}`)
+
+    const executable = executableFrom(installDir)
+    fs.chmodSync(executable, '755')
+    core.info(`Provisioned Gradle executable ${executable}`)
+
+    return executable
+}
+
+async function downloadAndCacheGradleDistribution(
+    versionInfo: GradleVersionInfo
+): Promise<string> {
     const downloadPath = path.join(
-        tmpdir,
-        `downloads/gradle-${version}-bin.zip`
+        os.homedir(),
+        `gradle-installations/downloads/gradle-${versionInfo.version}-bin.zip`
     )
 
-    const cacheKey = `gradle-${version}`
+    if (isDistributionCacheDisabled()) {
+        await downloadGradleDistribution(versionInfo, downloadPath)
+        return downloadPath
+    }
+
+    const cacheKey = `gradle-${versionInfo.version}`
     const restoreKey = await cache.restoreCache([downloadPath], cacheKey)
     if (restoreKey) {
         core.info(`Restored Gradle distribution ${cacheKey} from cache`)
     } else {
         core.info(
-            `Gradle distribution ${cacheKey} not found in cache. Will download and cache.`
+            `Gradle distribution ${versionInfo.version} not found in cache. Will download.`
         )
-        await toolCache.downloadTool(url, downloadPath)
-        core.info(
-            `Downloaded ${url} to ${downloadPath} (size ${
-                fs.statSync(downloadPath).size
-            })`
-        )
+        await downloadGradleDistribution(versionInfo, downloadPath)
 
         try {
             await cache.saveCache([downloadPath], cacheKey)
@@ -120,17 +138,19 @@ async function provisionGradle(version: string, url: string): Promise<string> {
             }
         }
     }
+    return downloadPath
+}
 
-    const installsDir = path.join(tmpdir, 'installs')
-    await toolCache.extractZip(downloadPath, installsDir)
-    const installDir = path.join(installsDir, `gradle-${version}`)
-    core.info(`Extracted Gradle ${version} to ${installDir}`)
-
-    const executable = executableFrom(installDir)
-    fs.chmodSync(executable, '755')
-    core.info(`Provisioned Gradle executable ${executable}`)
-
-    return executable
+async function downloadGradleDistribution(
+    versionInfo: GradleVersionInfo,
+    downloadPath: string
+): Promise<void> {
+    await toolCache.downloadTool(versionInfo.downloadUrl, downloadPath)
+    core.info(
+        `Downloaded ${versionInfo.downloadUrl} to ${downloadPath} (size ${
+            fs.statSync(downloadPath).size
+        })`
+    )
 }
 
 function executableFrom(installDir: string): string {
@@ -151,6 +171,10 @@ async function httpGetString(url: string): Promise<string> {
     const httpClient = new httpm.HttpClient('eskatos/gradle-command-action')
     const response = await httpClient.get(url)
     return response.readBody()
+}
+
+function isDistributionCacheDisabled(): boolean {
+    return !github.inputBoolean('wrapper-cache-enabled', true)
 }
 
 interface GradleVersionInfo {
