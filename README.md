@@ -122,7 +122,7 @@ jobs:
 
 This action provides 3 levels of caching to help speed up your GitHub Actions:
 
-- `wrapper` caches the local [wrapper](https://docs.gradle.org/current/userguide/gradle_wrapper.html) installation, saving time downloading and unpacking Gradle distributions ;
+- `distributions` caches the any downloaded Gradle zips, including any downloaded [wrapper](https://docs.gradle.org/current/userguide/gradle_wrapper.html) versions, saving time downloading and unpacking Gradle distributions ;
 - `dependencies` caches the [dependencies](https://docs.gradle.org/current/userguide/dependency_resolution.html#sub:cache_copy), saving time downloading dependencies ;
 - `configuration` caches the [build configuration](https://docs.gradle.org/nightly/userguide/configuration_cache.html), saving time configuring the build.
 
@@ -132,12 +132,12 @@ Future versions of this action will enable all caching by default.
 You can control which level is enabled as follows:
 
 ```yaml
-wrapper-cache-enabled: true
+distributions-cache-enabled: true
 dependencies-cache-enabled: true
 configuration-cache-enabled: true
 ```
 
-The wrapper installation cache is simple and can't be configured further.
+The distributions cache is simple and can't be configured further.
 
 The dependencies and configuration cache will compute a cache key in a best effort manner.
 Keep reading to learn how to better control how they work.

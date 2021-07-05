@@ -12,7 +12,7 @@ const WRAPPER_SLUG = 'WRAPPER_SLUG'
 export async function restoreCachedWrapperDist(
     gradlewDirectory: string | null
 ): Promise<void> {
-    if (isWrapperCacheDisabled()) return
+    if (isDistributionsCacheDisabled()) return
     if (gradlewDirectory == null) return
 
     const wrapperProperties = path.join(
@@ -56,7 +56,7 @@ export async function restoreCachedWrapperDist(
 }
 
 export async function cacheWrapperDist(): Promise<void> {
-    if (isWrapperCacheDisabled()) return
+    if (isDistributionsCacheDisabled()) return
 
     const wrapperSlug = core.getState(WRAPPER_SLUG)
     if (!wrapperSlug) return
@@ -106,8 +106,8 @@ export function extractGradleWrapperSlugFromDistUri(
     return match ? match[1] : null
 }
 
-function isWrapperCacheDisabled(): boolean {
-    return !github.inputBoolean('wrapper-cache-enabled', true)
+function isDistributionsCacheDisabled(): boolean {
+    return !github.inputBoolean('distributions-cache-enabled', true)
 }
 
 function getCacheKey(wrapperSlug: string): string {
