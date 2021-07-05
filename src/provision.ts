@@ -111,7 +111,7 @@ async function downloadAndCacheGradleDistribution(
         `gradle-installations/downloads/gradle-${versionInfo.version}-bin.zip`
     )
 
-    if (isDistributionCacheDisabled()) {
+    if (isDistributionsCacheDisabled()) {
         await downloadGradleDistribution(versionInfo, downloadPath)
         return downloadPath
     }
@@ -173,8 +173,8 @@ async function httpGetString(url: string): Promise<string> {
     return response.readBody()
 }
 
-function isDistributionCacheDisabled(): boolean {
-    return !github.inputBoolean('wrapper-cache-enabled', true)
+function isDistributionsCacheDisabled(): boolean {
+    return !github.inputBoolean('distributions-cache-enabled', true)
 }
 
 interface GradleVersionInfo {
