@@ -89,11 +89,15 @@ async function findGradleVersionDeclaration(
 async function provisionGradle(
     versionInfo: GradleVersionInfo
 ): Promise<string> {
-    const downloadPath = await downloadAndCacheGradleDistribution(versionInfo)
-
     const installsDir = path.join(os.homedir(), 'gradle-installations/installs')
-    await toolCache.extractZip(downloadPath, installsDir)
     const installDir = path.join(installsDir, `gradle-${versionInfo.version}`)
+    if (fs.existsSync(installDir)) {
+        core.info(`Gradle installation already exists at ${installDir}`)
+        return executableFrom(installDir)
+    }
+
+    const downloadPath = await downloadAndCacheGradleDistribution(versionInfo)
+    await toolCache.extractZip(downloadPath, installsDir)
     core.info(`Extracted Gradle ${versionInfo.version} to ${installDir}`)
 
     const executable = executableFrom(installDir)
