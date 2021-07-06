@@ -2,14 +2,11 @@ import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
 import * as httpm from '@actions/http-client'
-import * as unzip from 'unzipper'
 import * as core from '@actions/core'
-import * as io from '@actions/io'
 import * as toolCache from '@actions/tool-cache'
 
 import * as gradlew from './gradlew'
 
-const httpc = new httpm.HttpClient('eskatos/gradle-command-action')
 const gradleVersionsBaseUrl = 'https://services.gradle.org/versions'
 
 /**
@@ -95,22 +92,21 @@ async function provisionGradle(version: string, url: string): Promise<string> {
         return cachedExecutable
     }
 
-    const home = os.homedir()
-    const tmpdir = path.join(home, 'gradle-provision-tmpdir')
-    const downloadsDir = path.join(tmpdir, 'downloads')
-    const installsDir = path.join(tmpdir, 'installs')
-    await io.mkdirP(downloadsDir)
-    await io.mkdirP(installsDir)
+    const tmpdir = path.join(os.homedir(), 'gradle-provision-tmpdir')
 
     core.info(`Downloading ${url}`)
 
-    const downloadPath = path.join(downloadsDir, `gradle-${version}-bin.zip`)
-    await httpDownload(url, downloadPath)
+    const downloadPath = path.join(
+        tmpdir,
+        `downloads/gradle-${version}-bin.zip`
+    )
+    await toolCache.downloadTool(url, downloadPath)
     core.info(
         `Downloaded at ${downloadPath}, size ${fs.statSync(downloadPath).size}`
     )
 
-    await extractZip(downloadPath, installsDir)
+    const installsDir = path.join(tmpdir, 'installs')
+    await toolCache.extractZip(downloadPath, installsDir)
     const installDir = path.join(installsDir, `gradle-${version}`)
     core.info(`Extracted in ${installDir}`)
 
@@ -138,36 +134,9 @@ async function httpGetGradleVersions(
 }
 
 async function httpGetString(url: string): Promise<string> {
-    const response = await httpc.get(url)
+    const httpClient = new httpm.HttpClient('eskatos/gradle-command-action')
+    const response = await httpClient.get(url)
     return response.readBody()
-}
-
-async function httpDownload(url: string, localPath: string): Promise<void> {
-    const response = await httpc.get(url)
-    return new Promise<void>(function (resolve, reject) {
-        const writeStream = fs.createWriteStream(localPath)
-        response.message
-            .pipe(writeStream)
-            .on('close', () => {
-                resolve()
-            })
-            .on('error', err => {
-                reject(err)
-            })
-    })
-}
-
-async function extractZip(zip: string, destination: string): Promise<void> {
-    return new Promise<void>(function (resolve, reject) {
-        fs.createReadStream(zip)
-            .pipe(unzip.Extract({path: destination}))
-            .on('close', () => {
-                resolve()
-            })
-            .on('error', err => {
-                reject(err)
-            })
-    })
 }
 
 interface GradleVersionInfo {
