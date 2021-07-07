@@ -60,14 +60,6 @@ If you need to pass environment variables, simply use the GitHub Actions workflo
     build-root-directory: some/subdirectory
 ```
 
-## Use a Gradle wrapper from a different directory
- 
-```yaml
- - uses: eskatos/gradle-command-action@v1
-   with:
-     wrapper-directory: path/to/wrapper-directory
- ```
-
 ## Use a specific `gradle` executable
 
 ```yaml
@@ -75,6 +67,16 @@ If you need to pass environment variables, simply use the GitHub Actions workflo
    with:
      gradle-executable: path/to/gradle
 ```
+
+## Use a Gradle wrapper from a different directory
+ 
+```yaml
+ - uses: eskatos/gradle-command-action@v1
+   with:
+     gradle-executable: path/to/gradlew
+ ```
+
+ NOTE: The `wrapper-directory` input has been deprecated. Use `gradle-executable` instead.
 
 ## Setup and use a declared Gradle version
 

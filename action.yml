@@ -8,6 +8,7 @@ inputs:
   wrapper-directory:
     description: Path to the Gradle Wrapper directory
     required: false
+    deprecationMessage: Use 'gradle-executable' to point to a gradlew[.bat] file in a non-default location
   gradle-executable:
     description: Path to the Gradle executable
     required: false

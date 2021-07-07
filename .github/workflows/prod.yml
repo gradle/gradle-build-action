@@ -22,12 +22,6 @@ jobs:
       with:
         build-root-directory: __tests__/samples/basic
         arguments: test
-    - name: Test custom wrapper location
-      uses: ./
-      with:
-        build-root-directory: __tests__/samples/no-wrapper
-        wrapper-directory: __tests__/samples/basic
-        arguments: help
     - name: Test use defined Gradle version
       uses: ./
       with:
@@ -45,6 +39,12 @@ jobs:
       with:
         gradle-executable: __tests__/samples/basic/gradlew${{ matrix.script-suffix }}
         build-root-directory: __tests__/samples/no-wrapper
+        arguments: help
+    - name: Test custom wrapper location (deprecated)
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/no-wrapper
+        wrapper-directory: __tests__/samples/basic
         arguments: help
 
   failures: # These build invocations are informational only, and are expected to fail
