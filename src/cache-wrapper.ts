@@ -107,7 +107,16 @@ export function extractGradleWrapperSlugFromDistUri(
 }
 
 function isWrapperCacheDisabled(): boolean {
-    return !github.inputBoolean('wrapper-cache-enabled', true)
+    // Check if either 'distributions' or 'wrapper' cache has been disabled
+    const wrapperCacheEnabled = github.inputBoolean(
+        'wrapper-cache-enabled',
+        true
+    )
+    const distributionsCacheEnabled = github.inputBoolean(
+        'distributions-cache-enabled',
+        true
+    )
+    return !wrapperCacheEnabled || !distributionsCacheEnabled
 }
 
 function getCacheKey(wrapperSlug: string): string {

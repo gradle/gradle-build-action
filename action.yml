@@ -20,9 +20,13 @@ inputs:
   arguments:
     description: Gradle command line arguments, see gradle --help
     required: false
+  distributions-cache-enabled:
+    description: Whether caching downloaded Gradle distributions is enabled or not, default to 'true'
+    required: false
   wrapper-cache-enabled:
     description: Whether caching wrapper installation is enabled or not, default to 'true'
     required: false
+    deprecationMessage: Replaced by 'distributions-cache-enabled' which enables caching for all downloaded Gradle distributions
   dependencies-cache-enabled:
     description: Whether caching dependencies is enabled or not, default to 'false'
     required: false
