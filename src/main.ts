@@ -2,7 +2,6 @@ import * as core from '@actions/core'
 import * as path from 'path'
 import {parseArgsStringToArgv} from 'string-argv'
 
-import * as github from './github-utils'
 import * as cacheWrapper from './cache-wrapper'
 import * as execution from './execution'
 import * as gradlew from './gradlew'
@@ -41,13 +40,13 @@ async function resolveGradleExecutable(
     workspaceDirectory: string,
     buildRootDirectory: string
 ): Promise<string> {
-    const gradleVersion = github.inputOrNull('gradle-version')
-    if (gradleVersion !== null && gradleVersion !== 'wrapper') {
+    const gradleVersion = core.getInput('gradle-version')
+    if (gradleVersion !== '' && gradleVersion !== 'wrapper') {
         return path.resolve(await provision.gradleVersion(gradleVersion))
     }
 
-    const gradleExecutable = github.inputOrNull('gradle-executable')
-    if (gradleExecutable !== null) {
+    const gradleExecutable = core.getInput('gradle-executable')
+    if (gradleExecutable !== '') {
         if (gradleExecutable.endsWith(gradlew.wrapperFilename())) {
             await cacheWrapper.restoreCachedWrapperDist(
                 path.resolve(gradleExecutable, '..')
@@ -56,9 +55,9 @@ async function resolveGradleExecutable(
         return path.resolve(workspaceDirectory, gradleExecutable)
     }
 
-    const wrapperDirectory = github.inputOrNull('wrapper-directory')
+    const wrapperDirectory = core.getInput('wrapper-directory')
     const gradlewDirectory =
-        wrapperDirectory !== null
+        wrapperDirectory !== ''
             ? path.resolve(workspaceDirectory, wrapperDirectory)
             : buildRootDirectory
 
@@ -69,15 +68,15 @@ async function resolveGradleExecutable(
 }
 
 function resolveBuildRootDirectory(baseDirectory: string): string {
-    const buildRootDirectory = github.inputOrNull('build-root-directory')
+    const buildRootDirectory = core.getInput('build-root-directory')
     const resolvedBuildRootDirectory =
-        buildRootDirectory === null
+        buildRootDirectory === ''
             ? path.resolve(baseDirectory)
             : path.resolve(baseDirectory, buildRootDirectory)
     return resolvedBuildRootDirectory
 }
 
 function parseCommandLineArguments(): string[] {
-    const input = github.inputOrNull('arguments')
-    return input === null ? [] : parseArgsStringToArgv(input)
+    const input = core.getInput('arguments')
+    return parseArgsStringToArgv(input)
 }

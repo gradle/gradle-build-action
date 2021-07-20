@@ -5,8 +5,6 @@ import * as os from 'os'
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 
-import * as github from './github-utils'
-
 const WRAPPER_SLUG = 'WRAPPER_SLUG'
 
 export async function restoreCachedWrapperDist(
@@ -108,13 +106,9 @@ export function extractGradleWrapperSlugFromDistUri(
 
 function isWrapperCacheDisabled(): boolean {
     // Check if either 'distributions' or 'wrapper' cache has been disabled
-    const wrapperCacheEnabled = github.inputBoolean(
-        'wrapper-cache-enabled',
-        true
-    )
-    const distributionsCacheEnabled = github.inputBoolean(
-        'distributions-cache-enabled',
-        true
+    const wrapperCacheEnabled = core.getBooleanInput('wrapper-cache-enabled')
+    const distributionsCacheEnabled = core.getBooleanInput(
+        'distributions-cache-enabled'
     )
     return !wrapperCacheEnabled || !distributionsCacheEnabled
 }

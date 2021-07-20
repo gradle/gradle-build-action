@@ -24,28 +24,34 @@ inputs:
   distributions-cache-enabled:
     description: Whether caching downloaded Gradle distributions is enabled or not, default to 'true'
     required: false
+    default: true
   wrapper-cache-enabled:
     description: Whether caching wrapper installation is enabled or not, default to 'true'
     required: false
+    default: true
     deprecationMessage: Replaced by 'distributions-cache-enabled' which enables caching for all downloaded Gradle distributions
   dependencies-cache-enabled:
     description: Whether caching dependencies is enabled or not, default to 'false'
     required: false
+    default: false
   dependencies-cache-key:
     description: Globs of files to hash in the build root directory, separated by new lines, use best-effort if unset
     required: false
   dependencies-cache-exact:
     description: Whether to restore only if exact match, default to 'false'
     required: false
+    default: false
   configuration-cache-enabled:
     description: Whether caching build configuration is enabled or not, default to 'false'
     required: false
+    default: false
   configuration-cache-key:
     description: Globs of files to hash in the build root directory, separated by new lines, use best-effort if unset
     required: false
   configuration-cache-exact:
     description: Whether to restore only if exact match, default to 'false'
     required: false
+    default: false
 
 outputs:
   build-scan-url:

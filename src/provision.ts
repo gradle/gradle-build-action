@@ -7,7 +7,6 @@ import * as cache from '@actions/cache'
 import * as toolCache from '@actions/tool-cache'
 
 import * as gradlew from './gradlew'
-import * as github from './github-utils'
 
 const gradleVersionsBaseUrl = 'https://services.gradle.org/versions'
 
@@ -185,7 +184,7 @@ async function httpGetString(url: string): Promise<string> {
 }
 
 function isDistributionsCacheDisabled(): boolean {
-    return !github.inputBoolean('distributions-cache-enabled', true)
+    return !core.getBooleanInput('distributions-cache-enabled')
 }
 
 interface GradleVersionInfo {
