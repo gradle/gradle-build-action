@@ -98,5 +98,9 @@ Thumbs.db
 __tests__/runner/*
 # lib/**/*
 
+# IntelliJ IDEA config files
 .idea/
 *.iml
+
+# ASDF tool configuration
+.tool-versions
