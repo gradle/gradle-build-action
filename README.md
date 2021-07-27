@@ -60,14 +60,6 @@ If you need to pass environment variables, simply use the GitHub Actions workflo
     build-root-directory: some/subdirectory
 ```
 
-## Use a Gradle wrapper from a different directory
- 
-```yaml
- - uses: eskatos/gradle-command-action@v1
-   with:
-     wrapper-directory: path/to/wrapper-directory
- ```
-
 ## Use a specific `gradle` executable
 
 ```yaml
@@ -75,6 +67,16 @@ If you need to pass environment variables, simply use the GitHub Actions workflo
    with:
      gradle-executable: path/to/gradle
 ```
+
+## Use a Gradle wrapper from a different directory
+ 
+```yaml
+ - uses: eskatos/gradle-command-action@v1
+   with:
+     gradle-executable: path/to/gradlew
+ ```
+
+ NOTE: The `wrapper-directory` input has been deprecated. Use `gradle-executable` instead.
 
 ## Setup and use a declared Gradle version
 
@@ -90,11 +92,11 @@ Moreover, you can use the following aliases:
 
 | Alias | Selects |
 | --- |---|
-| `wrapper`      | The Gradle wrapper's version (default, useful for matrix builds) |
-| `current`      | The current [stable release](https://gradle.org/install/) |
-| `rc`      | The current [release candidate](https://gradle.org/release-candidate/) if any, otherwise fallback to `current` |
-| `nightly` | The latest [nightly](https://gradle.org/nightly/), fails if none. |
-| `release-nightly` | The latest [release nightly](https://gradle.org/release-nightly/), fails if none.      |
+| `wrapper`           | The Gradle wrapper's version (default, useful for matrix builds) |
+| `current`           | The current [stable release](https://gradle.org/install/) |
+| `release-candidate` | The current [release candidate](https://gradle.org/release-candidate/) if any, otherwise fallback to `current` |
+| `nightly`           | The latest [nightly](https://gradle.org/nightly/), fails if none. |
+| `release-nightly`   | The latest [release nightly](https://gradle.org/release-nightly/), fails if none.      |
 
 This can be handy to, for example, automatically test your build with the next Gradle version once a release candidate is out:
 
@@ -114,7 +116,7 @@ jobs:
         java-version: 11
     - uses: eskatos/gradle-command-action@v1
       with:
-        gradle-version: rc
+        gradle-version: release-candidate
         arguments: build --dry-run # just test build configuration
 ```
 

@@ -6,7 +6,7 @@ on:
   push:
 
 jobs:
-  check:
+  gradle-execution:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -22,12 +22,6 @@ jobs:
       with:
         build-root-directory: __tests__/samples/basic
         arguments: test
-    - name: Test custom wrapper location
-      uses: ./
-      with:
-        build-root-directory: __tests__/samples/no-wrapper
-        wrapper-directory: __tests__/samples/basic
-        arguments: help
     - name: Test use defined Gradle version
       uses: ./
       with:
@@ -37,7 +31,7 @@ jobs:
     - name: Test use Gradle version alias
       uses: ./
       with:
-        gradle-version: rc
+        gradle-version: release-candidate
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help
     - name: Test use defined Gradle executable
@@ -46,6 +40,45 @@ jobs:
         gradle-executable: __tests__/samples/basic/gradlew${{ matrix.script-suffix }}
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help
+    - name: Test custom wrapper location (deprecated)
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/no-wrapper
+        wrapper-directory: __tests__/samples/basic
+        arguments: help
+
+  dependencies-cache:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Test dependencies-cache-enabled
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/basic
+        arguments: test --no-daemon
+        dependencies-cache-enabled: true
+
+  configuration-cache:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Test configuration-cache-enabled
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/basic
+        arguments: test --configuration-cache --no-daemon
+        configuration-cache-enabled: true
+        dependencies-cache-enabled: true 
+        # Configuration cache requires dependencies cache, since it assumes dependencies are already downloaded.
+
 
   failures: # These build invocations are informational only, and are expected to fail
     runs-on: ubuntu-latest

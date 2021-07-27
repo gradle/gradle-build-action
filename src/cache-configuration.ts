@@ -4,7 +4,6 @@ import fs from 'fs'
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 
-import * as github from './github-utils'
 import * as crypto from './crypto-utils'
 
 import {inputCacheKeyGlobs, tryDeleteFiles} from './cache-dependencies'
@@ -22,7 +21,7 @@ export async function restoreCachedConfiguration(
     if (fs.existsSync(cachePath)) return
     core.saveState(CONFIGURATION_CACHE_PATH, cachePath)
 
-    const inputCacheExact = github.inputBoolean('configuration-cache-exact')
+    const inputCacheExact = core.getBooleanInput('configuration-cache-exact')
     const cacheKeyGlobs = inputCacheKeyGlobs('configuration-cache-key')
 
     const hash = await crypto.hashFiles(rootDir, cacheKeyGlobs)
@@ -93,5 +92,5 @@ export async function cacheConfiguration(): Promise<void> {
 }
 
 function isConfigurationCacheDisabled(): boolean {
-    return !github.inputBoolean('configuration-cache-enabled', false)
+    return !core.getBooleanInput('configuration-cache-enabled')
 }

@@ -5,7 +5,6 @@ import * as os from 'os'
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 
-import * as github from './github-utils'
 import * as crypto from './crypto-utils'
 
 const DEPENDENCIES_CACHE_PATH = 'DEPENDENCIES_CACHE_PATH'
@@ -21,7 +20,7 @@ export async function restoreCachedDependencies(
     if (fs.existsSync(cachePath)) return
     core.saveState(DEPENDENCIES_CACHE_PATH, cachePath)
 
-    const inputCacheExact = github.inputBoolean('dependencies-cache-exact')
+    const inputCacheExact = core.getBooleanInput('dependencies-cache-exact')
     const cacheKeyGlobs = inputCacheKeyGlobs('dependencies-cache-key')
 
     const hash = await crypto.hashFiles(rootDir, cacheKeyGlobs)
@@ -104,12 +103,12 @@ export function tryDeleteFiles(filePaths: string[]): boolean {
 }
 
 function isDependenciesCacheDisabled(): boolean {
-    return !github.inputBoolean('dependencies-cache-enabled', false)
+    return !core.getBooleanInput('dependencies-cache-enabled')
 }
 
 export function inputCacheKeyGlobs(input: string): string[] {
-    const inputValue = github.inputArrayOrNull(input)
-    return inputValue
+    const inputValue = core.getMultilineInput(input)
+    return inputValue.length > 0
         ? inputValue
         : [
               '**/*.gradle',
