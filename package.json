@@ -1,8 +1,8 @@
 {
-  "name": "gradle-command-action",
+  "name": "gradle-build-action",
   "version": "1.0.0",
   "private": true,
-  "description": "Execute Gradle Command Line",
+  "description": "Execute Gradle Build",
   "scripts": {
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eskatos/gradle-command-action.git"
+    "url": "git+https://github.com/gradle/gradle-build-action.git"
   },
   "keywords": [
     "github",

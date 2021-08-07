@@ -178,7 +178,7 @@ async function httpGetGradleVersions(
 }
 
 async function httpGetString(url: string): Promise<string> {
-    const httpClient = new httpm.HttpClient('eskatos/gradle-command-action')
+    const httpClient = new httpm.HttpClient('gradle/gradle-build-action')
     const response = await httpClient.get(url)
     return response.readBody()
 }

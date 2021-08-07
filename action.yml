@@ -1,6 +1,5 @@
 name: "Gradle Command"
-description: 'Execute Gradle Command Line'
-author: 'Paul Merlin <paul@nospere.org>'
+description: 'Execute Gradle Build'
 
 # https://help.github.com/en/articles/metadata-syntax-for-github-actions
 

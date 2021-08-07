@@ -1,12 +1,10 @@
-# Execute Gradle commands in GitHub Actions workflows
+# Execute Gradle builds in GitHub Actions workflows
 
-This GitHub Action can be used to run arbitrary Gradle commands on any platform supported by GitHub Actions.
-
-You might also be interested by the related [Gradle Plugin](https://github.com/eskatos/gradle-github-actions-plugin) that allows your build to easily get GitHub Actions environment and tag Gradle Build Scans accordingly.
+This GitHub Action can be used to execute a Gradle build on any platform supported by GitHub Actions.
 
 ## Usage
 
-The following workflow will run `./gradlew build` using the wrapper from the repository on ubuntu, macos and windows. The only prerequisite is to have Java installed, you can define the version you need to run the build using the `actions/setup-java` action.
+The following workflow will run `./gradlew build` using the wrapper from the repository on ubuntu, macos and windows. The only prerequisite is to have Java installed: you define the version of Java you need to run the build using the `actions/setup-java` action.
 
 ```yaml
 # .github/workflows/gradle-build-pr.yml
@@ -23,7 +21,7 @@ jobs:
     - uses: actions/setup-java@v1
       with:
         java-version: 11
-    - uses: eskatos/gradle-command-action@v1
+    - uses: gradle/gradle-build-action@v1
       with:
         arguments: build
 ```
@@ -47,7 +45,7 @@ See `gradle --help` for more information.
 If you need to pass environment variables, simply use the GitHub Actions workflow syntax:
 
 ```yaml
-- uses: eskatos/gradle-command-action@v1
+- uses: gradle/gradle-build-action@v1
   env:
     CI: true
 ```
@@ -55,7 +53,7 @@ If you need to pass environment variables, simply use the GitHub Actions workflo
 ## Run a build from a different directory
 
 ```yaml
-- uses: eskatos/gradle-command-action@v1
+- uses: gradle/gradle-build-action@v1
   with:
     build-root-directory: some/subdirectory
 ```
@@ -63,7 +61,7 @@ If you need to pass environment variables, simply use the GitHub Actions workflo
 ## Use a specific `gradle` executable
 
 ```yaml
- - uses: eskatos/gradle-command-action@v1
+ - uses: gradle/gradle-build-action@v1
    with:
      gradle-executable: path/to/gradle
 ```
@@ -71,7 +69,7 @@ If you need to pass environment variables, simply use the GitHub Actions workflo
 ## Use a Gradle wrapper from a different directory
  
 ```yaml
- - uses: eskatos/gradle-command-action@v1
+ - uses: gradle/gradle-build-action@v1
    with:
      gradle-executable: path/to/gradlew
  ```
@@ -81,7 +79,7 @@ If you need to pass environment variables, simply use the GitHub Actions workflo
 ## Setup and use a declared Gradle version
 
 ```yaml
- - uses: eskatos/gradle-command-action@v1
+ - uses: gradle/gradle-build-action@v1
    with:
      gradle-version: 6.5
 ```
@@ -114,7 +112,7 @@ jobs:
     - uses: actions/setup-java@v1
       with:
         java-version: 11
-    - uses: eskatos/gradle-command-action@v1
+    - uses: gradle/gradle-build-action@v1
       with:
         gradle-version: release-candidate
         arguments: build --dry-run # just test build configuration
@@ -189,7 +187,7 @@ dependencies-cache-exact: true
 
 ## Build scans
 
-If your build publishes a [build scan](https://gradle.com/build-scans/) the `gradle-command-action` action will emit the link to the published build scan as an output named `build-scan-url`.
+If your build publishes a [build scan](https://gradle.com/build-scans/) the `gradle-build-action` action will emit the link to the published build scan as an output named `build-scan-url`.
 
 You can then use that link in subsequent actions of your workflow.
 
@@ -210,7 +208,7 @@ jobs:
     - uses: actions/setup-java@v1
       with:
         java-version: 11
-    - uses: eskatos/gradle-command-action@v1
+    - uses: gradle/gradle-build-action@v1
       with:
         arguments: build
       id: gradle
