@@ -144,6 +144,8 @@ The distributions cache is simple and can't be configured further.
 The dependencies and configuration cache will compute a cache key in a best effort manner.
 Keep reading to learn how to better control how they work.
 
+Note that enabling configuration cache without thee dependencies cache is not permitted, since a hit in the configuration cache assumes that dependencies are already present in the local dependencies cache.
+
 ### Configuring the dependencies and configuration caches
 
 Both the dependencies and configuration caches use the same default configuration:

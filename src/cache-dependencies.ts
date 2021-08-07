@@ -102,7 +102,7 @@ export function tryDeleteFiles(filePaths: string[]): boolean {
     return !failure
 }
 
-function isDependenciesCacheDisabled(): boolean {
+export function isDependenciesCacheDisabled(): boolean {
     return !core.getBooleanInput('dependencies-cache-enabled')
 }
 

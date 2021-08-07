@@ -6,7 +6,11 @@ import * as cache from '@actions/cache'
 
 import * as crypto from './crypto-utils'
 
-import {inputCacheKeyGlobs, tryDeleteFiles} from './cache-dependencies'
+import {
+    inputCacheKeyGlobs,
+    tryDeleteFiles,
+    isDependenciesCacheDisabled
+} from './cache-dependencies'
 
 const CONFIGURATION_CACHE_PATH = 'CONFIGURATION_CACHE_PATH'
 const CONFIGURATION_CACHE_KEY = 'CONFIGURATION_CACHE_KEY'
@@ -16,6 +20,12 @@ export async function restoreCachedConfiguration(
     rootDir: string
 ): Promise<void> {
     if (isConfigurationCacheDisabled()) return
+
+    if (isDependenciesCacheDisabled()) {
+        throw new Error(
+            `Must enable dependencies-cache when configuration-cache is enabled`
+        )
+    }
 
     const cachePath = path.resolve(rootDir, '.gradle/configuration-cache')
     if (fs.existsSync(cachePath)) return
