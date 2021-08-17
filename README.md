@@ -187,6 +187,18 @@ dependencies-cache-key: gradle/dependency-locks/**
 dependencies-cache-exact: true
 ```
 
+### Using the caches read-only
+
+Cache storage space is limited for GitHub actions, and writing new cache entries can trigger the deletion of exising entries.
+In some circumstances, it makes sense for a Gradle invocation to use any existing cache entries but not to write and changes back.
+For example, you may want to write cache entries for builds on your `main` branch, but not for any PR build invocations.
+
+Use the following configuration to avoid writing cache entries for the action invocation:
+
+```yaml
+cache-read-only: true
+```
+
 ## Build scans
 
 If your build publishes a [build scan](https://gradle.com/build-scans/) the `gradle-build-action` action will emit the link to the published build scan as an output named `build-scan-url`.

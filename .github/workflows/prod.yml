@@ -62,6 +62,13 @@ jobs:
         build-root-directory: __tests__/samples/basic
         arguments: test --no-daemon
         dependencies-cache-enabled: true
+    - name: Test dependencies-cache-enabled
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/basic
+        arguments: test --no-daemon
+        dependencies-cache-enabled: true
+        cache-read-only: true
 
   configuration-cache:
     strategy:
