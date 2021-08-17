@@ -1,4 +1,4 @@
-name: "Gradle Command"
+name: "Gradle Build Action"
 description: 'Execute Gradle Build'
 
 # https://help.github.com/en/articles/metadata-syntax-for-github-actions
