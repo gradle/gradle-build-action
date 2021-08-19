@@ -1,5 +1,5 @@
 name: "Gradle Build Action"
-description: 'Execute Gradle Build'
+description: 'Executes a Gradle build, caching useful state in the GitHub actions cache'
 
 # https://help.github.com/en/articles/metadata-syntax-for-github-actions
 
