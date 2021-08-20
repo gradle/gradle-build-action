@@ -28,6 +28,10 @@ inputs:
     description: Whether caching of state in Gradle User Home is enabled, default to 'true'
     required: false
     default: true
+  project-dot-gradle-cache-enabled:
+    description: Whether caching of state in project .gradle dir is enabled, default to 'false'
+    required: false
+    default: true
   wrapper-cache-enabled:
     description: Whether caching wrapper installation is enabled or not, default to 'true'
     required: false

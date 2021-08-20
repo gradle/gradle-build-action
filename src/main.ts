@@ -2,19 +2,19 @@ import * as core from '@actions/core'
 import * as path from 'path'
 import {parseArgsStringToArgv} from 'string-argv'
 
-import * as cacheGradleUserHome from './cache-gradle-user-home'
+import * as caches from './caches'
 import * as execution from './execution'
 import * as gradlew from './gradlew'
 import * as provision from './provision'
 
 // Invoked by GitHub Actions
 export async function run(): Promise<void> {
-    await cacheGradleUserHome.restore()
+    const workspaceDirectory = process.env[`GITHUB_WORKSPACE`] || ''
+    const buildRootDirectory = resolveBuildRootDirectory(workspaceDirectory)
+
+    await caches.restore(buildRootDirectory)
 
     try {
-        const workspaceDirectory = process.env[`GITHUB_WORKSPACE`] || ''
-        const buildRootDirectory = resolveBuildRootDirectory(workspaceDirectory)
-
         const result = await execution.execute(
             await resolveGradleExecutable(
                 workspaceDirectory,

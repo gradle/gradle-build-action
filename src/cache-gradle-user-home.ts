@@ -12,8 +12,8 @@ const CACHE_PATH = [
     '~/.gradle/notifications/*', // Prevent the re-rendering of first-use message for version
     '~/.gradle/wrapper/dists/*/*/*.zip' // Only wrapper zips are required : Gradle will expand these on demand
 ]
-const GUH_CACHE_KEY = 'GUH_CACHE_KEY'
-const GUH_CACHE_RESULT = 'GUH_CACHE_RESULT'
+const CACHE_KEY = 'GUH_CACHE_KEY'
+const CACHE_RESULT = 'GUH_CACHE_RESULT'
 
 export async function restore(): Promise<void> {
     if (!isGradleUserHomeCacheEnabled()) return
@@ -31,7 +31,7 @@ export async function restore(): Promise<void> {
 
     const cacheKey = `${cacheKeyWithArgs}${github.context.sha}`
 
-    core.saveState(GUH_CACHE_KEY, cacheKey)
+    core.saveState(CACHE_KEY, cacheKey)
 
     const cacheResult = await cache.restoreCache(CACHE_PATH, cacheKey, [
         cacheKeyWithArgs,
@@ -57,8 +57,8 @@ export async function save(): Promise<void> {
         return
     }
 
-    const cacheKey = core.getState(GUH_CACHE_KEY)
-    const cacheResult = core.getState(GUH_CACHE_RESULT)
+    const cacheKey = core.getState(CACHE_KEY)
+    const cacheResult = core.getState(CACHE_RESULT)
 
     if (!cacheKey) {
         core.info(

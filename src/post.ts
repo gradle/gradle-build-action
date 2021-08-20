@@ -1,12 +1,12 @@
 import * as core from '@actions/core'
 
-import * as cacheGradleUserHome from './cache-gradle-user-home'
+import * as caches from './caches'
 
 // Invoked by GitHub Actions
 export async function run(): Promise<void> {
     if (isCacheReadOnly()) return
 
-    await cacheGradleUserHome.save()
+    await caches.save()
 }
 
 function isCacheReadOnly(): boolean {
