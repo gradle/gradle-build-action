@@ -4,6 +4,7 @@ name: prod
 on:
   pull_request:
   push:
+  workflow_dispatch:
 
 jobs:
   gradle-execution:
