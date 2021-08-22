@@ -21,17 +21,21 @@ export async function restoreCachedDependencies(
     core.saveState(DEPENDENCIES_CACHE_PATH, cachePath)
 
     const inputCacheExact = core.getBooleanInput('dependencies-cache-exact')
-    const cacheKeyGlobs = inputCacheKeyGlobs('dependencies-cache-key')
+    const cacheKeyPrefix = 'dependencies|'
 
+    const args = core.getInput('arguments')
+    const cacheKeyWithArgs = `${cacheKeyPrefix}${args}|`
+
+    const cacheKeyGlobs = inputCacheKeyGlobs('dependencies-cache-key')
     const hash = await crypto.hashFiles(rootDir, cacheKeyGlobs)
-    const cacheKeyPrefix = 'dependencies-'
-    const cacheKey = `${cacheKeyPrefix}${hash}`
+    const cacheKey = `${cacheKeyWithArgs}${hash}`
+
     core.saveState(DEPENDENCIES_CACHE_KEY, cacheKey)
 
     const cacheResult = await cache.restoreCache(
         [cachePath],
         cacheKey,
-        inputCacheExact ? [] : [cacheKeyPrefix]
+        inputCacheExact ? [] : [cacheKeyWithArgs, cacheKeyPrefix]
     )
 
     if (!cacheResult) {
