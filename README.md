@@ -144,7 +144,7 @@ The distributions cache is simple and can't be configured further.
 The dependencies and configuration cache will compute a cache key in a best effort manner.
 Keep reading to learn how to better control how they work.
 
-Note that enabling configuration cache without thee dependencies cache is not permitted, since a hit in the configuration cache assumes that dependencies are already present in the local dependencies cache.
+Note that enabling configuration cache without the dependencies cache is not permitted, since a hit in the configuration cache assumes that dependencies are already present in the local dependencies cache.
 
 ### Configuring the dependencies and configuration caches
 
@@ -185,6 +185,18 @@ If you happen to use Gradle [dependency locking](https://docs.gradle.org/current
 dependencies-cache-enabled: true
 dependencies-cache-key: gradle/dependency-locks/**
 dependencies-cache-exact: true
+```
+
+### Using the caches read-only
+
+Cache storage space is limited for GitHub actions, and writing new cache entries can trigger the deletion of exising entries.
+In some circumstances, it makes sense for a Gradle invocation to use any existing cache entries but not to write and changes back.
+For example, you may want to write cache entries for builds on your `main` branch, but not for any PR build invocations.
+
+Use the following configuration to avoid writing cache entries for the action invocation:
+
+```yaml
+cache-read-only: true
 ```
 
 ## Build scans
