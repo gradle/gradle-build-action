@@ -1,5 +1,5 @@
-import path from 'path'
-import fs from 'fs'
+import * as path from 'path'
+import * as fs from 'fs'
 
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
@@ -32,17 +32,21 @@ export async function restoreCachedConfiguration(
     core.saveState(CONFIGURATION_CACHE_PATH, cachePath)
 
     const inputCacheExact = core.getBooleanInput('configuration-cache-exact')
-    const cacheKeyGlobs = inputCacheKeyGlobs('configuration-cache-key')
+    const cacheKeyPrefix = 'configuration|'
 
+    const args = core.getInput('arguments')
+    const cacheKeyWithArgs = `${cacheKeyPrefix}${args}|`
+
+    const cacheKeyGlobs = inputCacheKeyGlobs('configuration-cache-key')
     const hash = await crypto.hashFiles(rootDir, cacheKeyGlobs)
-    const cacheKeyPrefix = 'configuration-'
-    const cacheKey = `${cacheKeyPrefix}${hash}`
+    const cacheKey = `${cacheKeyWithArgs}${hash}`
+
     core.saveState(CONFIGURATION_CACHE_KEY, cacheKey)
 
     const cacheResult = await cache.restoreCache(
         [cachePath],
         cacheKey,
-        inputCacheExact ? [] : [cacheKeyPrefix]
+        inputCacheExact ? [] : [cacheKeyWithArgs, cacheKeyPrefix]
     )
 
     if (!cacheResult) {
