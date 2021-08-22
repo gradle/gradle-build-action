@@ -86,6 +86,8 @@ export async function cacheConfiguration(): Promise<void> {
         return
     }
 
+    core.info(`Will cache configuration with key ${cacheKey}`)
+
     try {
         await cache.saveCache([cachePath], cacheKey)
     } catch (error) {

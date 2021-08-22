@@ -73,6 +73,8 @@ export async function cacheDependencies(): Promise<void> {
         return
     }
 
+    core.info(`Will cache dependencies with key ${cacheKey}`)
+
     try {
         await cache.saveCache([cachePath], cacheKey)
     } catch (error) {
