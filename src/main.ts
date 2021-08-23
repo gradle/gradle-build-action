@@ -2,13 +2,15 @@ import * as core from '@actions/core'
 import * as path from 'path'
 import {parseArgsStringToArgv} from 'string-argv'
 
-import * as cacheWrapper from './cache-wrapper'
+import * as cacheGradleUserHome from './cache-gradle-user-home'
 import * as execution from './execution'
 import * as gradlew from './gradlew'
 import * as provision from './provision'
 
 // Invoked by GitHub Actions
 export async function run(): Promise<void> {
+    await cacheGradleUserHome.restore()
+
     try {
         const workspaceDirectory = process.env[`GITHUB_WORKSPACE`] || ''
         const buildRootDirectory = resolveBuildRootDirectory(workspaceDirectory)
@@ -47,11 +49,6 @@ async function resolveGradleExecutable(
 
     const gradleExecutable = core.getInput('gradle-executable')
     if (gradleExecutable !== '') {
-        if (gradleExecutable.endsWith(gradlew.wrapperFilename())) {
-            await cacheWrapper.restoreCachedWrapperDist(
-                path.resolve(gradleExecutable, '..')
-            )
-        }
         return path.resolve(workspaceDirectory, gradleExecutable)
     }
 
@@ -62,8 +59,6 @@ async function resolveGradleExecutable(
             : buildRootDirectory
 
     gradlew.validateGradleWrapper(gradlewDirectory)
-    await cacheWrapper.restoreCachedWrapperDist(gradlewDirectory)
-
     return path.resolve(gradlewDirectory, gradlew.wrapperFilename())
 }
 
