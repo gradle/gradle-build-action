@@ -51,12 +51,6 @@ jobs:
         gradle-executable: __tests__/samples/basic/gradlew${{ matrix.script-suffix }}
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help
-    - name: Test custom wrapper location (deprecated)
-      uses: ./
-      with:
-        build-root-directory: __tests__/samples/no-wrapper
-        wrapper-directory: __tests__/samples/basic
-        arguments: help
 
   dependencies-cache:
     needs: basic-build

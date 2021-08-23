@@ -4,10 +4,6 @@ description: 'Executes a Gradle build, caching useful state in the GitHub action
 # https://help.github.com/en/articles/metadata-syntax-for-github-actions
 
 inputs:
-  wrapper-directory:
-    description: Path to the Gradle Wrapper directory
-    required: false
-    deprecationMessage: Use 'gradle-executable' to point to a gradlew[.bat] file in a non-default location
   gradle-executable:
     description: Path to the Gradle executable
     required: false
@@ -32,37 +28,6 @@ inputs:
     description: Whether caching of state in project .gradle dir is enabled, default to 'false'
     required: false
     default: true
-  wrapper-cache-enabled:
-    description: Whether caching wrapper installation is enabled or not, default to 'true'
-    required: false
-    default: true
-    deprecationMessage: Replaced by 'distributions-cache-enabled' which enables caching for all downloaded Gradle distributions
-  dependencies-cache-enabled:
-    description: Whether caching dependencies is enabled or not, default to 'false'
-    required: false
-    default: false
-  dependencies-cache-key:
-    description: Globs of files to hash in the build root directory, separated by new lines, use best-effort if unset
-    required: false
-  dependencies-cache-exact:
-    description: Whether to restore only if exact match, default to 'false'
-    required: false
-    default: false
-  configuration-cache-enabled:
-    description: Whether caching build configuration is enabled or not, default to 'false'
-    required: false
-    default: false
-  configuration-cache-key:
-    description: Globs of files to hash in the build root directory, separated by new lines, use best-effort if unset
-    required: false
-  configuration-cache-exact:
-    description: Whether to restore only if exact match, default to 'false'
-    required: false
-    default: false
-  cache-read-only:
-    description: When 'true', existing entries will be read from the cache but no entries will be written
-    required: false
-    default: false
 
 outputs:
   build-scan-url:
