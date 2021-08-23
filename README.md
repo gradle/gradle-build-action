@@ -74,8 +74,6 @@ If you need to pass environment variables, simply use the GitHub Actions workflo
      gradle-executable: path/to/gradlew
  ```
 
- NOTE: The `wrapper-directory` input has been deprecated. Use `gradle-executable` instead.
-
 ## Setup and use a declared Gradle version
 
 ```yaml
@@ -122,81 +120,39 @@ jobs:
 
 This action provides 3 levels of caching to help speed up your GitHub Actions:
 
-- `distributions` caches any downloaded Gradle zips, including any downloaded [wrapper](https://docs.gradle.org/current/userguide/gradle_wrapper.html) versions, saving time downloading Gradle distributions ;
-- `dependencies` caches the [dependencies](https://docs.gradle.org/current/userguide/dependency_resolution.html#sub:cache_copy), saving time downloading dependencies ;
-- `configuration` caches the [build configuration](https://docs.gradle.org/nightly/userguide/configuration_cache.html), saving time configuring the build.
+- `distributions` caches any distributions downloaded to satisfy a `gradle-version` parameter ;
+- `gradle-user-home` caches downloaded dependencies, wrapper distributions, and other stuff from the Gradle User home directory ;
+- `project-dot-gradle` caches stored [configuration-cache](https://docs.gradle.org/nightly/userguide/configuration_cache.html) state, saving time configuring the build.
 
-Only the first one, caching downloaded distributions, is enabled by default.
-Future versions of this action will enable all caching by default.
-
-You can control which level is enabled as follows:
+Each of these are enabled by default. To save caching space, you can disable any of them as follows:
 
 ```yaml
 distributions-cache-enabled: true
-dependencies-cache-enabled: true
-configuration-cache-enabled: true
+gradle-user-home-cache-enabled: true
+project-dot-gradle-cache-enabled: true
 ```
 
-NOTE: The `wrapper-cache-enabled` flag has been deprecated, replaced by `distributions-cache-enabled` which enables caching for all downloaded distributions, including Gradle wrapper downloads.
+The distributions cache uses a cache key that is unique to the downloaded distribution. This will not change over time.
 
-The distributions cache is simple and can't be configured further.
+The `gradle-user-home` and `project-dot-gradle` caches compute a cache key based on the current commit and the Gradle invocation.
+As such, these are likely to change on each subsequent run of GitHub actions, allowing the most recent state to always be available in the GitHub actions cache.
 
-The dependencies and configuration cache will compute a cache key in a best effort manner.
-Keep reading to learn how to better control how they work.
+By default, this action aims to cache any and all reusable state that may be speed up a subsequent build invocation. 
 
-Note that enabling configuration cache without the dependencies cache is not permitted, since a hit in the configuration cache assumes that dependencies are already present in the local dependencies cache.
-
-### Configuring the dependencies and configuration caches
-
-Both the dependencies and configuration caches use the same default configuration:
-
-They use the following inputs to calculate the cache key:
-
-```text
-**/*.gradle
-**/*.gradle.kts
-**/gradle.properties
-gradle/**
-```
-
-This is a good enough approximation.
-They restore cached state even if there isn't an exact match.
-
-If the defaults don't suit your needs you can override them with the following inputs:
-
-```yaml
-dependencies-cache-key: |
-  **/gradle.properties
-  gradle/dependency-locks/**
-dependencies-cache-exact: true
-configuration-cache-key: |
-  **/gradle.properties
-  gradle/dependency-locks/**
-configuration-cache-exact: true
-```
-
-Coming up with a good cache key isn't trivial and depends on your build.
-The above example isn't realistic.
-Stick to the defaults unless you know what you are doing.
-
-If you happen to use Gradle [dependency locking](https://docs.gradle.org/current/userguide/dependency_locking.html) you can make the dependencies cache more precise with the following configuration:
-
-```yaml
-dependencies-cache-enabled: true
-dependencies-cache-key: gradle/dependency-locks/**
-dependencies-cache-exact: true
-```
+At this time it is not possible to fine-tune this caching. If you have a legitimate use case for fine-grained caching or restricting which files are cached, please raise an issue.
 
 ### Using the caches read-only
 
 Cache storage space is limited for GitHub actions, and writing new cache entries can trigger the deletion of exising entries.
-In some circumstances, it makes sense for a Gradle invocation to use any existing cache entries but not to write and changes back.
+In some circumstances, it makes sense for a Gradle invocation to read any existing cache entries but not to write changes back.
 For example, you may want to write cache entries for builds on your `main` branch, but not for any PR build invocations.
 
-Use the following configuration to avoid writing cache entries for the action invocation:
+You can enable read-only caching for any of the caches asfollows:
 
 ```yaml
-cache-read-only: true
+distributions-cache-enabled: read-only
+gradle-user-home-cache-enabled: read-only
+project-dot-gradle-cache-enabled: read-only
 ```
 
 ## Build scans

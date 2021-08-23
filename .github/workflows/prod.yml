@@ -19,7 +19,12 @@ jobs:
       uses: ./
       with:
         build-root-directory: __tests__/samples/basic
-        arguments: test
+        arguments: test --no-daemon
+    - name: Build with configuration-cache enabled
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/basic
+        arguments: test --no-daemon --configuration-cache
    
   gradle-execution:
     needs: basic-build
@@ -66,7 +71,6 @@ jobs:
       with:
         build-root-directory: __tests__/samples/basic
         arguments: test --no-daemon
-        dependencies-cache-enabled: true
 
   configuration-cache:
     needs: basic-build
@@ -82,11 +86,8 @@ jobs:
       with:
         build-root-directory: __tests__/samples/basic
         arguments: test --configuration-cache --no-daemon
-        configuration-cache-enabled: true
-        dependencies-cache-enabled: true 
-        # Configuration cache requires dependencies cache, since it assumes dependencies are already downloaded.
 
-  cache-read-only:
+  read-only-cache:
     needs: basic-build
     strategy:
       matrix:
@@ -95,14 +96,25 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Test cache-read-only
+    - name: Test caches read-only
       uses: ./
       with:
         build-root-directory: __tests__/samples/basic
         arguments: test --no-daemon
-        dependencies-cache-enabled: true
-        configuration-cache-enabled: true
-        cache-read-only: true
+        distributions-cache-enabled: read-only
+        gradle-user-home-cache-enabled: read-only
+        project-dot-gradle-cache-enabled: read-only
+        
+    - name: Test caches disabled
+      uses: ./
+      with:
+        gradle-version: 6.9
+        build-root-directory: __tests__/samples/basic
+        arguments: test --no-daemon
+        distributions-cache-enabled: false
+        gradle-user-home-cache-enabled: false
+        project-dot-gradle-cache-enabled: false
+
 
   failures: # These build invocations are informational only, and are expected to fail
     needs: basic-build
@@ -116,3 +128,10 @@ jobs:
       with:
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help
+    - name: Test bad config value
+      uses: ./
+      continue-on-error: true
+      with:
+        build-root-directory: __tests__/samples/no-wrapper
+        arguments: help
+        gradle-user-home-cache-enabled: no
