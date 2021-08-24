@@ -5,7 +5,7 @@ import * as os from 'os'
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 
-import * as crypto from './crypto-utils'
+import * as cacheUtils from './cache-utils'
 
 const DEPENDENCIES_CACHE_PATH = 'DEPENDENCIES_CACHE_PATH'
 const DEPENDENCIES_CACHE_KEY = 'DEPENDENCIES_CACHE_KEY'
@@ -24,10 +24,11 @@ export async function restoreCachedDependencies(
     const cacheKeyPrefix = 'dependencies|'
 
     const args = core.getInput('arguments')
-    const cacheKeyWithArgs = `${cacheKeyPrefix}${args}|`
+    const argsKey = cacheUtils.truncateArgs(args)
+    const cacheKeyWithArgs = `${cacheKeyPrefix}${argsKey}|`
 
     const cacheKeyGlobs = inputCacheKeyGlobs('dependencies-cache-key')
-    const hash = await crypto.hashFiles(rootDir, cacheKeyGlobs)
+    const hash = await cacheUtils.hashFiles(rootDir, cacheKeyGlobs)
     const cacheKey = `${cacheKeyWithArgs}${hash}`
 
     core.saveState(DEPENDENCIES_CACHE_KEY, cacheKey)

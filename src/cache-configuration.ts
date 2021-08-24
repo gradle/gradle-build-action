@@ -4,7 +4,7 @@ import * as fs from 'fs'
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 
-import * as crypto from './crypto-utils'
+import * as cacheUtils from './cache-utils'
 
 import {
     inputCacheKeyGlobs,
@@ -35,10 +35,11 @@ export async function restoreCachedConfiguration(
     const cacheKeyPrefix = 'configuration|'
 
     const args = core.getInput('arguments')
-    const cacheKeyWithArgs = `${cacheKeyPrefix}${args}|`
+    const argsKey = cacheUtils.truncateArgs(args)
+    const cacheKeyWithArgs = `${cacheKeyPrefix}${argsKey}|`
 
     const cacheKeyGlobs = inputCacheKeyGlobs('configuration-cache-key')
-    const hash = await crypto.hashFiles(rootDir, cacheKeyGlobs)
+    const hash = await cacheUtils.hashFiles(rootDir, cacheKeyGlobs)
     const cacheKey = `${cacheKeyWithArgs}${hash}`
 
     core.saveState(CONFIGURATION_CACHE_KEY, cacheKey)

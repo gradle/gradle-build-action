@@ -11,3 +11,7 @@ export async function hashFiles(
         .join('\n')
     return glob.hashFiles(combinedPatterns, {followSymbolicLinks})
 }
+
+export function truncateArgs(args: string): string {
+    return args.trim().replace(/\s+/g, ' ').substr(0, 400)
+}
