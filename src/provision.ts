@@ -7,6 +7,7 @@ import * as cache from '@actions/cache'
 import * as toolCache from '@actions/tool-cache'
 
 import * as gradlew from './gradlew'
+import {isCacheReadEnabled, isCacheSaveEnabled} from './cache-utils'
 
 const gradleVersionsBaseUrl = 'https://services.gradle.org/versions'
 
@@ -119,7 +120,7 @@ async function downloadAndCacheGradleDistribution(
         `gradle-installations/downloads/gradle-${versionInfo.version}-bin.zip`
     )
 
-    if (isDistributionsCacheDisabled()) {
+    if (!isCacheReadEnabled('distributions')) {
         await downloadGradleDistribution(versionInfo, downloadPath)
         return downloadPath
     }
@@ -130,12 +131,14 @@ async function downloadAndCacheGradleDistribution(
         core.info(
             `Restored Gradle distribution ${cacheKey} from cache to ${downloadPath}`
         )
-    } else {
-        core.info(
-            `Gradle distribution ${versionInfo.version} not found in cache. Will download.`
-        )
-        await downloadGradleDistribution(versionInfo, downloadPath)
+        return downloadPath
+    }
+    core.info(
+        `Gradle distribution ${versionInfo.version} not found in cache. Will download.`
+    )
+    await downloadGradleDistribution(versionInfo, downloadPath)
 
+    if (isCacheSaveEnabled('distributions')) {
         try {
             await cache.saveCache([downloadPath], cacheKey)
         } catch (error) {
@@ -181,10 +184,6 @@ async function httpGetString(url: string): Promise<string> {
     const httpClient = new httpm.HttpClient('gradle/gradle-build-action')
     const response = await httpClient.get(url)
     return response.readBody()
-}
-
-function isDistributionsCacheDisabled(): boolean {
-    return !core.getBooleanInput('distributions-cache-enabled')
 }
 
 interface GradleVersionInfo {

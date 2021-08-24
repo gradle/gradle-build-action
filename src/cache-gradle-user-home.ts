@@ -5,8 +5,13 @@ import os from 'os'
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 import * as github from '@actions/github'
-import {truncateArgs} from './cache-utils'
+import {
+    isCacheReadEnabled,
+    isCacheSaveEnabled,
+    truncateArgs
+} from './cache-utils'
 
+const CACHE_NAME = 'gradle-user-home'
 const CACHE_PATH = [
     '~/.gradle/caches/*', // All directories in 'caches'
     '~/.gradle/notifications/*', // Prevent the re-rendering of first-use message for version
@@ -16,7 +21,7 @@ const CACHE_KEY = 'GUH_CACHE_KEY'
 const CACHE_RESULT = 'GUH_CACHE_RESULT'
 
 export async function restore(): Promise<void> {
-    if (!isGradleUserHomeCacheEnabled()) return
+    if (!isCacheReadEnabled(CACHE_NAME)) return
 
     if (gradleUserHomeExists()) {
         core.debug('Gradle User Home already exists. Not restoring from cache.')
@@ -50,7 +55,7 @@ export async function restore(): Promise<void> {
 }
 
 export async function save(): Promise<void> {
-    if (!isGradleUserHomeCacheEnabled()) return
+    if (!isCacheSaveEnabled(CACHE_NAME)) return
 
     if (!gradleUserHomeExists()) {
         core.debug('No Gradle User Home to cache.')
@@ -88,10 +93,6 @@ export async function save(): Promise<void> {
     }
 
     return
-}
-
-export function isGradleUserHomeCacheEnabled(): boolean {
-    return core.getBooleanInput('gradle-user-home-cache-enabled')
 }
 
 function gradleUserHomeExists(): boolean {
