@@ -27,8 +27,9 @@ export async function restore(rootDir: string): Promise<void> {
         return
     }
 
+    const cacheKeySeed = process.env[`CACHE_KEY_SEED`] || ''
     const runnerOs = process.env[`RUNNER_OS`] || ''
-    const cacheKeyPrefix = `${runnerOs}-project|`
+    const cacheKeyPrefix = `${cacheKeySeed}${runnerOs}|project|`
 
     const args = truncateArgs(core.getInput('arguments'))
     const cacheKeyWithArgs = `${cacheKeyPrefix}${args}|`

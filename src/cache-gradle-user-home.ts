@@ -28,8 +28,9 @@ export async function restore(): Promise<void> {
         return
     }
 
+    const cacheKeySeed = process.env[`CACHE_KEY_SEED`] || ''
     const runnerOs = process.env[`RUNNER_OS`] || ''
-    const cacheKeyPrefix = `${runnerOs}-gradle|`
+    const cacheKeyPrefix = `${cacheKeySeed}${runnerOs}|gradle|`
 
     const args = truncateArgs(core.getInput('arguments'))
     const cacheKeyWithArgs = `${cacheKeyPrefix}${args}|`

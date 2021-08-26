@@ -6,6 +6,9 @@ on:
   push:
   workflow_dispatch:
 
+env:
+  CACHE_KEY_SEED: ${{github.workflow}}#${{github.run_number}}-
+
 jobs:
   basic-build:
     strategy:
