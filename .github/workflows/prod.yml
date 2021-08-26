@@ -1,4 +1,4 @@
- # make sure the action works on a clean machine without building
+ # Make sure the action works on a clean machine without building
 name: prod
 
 on:
@@ -10,6 +10,8 @@ env:
   CACHE_KEY_SEED: ${{github.workflow}}#${{github.run_number}}-
 
 jobs:
+  # Run initial Gradle builds to push initial cache entries
+  # These builds should start fresh without cache hits, due to the seed injected into the cache key above.
   basic-build:
     strategy:
       matrix:
@@ -29,6 +31,9 @@ jobs:
         build-root-directory: __tests__/samples/basic
         arguments: test --configuration-cache
    
+  # Tests for executing with different Gradle versions. 
+  # Each build verifies that it is executed with the expected Gradle version.
+  # These builds will not store cache entries for gradle-user-home or project-dot-gradle
   gradle-execution:
     needs: basic-build
     strategy:
@@ -46,19 +51,25 @@ jobs:
       with:
         gradle-version: 6.9
         build-root-directory: __tests__/samples/no-wrapper
-        arguments: help
+        arguments: help -DgradleVersionCheck=6.9
+        gradle-user-home-cache-enabled: read-only
+        project-dot-gradle-cache-enabled: read-only
     - name: Test use Gradle version alias
       uses: ./
       with:
         gradle-version: release-candidate
         build-root-directory: __tests__/samples/no-wrapper
-        arguments: help
+        arguments: help -DgradleVersionCheck=7.2
+        gradle-user-home-cache-enabled: read-only
+        project-dot-gradle-cache-enabled: read-only
     - name: Test use defined Gradle executable
       uses: ./
       with:
         gradle-executable: __tests__/samples/basic/gradlew${{ matrix.script-suffix }}
         build-root-directory: __tests__/samples/no-wrapper
-        arguments: help
+        arguments: help -DgradleVersionCheck=7.1.1
+        gradle-user-home-cache-enabled: read-only
+        project-dot-gradle-cache-enabled: read-only
 
   dependencies-cache:
     needs: basic-build
