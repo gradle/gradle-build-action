@@ -11,6 +11,10 @@ dependencies {
 }
 
 tasks.named("test").configure {
+    // Use an environment variable to bypass config-cache checks
+    if (System.getenv('VERIFY_CACHED_CONFIGURATION') != null) {
+        throw new RuntimeException("Configuration was not cached: unexpected configuration of test task")
+    }
     doLast {
         if (System.properties.verifyCachedBuild) {
             throw new RuntimeException("Build was not cached: unexpected execution of test task")

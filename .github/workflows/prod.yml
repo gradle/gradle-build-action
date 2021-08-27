@@ -33,7 +33,6 @@ jobs:
    
   # Tests for executing with different Gradle versions. 
   # Each build verifies that it is executed with the expected Gradle version.
-  # These builds will not store cache entries for gradle-user-home or project-dot-gradle
   gradle-execution:
     needs: seed-build
     strategy:
@@ -89,7 +88,7 @@ jobs:
         gradle-user-home-cache-enabled: read-only
         project-dot-gradle-cache-enabled: read-only
 
-  # Test that the gradle-user-home cache will cache and restore local build-cachee
+  # Test that the gradle-user-home cache will cache and restore local build-cache
   build-cache:
     needs: seed-build
     strategy:
@@ -107,6 +106,7 @@ jobs:
         gradle-user-home-cache-enabled: read-only
         project-dot-gradle-cache-enabled: read-only
 
+  # Test that the project-dot-gradle cache will cache and restore configuration-cache
   configuration-cache:
     needs: seed-build
     strategy:
@@ -116,42 +116,18 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Test configuration-cache-enabled
+    - name: Execute Gradle build and verify cached configuration
       uses: ./
+      env: 
+        VERIFY_CACHED_CONFIGURATION: true
       with:
         build-root-directory: __tests__/samples/basic
         arguments: test --configuration-cache
-
-  read-only-cache:
-    needs: seed-build
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Test caches read-only
-      uses: ./
-      with:
-        build-root-directory: __tests__/samples/basic
-        arguments: test
-        distributions-cache-enabled: read-only
         gradle-user-home-cache-enabled: read-only
         project-dot-gradle-cache-enabled: read-only
-        
-    - name: Test caches disabled
-      uses: ./
-      with:
-        gradle-version: 6.9
-        build-root-directory: __tests__/samples/basic
-        arguments: test
-        distributions-cache-enabled: false
-        gradle-user-home-cache-enabled: false
-        project-dot-gradle-cache-enabled: false
 
-
-  failures: # These build invocations are informational only, and are expected to fail
+  # These build invocations are informational only, and are expected to fail
+  failures: 
     needs: seed-build
     runs-on: ubuntu-latest
     steps:
