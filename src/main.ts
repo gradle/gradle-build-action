@@ -15,13 +15,16 @@ export async function run(): Promise<void> {
     await caches.restore(buildRootDirectory)
 
     try {
+        const args: string[] = parseCommandLineArguments()
+        args.push('--no-daemon')
+
         const result = await execution.execute(
             await resolveGradleExecutable(
                 workspaceDirectory,
                 buildRootDirectory
             ),
             buildRootDirectory,
-            parseCommandLineArguments()
+            args
         )
 
         if (result.buildScanUrl) {

@@ -19,12 +19,12 @@ jobs:
       uses: ./
       with:
         build-root-directory: __tests__/samples/basic
-        arguments: test --no-daemon
+        arguments: test
     - name: Build with configuration-cache enabled
       uses: ./
       with:
         build-root-directory: __tests__/samples/basic
-        arguments: test --no-daemon --configuration-cache
+        arguments: test --configuration-cache
    
   gradle-execution:
     needs: basic-build
@@ -70,7 +70,7 @@ jobs:
       uses: ./
       with:
         build-root-directory: __tests__/samples/basic
-        arguments: test --no-daemon
+        arguments: test
 
   configuration-cache:
     needs: basic-build
@@ -85,7 +85,7 @@ jobs:
       uses: ./
       with:
         build-root-directory: __tests__/samples/basic
-        arguments: test --configuration-cache --no-daemon
+        arguments: test --configuration-cache
 
   read-only-cache:
     needs: basic-build
@@ -100,7 +100,7 @@ jobs:
       uses: ./
       with:
         build-root-directory: __tests__/samples/basic
-        arguments: test --no-daemon
+        arguments: test
         distributions-cache-enabled: read-only
         gradle-user-home-cache-enabled: read-only
         project-dot-gradle-cache-enabled: read-only
@@ -110,7 +110,7 @@ jobs:
       with:
         gradle-version: 6.9
         build-root-directory: __tests__/samples/basic
-        arguments: test --no-daemon
+        arguments: test
         distributions-cache-enabled: false
         gradle-user-home-cache-enabled: false
         project-dot-gradle-cache-enabled: false
