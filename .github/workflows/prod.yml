@@ -89,6 +89,24 @@ jobs:
         gradle-user-home-cache-enabled: read-only
         project-dot-gradle-cache-enabled: read-only
 
+  # Test that the gradle-user-home cache will cache and restore local build-cachee
+  build-cache:
+    needs: seed-build
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Execute Gradle build and verify tasks from cache
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/basic
+        arguments: test -DverifyCachedBuild=true
+        gradle-user-home-cache-enabled: read-only
+        project-dot-gradle-cache-enabled: read-only
+
   configuration-cache:
     needs: seed-build
     strategy:

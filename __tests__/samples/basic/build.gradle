@@ -9,3 +9,11 @@ repositories {
 dependencies {
     testImplementation('junit:junit:4.12')
 }
+
+tasks.named("test").configure {
+    doLast {
+        if (System.properties.verifyCachedBuild) {
+            throw new RuntimeException("Build was not cached: unexpected execution of test task")
+        }
+    }
+}
