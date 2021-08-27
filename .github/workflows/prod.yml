@@ -12,7 +12,7 @@ env:
 jobs:
   # Run initial Gradle builds to push initial cache entries
   # These builds should start fresh without cache hits, due to the seed injected into the cache key above.
-  basic-build:
+  seed-build:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -35,7 +35,7 @@ jobs:
   # Each build verifies that it is executed with the expected Gradle version.
   # These builds will not store cache entries for gradle-user-home or project-dot-gradle
   gradle-execution:
-    needs: basic-build
+    needs: seed-build
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -71,8 +71,9 @@ jobs:
         gradle-user-home-cache-enabled: read-only
         project-dot-gradle-cache-enabled: read-only
 
+  # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
   dependencies-cache:
-    needs: basic-build
+    needs: seed-build
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -80,14 +81,16 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Test dependencies-cache-enabled
+    - name: Execute Gradle build with --offline
       uses: ./
       with:
         build-root-directory: __tests__/samples/basic
-        arguments: test
+        arguments: test --offline
+        gradle-user-home-cache-enabled: read-only
+        project-dot-gradle-cache-enabled: read-only
 
   configuration-cache:
-    needs: basic-build
+    needs: seed-build
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -102,7 +105,7 @@ jobs:
         arguments: test --configuration-cache
 
   read-only-cache:
-    needs: basic-build
+    needs: seed-build
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -131,7 +134,7 @@ jobs:
 
 
   failures: # These build invocations are informational only, and are expected to fail
-    needs: basic-build
+    needs: seed-build
     runs-on: ubuntu-latest
     steps:
     - name: Checkout sources
