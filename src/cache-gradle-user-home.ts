@@ -4,11 +4,10 @@ import os from 'os'
 
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
-import * as github from '@actions/github'
 import {
+    generateCacheKey,
     isCacheReadEnabled,
-    isCacheSaveEnabled,
-    truncateArgs
+    isCacheSaveEnabled
 } from './cache-utils'
 
 const CACHE_NAME = 'gradle-user-home'
@@ -28,21 +27,15 @@ export async function restore(): Promise<void> {
         return
     }
 
-    const cacheKeySeed = process.env[`CACHE_KEY_SEED`] || ''
-    const runnerOs = process.env[`RUNNER_OS`] || ''
-    const cacheKeyPrefix = `${cacheKeySeed}${runnerOs}|gradle|`
+    const cacheKey = generateCacheKey('gradle')
 
-    const args = truncateArgs(core.getInput('arguments'))
-    const cacheKeyWithArgs = `${cacheKeyPrefix}${args}|`
+    core.saveState(CACHE_KEY, cacheKey.key)
 
-    const cacheKey = `${cacheKeyWithArgs}${github.context.sha}`
-
-    core.saveState(CACHE_KEY, cacheKey)
-
-    const cacheResult = await cache.restoreCache(CACHE_PATH, cacheKey, [
-        cacheKeyWithArgs,
-        cacheKeyPrefix
-    ])
+    const cacheResult = await cache.restoreCache(
+        CACHE_PATH,
+        cacheKey.key,
+        cacheKey.restoreKeys
+    )
 
     if (!cacheResult) {
         core.info(
