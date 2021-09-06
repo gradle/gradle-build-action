@@ -3,13 +3,8 @@ import fs from 'fs'
 
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
-import {
-    generateCacheKey,
-    isCacheReadEnabled,
-    isCacheSaveEnabled
-} from './cache-utils'
+import {generateCacheKey} from './cache-utils'
 
-const CACHE_NAME = 'project-dot-gradle'
 const PATHS_TO_CACHE = [
     'configuration-cache' // Only configuration-cache is stored at present
 ]
@@ -17,10 +12,8 @@ const CACHE_KEY = 'PROJECT_CACHE_KEY'
 const CACHE_RESULT = 'PROJECT_CACHE_RESULT'
 
 export async function restore(rootDir: string): Promise<void> {
-    if (!isCacheReadEnabled(CACHE_NAME)) return
-
     if (projectDotGradleDirExists(rootDir)) {
-        core.debug(
+        core.info(
             'Project .gradle directory already exists. Not restoring from cache.'
         )
         return
@@ -46,8 +39,6 @@ export async function restore(rootDir: string): Promise<void> {
 }
 
 export async function save(rootDir: string): Promise<void> {
-    if (!isCacheSaveEnabled(CACHE_NAME)) return
-
     if (!projectDotGradleDirExists(rootDir)) {
         core.debug('No project .gradle dir to cache.')
         return

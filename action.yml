@@ -20,12 +20,8 @@ inputs:
     description: Whether caching downloaded Gradle distributions is enabled or not. Valid values are 'true' (default), 'false', and 'read-only'.
     required: false
     default: true
-  gradle-user-home-cache-enabled:
-    description: Whether caching of state in Gradle User Home is enabled. Valid values are 'true' (default), 'false', and 'read-only'.
-    required: false
-    default: true
-  project-dot-gradle-cache-enabled:
-    description: Whether caching of state in project .gradle dir is enabled. Valid values are 'true' (default), 'false', and 'read-only'.
+  gradle-cache-enabled:
+    description: Whether caching of Gradle User Home and project .gradle directory is enabled. Valid values are 'true' (default), 'false', and 'read-only'.
     required: false
     default: true
 
