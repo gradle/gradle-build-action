@@ -36,6 +36,9 @@ export async function run(): Promise<void> {
             core.setFailed(`Gradle process exited with status ${result.status}`)
         }
     } catch (error) {
+        if (!(error instanceof Error)) {
+            throw error
+        }
         core.setFailed(error.message)
     }
 }

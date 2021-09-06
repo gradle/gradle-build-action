@@ -1,4 +1,5 @@
 import * as core from '@actions/core'
+import * as cache from '@actions/cache'
 import * as github from '@actions/github'
 import * as crypto from 'crypto'
 
@@ -25,7 +26,7 @@ function getCacheEnabledValue(cacheName: string): string {
     )
 }
 
-export function generateCacheKey(cacheName: string): CacheKey {
+function generateCacheKey(cacheName: string): CacheKey {
     // Prefix can be used to force change all cache keys
     const cacheKeyPrefix = process.env['CACHE_KEY_PREFIX'] || ''
 
@@ -70,7 +71,7 @@ export function hashStrings(values: string[]): string {
     return hash.digest('hex')
 }
 
-export class CacheKey {
+class CacheKey {
     key: string
     restoreKeys: string[]
 
@@ -78,4 +79,96 @@ export class CacheKey {
         this.key = key
         this.restoreKeys = restoreKeys
     }
+}
+
+export abstract class AbstractCache {
+    private cacheName: string
+    private cacheDescription: string
+    private cacheKeyStateKey: string
+    private cacheResultStateKey: string
+
+    constructor(cacheName: string, cacheDescription: string) {
+        this.cacheName = cacheName
+        this.cacheDescription = cacheDescription
+        this.cacheKeyStateKey = `CACHE_KEY_${cacheName}`
+        this.cacheResultStateKey = `CACHE_RESULT_${cacheName}`
+    }
+
+    async restore(): Promise<void> {
+        if (this.cacheOutputExists()) {
+            core.info(
+                `${this.cacheDescription} already exists. Not restoring from cache.`
+            )
+            return
+        }
+
+        const cacheKey = generateCacheKey(this.cacheName)
+
+        core.saveState(this.cacheKeyStateKey, cacheKey.key)
+
+        const cacheResult = await cache.restoreCache(
+            this.getCachePath(),
+            cacheKey.key,
+            cacheKey.restoreKeys
+        )
+
+        if (!cacheResult) {
+            core.info(
+                `${this.cacheDescription} cache not found. Will start with empty.`
+            )
+            return
+        }
+
+        core.saveState(this.cacheResultStateKey, cacheResult)
+
+        core.info(
+            `${this.cacheDescription} restored from cache key: ${cacheResult}`
+        )
+        return
+    }
+
+    async save(): Promise<void> {
+        if (!this.cacheOutputExists()) {
+            core.debug(`No ${this.cacheDescription} to cache.`)
+            return
+        }
+
+        const cacheKey = core.getState(this.cacheKeyStateKey)
+        const cacheResult = core.getState(this.cacheResultStateKey)
+
+        if (!cacheKey) {
+            core.info(
+                `${this.cacheDescription} existed prior to cache restore. Not saving.`
+            )
+            return
+        }
+
+        if (cacheResult && cacheKey === cacheResult) {
+            core.info(
+                `Cache hit occurred on the cache key ${cacheKey}, not saving cache.`
+            )
+            return
+        }
+
+        core.info(
+            `Caching ${this.cacheDescription} with cache key: ${cacheKey}`
+        )
+        try {
+            await cache.saveCache(this.getCachePath(), cacheKey)
+        } catch (error) {
+            // Fail on validation errors or non-errors (the latter to keep Typescript happy)
+            if (
+                error instanceof cache.ValidationError ||
+                !(error instanceof Error)
+            ) {
+                throw error
+            }
+            core.warning(error.message)
+        }
+
+        return
+    }
+
+    protected abstract cacheOutputExists(): boolean
+    protected abstract getCachePath(): string[]
 }

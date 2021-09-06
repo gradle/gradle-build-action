@@ -142,13 +142,14 @@ async function downloadAndCacheGradleDistribution(
         try {
             await cache.saveCache([downloadPath], cacheKey)
         } catch (error) {
-            if (error.name === cache.ValidationError.name) {
+            // Fail on validation errors or non-errors (the latter to keep Typescript happy)
+            if (
+                error instanceof cache.ValidationError ||
+                !(error instanceof Error)
+            ) {
                 throw error
-            } else if (error.name === cache.ReserveCacheError.name) {
-                core.info(error.message)
-            } else {
-                core.info(`[warning] ${error.message}`)
             }
+            core.warning(error.message)
         }
     }
     return downloadPath

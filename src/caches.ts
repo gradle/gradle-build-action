@@ -1,5 +1,5 @@
-import * as cacheGradleUserHome from './cache-gradle-user-home'
-import * as cacheProjectDotGradle from './cache-project-dot-gradle'
+import {GradleUserHomeCache} from './cache-gradle-user-home'
+import {ProjectDotGradleCache} from './cache-project-dot-gradle'
 import * as core from '@actions/core'
 import {isCacheReadEnabled, isCacheSaveEnabled} from './cache-utils'
 
@@ -12,9 +12,9 @@ export async function restore(buildRootDirectory: string): Promise<void> {
     }
 
     core.startGroup('Restore Gradle state from cache')
-    await cacheGradleUserHome.restore()
     core.saveState(BUILD_ROOT_DIR, buildRootDirectory)
-    await cacheProjectDotGradle.restore(buildRootDirectory)
+    new GradleUserHomeCache().restore()
+    new ProjectDotGradleCache(buildRootDirectory).restore()
     core.endGroup()
 }
 
@@ -25,8 +25,8 @@ export async function save(): Promise<void> {
     }
 
     core.startGroup('Caching Gradle state')
-    await cacheGradleUserHome.save()
     const buildRootDirectory = core.getState(BUILD_ROOT_DIR)
-    await cacheProjectDotGradle.save(buildRootDirectory)
+    new GradleUserHomeCache().save()
+    new ProjectDotGradleCache(buildRootDirectory).save()
     core.endGroup()
 }
