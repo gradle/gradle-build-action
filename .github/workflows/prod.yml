@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  CACHE_KEY_SEED: ${{github.workflow}}#${{github.run_number}}-
+  CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
 
 jobs:
   # Run initial Gradle builds to push initial cache entries
