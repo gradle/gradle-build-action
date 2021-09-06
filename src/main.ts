@@ -29,6 +29,7 @@ export async function run(): Promise<void> {
 
         if (result.buildScanUrl) {
             core.setOutput('build-scan-url', result.buildScanUrl)
+            core.notice(`Gradle build scan: ${result.buildScanUrl}`)
         }
 
         if (result.status !== 0) {
