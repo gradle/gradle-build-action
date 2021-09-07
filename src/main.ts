@@ -59,14 +59,7 @@ async function resolveGradleExecutable(
         return path.resolve(workspaceDirectory, gradleExecutable)
     }
 
-    const wrapperDirectory = core.getInput('wrapper-directory')
-    const gradlewDirectory =
-        wrapperDirectory !== ''
-            ? path.resolve(workspaceDirectory, wrapperDirectory)
-            : buildRootDirectory
-
-    gradlew.validateGradleWrapper(gradlewDirectory)
-    return path.resolve(gradlewDirectory, gradlew.wrapperFilename())
+    return gradlew.locateGradleWrapperScript(buildRootDirectory)
 }
 
 function resolveBuildRootDirectory(baseDirectory: string): string {

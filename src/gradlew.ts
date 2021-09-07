@@ -3,7 +3,7 @@ import fs from 'fs'
 
 const IS_WINDOWS = process.platform === 'win32'
 
-export function wrapperFilename(): string {
+export function wrapperScriptFilename(): string {
     return IS_WINDOWS ? 'gradlew.bat' : 'gradlew'
 }
 
@@ -11,9 +11,14 @@ export function installScriptFilename(): string {
     return IS_WINDOWS ? 'gradle.bat' : 'gradle'
 }
 
-export function validateGradleWrapper(gradlewDirectory: string): void {
+export function locateGradleWrapperScript(buildRootDirectory: string): string {
+    validateGradleWrapper(buildRootDirectory)
+    return path.resolve(buildRootDirectory, wrapperScriptFilename())
+}
+
+function validateGradleWrapper(buildRootDirectory: string): void {
     const wrapperProperties = path.resolve(
-        gradlewDirectory,
+        buildRootDirectory,
         'gradle/wrapper/gradle-wrapper.properties'
     )
     if (!fs.existsSync(wrapperProperties)) {
