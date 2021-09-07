@@ -24,6 +24,10 @@ inputs:
     description: Whether caching of Gradle User Home and project .gradle directory is enabled. Valid values are 'true' (default), 'false', and 'read-only'.
     required: false
     default: true
+  workflow-job-context:
+    description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users.
+    required: false
+    default: ${{ toJSON(matrix) }}
 
 outputs:
   build-scan-url:

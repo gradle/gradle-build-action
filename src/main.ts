@@ -16,6 +16,7 @@ export async function run(): Promise<void> {
 
     try {
         const args: string[] = parseCommandLineArguments()
+        // TODO: instead of running with no-daemon, run `--stop` in post action.
         args.push('--no-daemon')
 
         const result = await execution.execute(
