@@ -10,10 +10,15 @@ import {AbstractCache} from './cache-utils'
 
 const CACHE_PATH = [
     '~/.gradle/caches/*', // All directories in 'caches'
-    '!~/.gradle/caches/*/generated-gradle-jars', // Exclude generated-gradle-jars
     '~/.gradle/notifications/*', // Prevent the re-rendering of first-use message for version
-    '~/.gradle/wrapper/dists/*/*/*.zip.txt' // Only wrapper zips are required : Gradle will expand these on demand
+    '~/.gradle/wrapper/dists/*/*/*.zip.txt' // Only wrapper zips are required : We do not want to cache the exploded distributions
 ]
+
+const DEDUPLCIATED_PATHS = [
+    '~/.gradle/wrapper/dists/*/*/*.zip',
+    '~/.gradle/caches/*/generated-gradle-jars/*.jar'
+]
+const MARKER_FILE_EXTENSION = '.txt'
 
 export class GradleUserHomeCache extends AbstractCache {
     constructor() {
@@ -23,90 +28,48 @@ export class GradleUserHomeCache extends AbstractCache {
     async restore(): Promise<void> {
         await super.restore()
         await this.reportCacheEntrySize()
-        await this.restoreWrapperZips()
-        await this.restoreGeneratedJars()
+        await this.restoreDeduplicatedPaths()
+        await this.reportCacheEntrySize()
     }
 
-    private async restoreWrapperZips(): Promise<void> {
-        const globber = await glob.create(
-            '~/.gradle/wrapper/dists/*/*/*.zip.txt'
-        )
-        const wrapperMarkers = await globber.glob()
+    private async restoreDeduplicatedPaths(): Promise<void> {
+        const markerFilePatterns = DEDUPLCIATED_PATHS.map(targetPath => {
+            return targetPath + MARKER_FILE_EXTENSION
+        }).join('\n')
 
-        core.info('Found the following wrapper zips')
-        for (const wrapperMarker of wrapperMarkers) {
-            const wrapperZip = wrapperMarker.substring(
+        core.info(`Using marker file patterns: ${markerFilePatterns}`)
+        const globber = await glob.create(markerFilePatterns)
+        const markerFiles = await globber.glob()
+
+        for (const markerFile of markerFiles) {
+            const targetFile = markerFile.substring(
                 0,
-                wrapperMarker.length - '.txt'.length
+                markerFile.length - MARKER_FILE_EXTENSION.length
             )
             core.info(
-                `Wrapper marker: ${wrapperMarker}. Looking for zip ${wrapperZip}`
+                `Found marker file: ${markerFile}. Looking for ${targetFile}`
             )
 
-            if (!fs.existsSync(wrapperZip)) {
-                // Extract the wrapper URL hash
-                const wrapperKey = path.basename(path.dirname(wrapperMarker))
-                core.info(`Wrapper key: ${wrapperKey}`)
-
-                const cacheKey = `gradle-wrapper-${wrapperKey}`
-                core.info(`Cache key: ${cacheKey}. Cache path: ${wrapperZip}`)
+            if (!fs.existsSync(targetFile)) {
+                const key = path.relative(this.getGradleUserHome(), targetFile)
+                const cacheKey = `gradle-dedup-${key}`
+                core.info(`Cache key: ${cacheKey}. Cache path: ${targetFile}`)
 
                 const restoreKey = await cache.restoreCache(
-                    [wrapperZip],
+                    [targetFile],
                     cacheKey
                 )
                 if (restoreKey) {
                     core.info(
-                        `Restored wrapper zip ${cacheKey} from cache to ${wrapperZip}`
+                        `Restored ${cacheKey} from cache to ${targetFile}`
                     )
                 } else {
                     core.info(
-                        `Did NOT restore wrapper zip from ${cacheKey} to ${wrapperZip}`
+                        `Did NOT restore from ${cacheKey} to ${targetFile}`
                     )
                 }
             } else {
-                core.info(`Wrapper zip file already exists: ${wrapperZip}`)
-            }
-        }
-    }
-
-    private async restoreGeneratedJars(): Promise<void> {
-        const globber = await glob.create(
-            '~/.gradle/caches/*/generated-gradle-jars/*.jar.txt'
-        )
-        const generatedJarMarkers = await globber.glob()
-
-        core.info('Found the following generated jars')
-        for (const jarMarker of generatedJarMarkers) {
-            const generatedJar = jarMarker.substring(
-                0,
-                jarMarker.length - '.txt'.length
-            )
-            core.info(
-                `Jar marker: ${jarMarker}. Looking for jar ${generatedJar}`
-            )
-
-            if (!fs.existsSync(generatedJar)) {
-                // Extract the wrapper URL hash
-                const jarKey = path.basename(generatedJar)
-                const cacheKey = `gradle-generated-jar-${jarKey}`
-                core.info(`Cache key: ${cacheKey}. Cache path: ${generatedJar}`)
-
-                const restoreKey = await cache.restoreCache(
-                    [generatedJar],
-                    cacheKey
-                )
-                if (restoreKey) {
-                    core.info(
-                        `Restored generated jar ${cacheKey} from cache to ${generatedJar}`
-                    )
-                } else {
-                    core.info(
-                        `Did NOT restore generated jar from ${cacheKey} to ${generatedJar}`
-                    )
-                }
-            } else {
-                core.info(`Generated jar file already exists: ${generatedJar}`)
+                core.info(`Target file already exists: ${targetFile}`)
             }
         }
     }
@@ -125,30 +88,28 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     async save(): Promise<void> {
-        await this.cacheWrapperZips()
-        await this.cacheGeneratedJars()
+        await this.cacheDeduplicatedPaths()
         await super.save()
     }
 
-    private async cacheWrapperZips(): Promise<void> {
-        const globber = await glob.create('~/.gradle/wrapper/dists/*/*/*.zip')
-        const wrapperZips = await globber.glob()
+    private async cacheDeduplicatedPaths(): Promise<void> {
+        const targetFilePatterns = DEDUPLCIATED_PATHS.join('\n')
+        core.info(`Using target file patterns: ${targetFilePatterns}`)
+        const globber = await glob.create(targetFilePatterns)
+        const targetFiles = await globber.glob()
 
-        for (const wrapperZip of wrapperZips) {
-            core.info(`Wrapper zip: ${wrapperZip}`)
+        for (const targetFile of targetFiles) {
+            core.info(`Deduplicate caching: ${targetFile}`)
 
-            const wrapperMarkerFile = `${wrapperZip}.txt`
+            const markerFile = `${targetFile}${MARKER_FILE_EXTENSION}`
 
-            if (!fs.existsSync(wrapperMarkerFile)) {
-                // Extract the wrapper URL hash
-                const wrapperKey = path.basename(path.dirname(wrapperZip))
-                core.info(`Wrapper key: ${wrapperKey}`)
+            if (!fs.existsSync(markerFile)) {
+                const key = path.relative(this.getGradleUserHome(), targetFile)
+                const cacheKey = `gradle-dedup-${key}`
+                core.info(`Cache key: ${cacheKey}. Cache path: ${targetFile}`)
 
-                const cacheKey = `gradle-wrapper-${wrapperKey}`
-
-                core.info(`Caching wrapper with cache key: ${cacheKey}`)
                 try {
-                    await cache.saveCache([wrapperZip], cacheKey)
+                    await cache.saveCache([targetFile], cacheKey)
                 } catch (error) {
                     // Fail on validation errors or non-errors (the latter to keep Typescript happy)
                     if (
@@ -162,71 +123,28 @@ export class GradleUserHomeCache extends AbstractCache {
                 }
 
                 // Write the marker file and delete the original
-                fs.writeFileSync(wrapperMarkerFile, 'dummy')
+                fs.writeFileSync(markerFile, 'dummy')
             } else {
-                core.info(
-                    `Wrapper marker file already exists: ${wrapperMarkerFile}`
-                )
+                core.info(`Marker file already exists: ${markerFile}`)
             }
 
             // TODO : Should not need to delete. Just exclude from cache path.
-            // Delete the wrapper
-            fs.unlinkSync(wrapperZip)
-        }
-    }
-
-    private async cacheGeneratedJars(): Promise<void> {
-        const globber = await glob.create(
-            '~/.gradle/caches/*/generated-gradle-jars/*.jar'
-        )
-        const generatedJars = await globber.glob()
-
-        for (const generatedJar of generatedJars) {
-            core.info(`Generated jar: ${generatedJar}`)
-
-            const generatedJarMarkerFile = `${generatedJar}.txt`
-
-            if (!fs.existsSync(generatedJarMarkerFile)) {
-                // Key by jar file name: this includes Gradle version
-                const jarKey = path.basename(generatedJar)
-                const cacheKey = `gradle-generated-jar-${jarKey}`
-
-                core.info(`Caching generated jar with cache key: ${cacheKey}`)
-                try {
-                    await cache.saveCache([generatedJar], cacheKey)
-                } catch (error) {
-                    // Fail on validation errors or non-errors (the latter to keep Typescript happy)
-                    if (
-                        error instanceof cache.ValidationError ||
-                        !(error instanceof Error)
-                    ) {
-                        throw error
-                    }
-                    // TODO : Avoid warning for reserve cache error: this is expected
-                    core.warning(error.message)
-                }
-
-                // Write the marker file and delete the original
-                fs.writeFileSync(generatedJarMarkerFile, 'dummy')
-            } else {
-                core.info(
-                    `Wrapper marker file already exists: ${generatedJarMarkerFile}`
-                )
-            }
-
-            // TODO : Should not need to delete. Just exclude from cache path.
-            // Delete the jar
-            fs.unlinkSync(generatedJar)
+            // Delete the target file
+            fs.unlinkSync(targetFile)
         }
     }
 
     protected cacheOutputExists(): boolean {
         // Need to check for 'caches' directory to avoid incorrect detection on MacOS agents
-        const dir = path.resolve(os.homedir(), '.gradle/caches')
+        const dir = path.resolve(this.getGradleUserHome(), 'caches')
         return fs.existsSync(dir)
     }
 
     protected getCachePath(): string[] {
         return CACHE_PATH
+    }
+
+    protected getGradleUserHome(): string {
+        return path.resolve(os.homedir(), '.gradle')
     }
 }
