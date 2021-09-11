@@ -120,6 +120,32 @@ jobs:
         arguments: test --configuration-cache
         gradle-cache-enabled: read-only
 
+  # Use kotlin-dsl project to verify caching of generated jars and compiled scripts
+  # At this stage there is no automated verification of this caching: eyeball the build scan to verify
+  seed-kotlin-dsl-build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Build kotlin-dsl project
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/kotlin-dsl
+        arguments: test
+
+  verify-kotlin-dsl-build:
+    needs: seed-kotlin-dsl-build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Build kotlin-dsl project
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/kotlin-dsl
+        arguments: test
+        gradle-cache-enabled: read-only
+
   # These build invocations are informational only, and are expected to fail
   failures: 
     needs: seed-build
