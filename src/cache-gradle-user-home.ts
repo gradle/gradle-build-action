@@ -16,7 +16,8 @@ const CACHE_PATH = [
 
 const DEDUPLCIATED_PATHS = [
     '~/.gradle/wrapper/dists/*/*/*.zip',
-    '~/.gradle/caches/*/generated-gradle-jars/*.jar'
+    '~/.gradle/caches/*/generated-gradle-jars/*.jar',
+    '~/.gradle/caches/modules-*/files-*/**/*.jar'
 ]
 const MARKER_FILE_EXTENSION = '.txt'
 
