@@ -42,36 +42,34 @@ export class GradleUserHomeCache extends AbstractCache {
         const globber = await glob.create(markerFilePatterns)
         const markerFiles = await globber.glob()
 
+        const processes: Promise<void>[] = []
         for (const markerFile of markerFiles) {
-            const targetFile = markerFile.substring(
-                0,
-                markerFile.length - MARKER_FILE_EXTENSION.length
-            )
-            core.info(
-                `Found marker file: ${markerFile}. Looking for ${targetFile}`
-            )
+            const p = this.restoreDeduplicatePath(markerFile)
+            processes.push(p)
+        }
+        await Promise.all(processes)
+    }
 
-            if (!fs.existsSync(targetFile)) {
-                const key = path.relative(this.getGradleUserHome(), targetFile)
-                const cacheKey = `gradle-dedup-${key}`
-                core.info(`Cache key: ${cacheKey}. Cache path: ${targetFile}`)
+    private async restoreDeduplicatePath(markerFile: string): Promise<void> {
+        const targetFile = markerFile.substring(
+            0,
+            markerFile.length - MARKER_FILE_EXTENSION.length
+        )
+        core.info(`Found marker file: ${markerFile}. Looking for ${targetFile}`)
 
-                const restoreKey = await cache.restoreCache(
-                    [targetFile],
-                    cacheKey
-                )
-                if (restoreKey) {
-                    core.info(
-                        `Restored ${cacheKey} from cache to ${targetFile}`
-                    )
-                } else {
-                    core.info(
-                        `Did NOT restore from ${cacheKey} to ${targetFile}`
-                    )
-                }
+        if (!fs.existsSync(targetFile)) {
+            const key = path.relative(this.getGradleUserHome(), targetFile)
+            const cacheKey = `gradle-dedup-${key}`
+            core.info(`Cache key: ${cacheKey}. Cache path: ${targetFile}`)
+
+            const restoreKey = await cache.restoreCache([targetFile], cacheKey)
+            if (restoreKey) {
+                core.info(`Restored ${cacheKey} from cache to ${targetFile}`)
             } else {
-                core.info(`Target file already exists: ${targetFile}`)
+                core.info(`Did NOT restore from ${cacheKey} to ${targetFile}`)
             }
+        } else {
+            core.info(`Target file already exists: ${targetFile}`)
         }
     }
 
@@ -99,40 +97,47 @@ export class GradleUserHomeCache extends AbstractCache {
         const globber = await glob.create(targetFilePatterns)
         const targetFiles = await globber.glob()
 
+        const processes: Promise<void>[] = []
         for (const targetFile of targetFiles) {
-            core.info(`Deduplicate caching: ${targetFile}`)
+            const p = this.cacheDeplucatePath(targetFile)
+            processes.push(p)
+        }
+        await Promise.all(processes)
+    }
 
-            const markerFile = `${targetFile}${MARKER_FILE_EXTENSION}`
+    private async cacheDeplucatePath(targetFile: string): Promise<void> {
+        core.info(`Deduplicate caching: ${targetFile}`)
 
-            if (!fs.existsSync(markerFile)) {
-                const key = path.relative(this.getGradleUserHome(), targetFile)
-                const cacheKey = `gradle-dedup-${key}`
-                core.info(`Cache key: ${cacheKey}. Cache path: ${targetFile}`)
+        const markerFile = `${targetFile}${MARKER_FILE_EXTENSION}`
 
-                try {
-                    await cache.saveCache([targetFile], cacheKey)
-                } catch (error) {
-                    // Fail on validation errors or non-errors (the latter to keep Typescript happy)
-                    if (
-                        error instanceof cache.ValidationError ||
-                        !(error instanceof Error)
-                    ) {
-                        throw error
-                    }
-                    // TODO : Avoid warning for reserve cache error: this is expected
-                    core.warning(error.message)
+        if (!fs.existsSync(markerFile)) {
+            const key = path.relative(this.getGradleUserHome(), targetFile)
+            const cacheKey = `gradle-dedup-${key}`
+            core.info(`Cache key: ${cacheKey}. Cache path: ${targetFile}`)
+
+            try {
+                await cache.saveCache([targetFile], cacheKey)
+            } catch (error) {
+                // Fail on validation errors or non-errors (the latter to keep Typescript happy)
+                if (
+                    error instanceof cache.ValidationError ||
+                    !(error instanceof Error)
+                ) {
+                    throw error
                 }
-
-                // Write the marker file and delete the original
-                fs.writeFileSync(markerFile, 'dummy')
-            } else {
-                core.info(`Marker file already exists: ${markerFile}`)
+                // TODO : Avoid warning for reserve cache error: this is expected
+                core.warning(error.message)
             }
 
-            // TODO : Should not need to delete. Just exclude from cache path.
-            // Delete the target file
-            fs.unlinkSync(targetFile)
+            // Write the marker file and delete the original
+            fs.writeFileSync(markerFile, 'dummy')
+        } else {
+            core.info(`Marker file already exists: ${markerFile}`)
         }
+
+        // TODO : Should not need to delete. Just exclude from cache path.
+        // Delete the target file
+        fs.unlinkSync(targetFile)
     }
 
     protected cacheOutputExists(): boolean {
