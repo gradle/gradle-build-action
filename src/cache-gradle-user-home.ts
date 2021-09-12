@@ -135,9 +135,12 @@ export class GradleUserHomeCache extends AbstractCache {
                     !(error instanceof Error)
                 ) {
                     throw error
+                } else if (error instanceof cache.ReserveCacheError) {
+                    // These are expected if the artifact is already cached
+                    this.debug(error.message)
+                } else {
+                    core.warning(error.message)
                 }
-                // TODO : Avoid warning for reserve cache error: this is expected
-                core.warning(error.message)
             }
 
             // Write the marker file that will stand in place of the original
