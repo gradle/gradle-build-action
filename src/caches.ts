@@ -1,12 +1,12 @@
 import {GradleUserHomeCache} from './cache-gradle-user-home'
 import {ProjectDotGradleCache} from './cache-project-dot-gradle'
 import * as core from '@actions/core'
-import {isCacheReadEnabled, isCacheSaveEnabled} from './cache-utils'
+import {isCacheDisabled, isCacheReadOnly} from './cache-utils'
 
 const BUILD_ROOT_DIR = 'BUILD_ROOT_DIR'
 
 export async function restore(buildRootDirectory: string): Promise<void> {
-    if (!isCacheReadEnabled('gradle')) {
+    if (isCacheDisabled()) {
         core.debug('Cache read disabled')
         return
     }
@@ -21,8 +21,8 @@ export async function restore(buildRootDirectory: string): Promise<void> {
 }
 
 export async function save(): Promise<void> {
-    if (!isCacheSaveEnabled('gradle')) {
-        core.debug('Cache save disabled')
+    if (isCacheReadOnly()) {
+        core.debug('Cache is read-only: not saving cache entry')
         return
     }
 

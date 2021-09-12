@@ -34,4 +34,4 @@ jobs:
       with:
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help
-        gradle-cache-enabled: no
+        cache-disabled: yes

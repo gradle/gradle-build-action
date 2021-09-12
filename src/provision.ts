@@ -7,7 +7,7 @@ import * as cache from '@actions/cache'
 import * as toolCache from '@actions/tool-cache'
 
 import * as gradlew from './gradlew'
-import {isCacheReadEnabled, isCacheSaveEnabled} from './cache-utils'
+import {isCacheDisabled, isCacheReadOnly} from './cache-utils'
 
 const gradleVersionsBaseUrl = 'https://services.gradle.org/versions'
 
@@ -120,7 +120,7 @@ async function downloadAndCacheGradleDistribution(
         `gradle-installations/downloads/gradle-${versionInfo.version}-bin.zip`
     )
 
-    if (!isCacheReadEnabled('distributions')) {
+    if (isCacheDisabled()) {
         await downloadGradleDistribution(versionInfo, downloadPath)
         return downloadPath
     }
@@ -138,7 +138,7 @@ async function downloadAndCacheGradleDistribution(
     )
     await downloadGradleDistribution(versionInfo, downloadPath)
 
-    if (isCacheSaveEnabled('distributions')) {
+    if (!isCacheReadOnly()) {
         try {
             await cache.saveCache([downloadPath], cacheKey)
         } catch (error) {

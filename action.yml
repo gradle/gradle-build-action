@@ -16,14 +16,14 @@ inputs:
   arguments:
     description: Gradle command line arguments, see gradle --help
     required: false
-  distributions-cache-enabled:
-    description: Whether caching downloaded Gradle distributions is enabled or not. Valid values are 'true' (default), 'false', and 'read-only'.
+  cache-disabled:
+    description: When 'true', all caching is disabled. No entries will be written to or read from the cache.
     required: false
-    default: true
-  gradle-cache-enabled:
-    description: Whether caching of Gradle User Home and project .gradle directory is enabled. Valid values are 'true' (default), 'false', and 'read-only'.
+    default: false
+  cache-read-only:
+    description: When 'true', existing entries will be read from the cache but no entries will be written
     required: false
-    default: true
+    default: false
   workflow-job-context:
     description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users.
     required: false

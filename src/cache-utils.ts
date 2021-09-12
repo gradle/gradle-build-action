@@ -3,27 +3,12 @@ import * as cache from '@actions/cache'
 import * as github from '@actions/github'
 import * as crypto from 'crypto'
 
-export function isCacheReadEnabled(cacheName: string): boolean {
-    const configValue = getCacheEnabledValue(cacheName)
-    return configValue === 'true' || configValue === 'read-only'
+export function isCacheDisabled(): boolean {
+    return core.getBooleanInput('cache-disabled')
 }
 
-export function isCacheSaveEnabled(cacheName: string): boolean {
-    const configValue = getCacheEnabledValue(cacheName)
-    return configValue === 'true'
-}
-
-function getCacheEnabledValue(cacheName: string): string {
-    const configValue = core
-        .getInput(`${cacheName}-cache-enabled`)
-        .toLowerCase()
-
-    if (['true', 'false', 'read-only'].includes(configValue)) {
-        return configValue
-    }
-    throw new Error(
-        `Invalid cache-enabled parameter '${configValue}'. Valid values are ['true', 'false', 'read-only']`
-    )
+export function isCacheReadOnly(): boolean {
+    return core.getBooleanInput('cache-read-only')
 }
 
 export function isCacheDebuggingEnabled(): boolean {

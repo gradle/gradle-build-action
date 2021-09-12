@@ -51,21 +51,21 @@ jobs:
         gradle-version: 6.9
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help -DgradleVersionCheck=6.9
-        gradle-cache-enabled: read-only
+        cache-read-only: true
     - name: Test use Gradle version alias
       uses: ./
       with:
         gradle-version: release-candidate
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help -DgradleVersionCheck=7.2
-        gradle-cache-enabled: read-only
+        cache-read-only: true
     - name: Test use defined Gradle executable
       uses: ./
       with:
         gradle-executable: __tests__/samples/basic/gradlew${{ matrix.script-suffix }}
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help -DgradleVersionCheck=7.1.1
-        gradle-cache-enabled: read-only
+        cache-read-only: true
 
   # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
   dependencies-cache:
@@ -82,7 +82,7 @@ jobs:
       with:
         build-root-directory: __tests__/samples/basic
         arguments: test --offline
-        gradle-cache-enabled: read-only
+        cache-read-only: true
 
   # Test that the gradle-user-home cache will cache and restore local build-cache
   build-cache:
@@ -99,7 +99,7 @@ jobs:
       with:
         build-root-directory: __tests__/samples/basic
         arguments: test -DverifyCachedBuild=true
-        gradle-cache-enabled: read-only
+        cache-read-only: true
 
   # Test that the project-dot-gradle cache will cache and restore configuration-cache
   configuration-cache:
@@ -118,4 +118,4 @@ jobs:
       with:
         build-root-directory: __tests__/samples/basic
         arguments: test --configuration-cache
-        gradle-cache-enabled: read-only
+        cache-read-only: true
