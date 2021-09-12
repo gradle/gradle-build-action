@@ -1,0 +1,37 @@
+ # Make sure the action works on a clean machine without building
+name: integration-testing-kotlin-dsl
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+env:
+  CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+
+jobs:
+  # Use kotlin-dsl project to verify caching of generated jars and compiled scripts
+  seed-build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Build kotlin-dsl project
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/kotlin-dsl
+        arguments: test
+
+  # Check that the build can run --offline
+  verify-build:
+    needs: seed-build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Build kotlin-dsl project
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/kotlin-dsl
+        arguments: test --offline
+        gradle-cache-enabled: read-only
