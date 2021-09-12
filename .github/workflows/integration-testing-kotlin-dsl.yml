@@ -8,6 +8,7 @@ on:
 
 env:
   CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+  CACHE_DEBUG_ENABLED: true
 
 jobs:
   # Use kotlin-dsl project to verify caching of generated jars and compiled scripts
@@ -34,4 +35,3 @@ jobs:
       with:
         build-root-directory: __tests__/samples/kotlin-dsl
         arguments: test --offline
-        gradle-cache-enabled: read-only

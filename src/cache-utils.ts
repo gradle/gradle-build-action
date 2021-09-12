@@ -26,6 +26,10 @@ function getCacheEnabledValue(cacheName: string): string {
     )
 }
 
+export function isCacheDebuggingEnabled(): boolean {
+    return process.env['CACHE_DEBUG_ENABLED'] ? true : false
+}
+
 function generateCacheKey(cacheName: string): CacheKey {
     // Prefix can be used to force change all cache keys
     const cacheKeyPrefix = process.env['CACHE_KEY_PREFIX'] || ''
@@ -80,11 +84,14 @@ export abstract class AbstractCache {
     private cacheKeyStateKey: string
     private cacheResultStateKey: string
 
+    protected readonly cacheDebuggingEnabled: boolean
+
     constructor(cacheName: string, cacheDescription: string) {
         this.cacheName = cacheName
         this.cacheDescription = cacheDescription
         this.cacheKeyStateKey = `CACHE_KEY_${cacheName}`
         this.cacheResultStateKey = `CACHE_RESULT_${cacheName}`
+        this.cacheDebuggingEnabled = isCacheDebuggingEnabled()
     }
 
     async restore(): Promise<void> {
@@ -122,7 +129,7 @@ export abstract class AbstractCache {
 
     async save(): Promise<void> {
         if (!this.cacheOutputExists()) {
-            core.debug(`No ${this.cacheDescription} to cache.`)
+            this.debug(`No ${this.cacheDescription} to cache.`)
             return
         }
 
@@ -130,7 +137,7 @@ export abstract class AbstractCache {
         const cacheResult = core.getState(this.cacheResultStateKey)
 
         if (!cacheKey) {
-            core.info(
+            this.debug(
                 `${this.cacheDescription} existed prior to cache restore. Not saving.`
             )
             return
@@ -160,6 +167,14 @@ export abstract class AbstractCache {
         }
 
         return
+    }
+
+    protected debug(message: string): void {
+        if (this.cacheDebuggingEnabled) {
+            core.info(message)
+        } else {
+            core.debug(message)
+        }
     }
 
     protected abstract cacheOutputExists(): boolean

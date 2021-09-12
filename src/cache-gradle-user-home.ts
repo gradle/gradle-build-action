@@ -50,8 +50,13 @@ export class GradleUserHomeCache extends AbstractCache {
         const processes: Promise<void>[] = []
         for (const markerFile of markerFiles) {
             const p = this.restoreCommonArtifact(markerFile)
+            // Run sequentially when debugging enabled
+            if (this.cacheDebuggingEnabled) {
+                await p
+            }
             processes.push(p)
         }
+
         await Promise.all(processes)
     }
 
@@ -59,9 +64,6 @@ export class GradleUserHomeCache extends AbstractCache {
         const artifactFile = markerFile.substring(
             0,
             markerFile.length - MARKER_FILE_EXTENSION.length
-        )
-        core.debug(
-            `Found marker file: ${markerFile}. Will attempt to restore ${artifactFile}`
         )
 
         if (!fs.existsSync(artifactFile)) {
@@ -73,20 +75,23 @@ export class GradleUserHomeCache extends AbstractCache {
                 cacheKey
             )
             if (restoreKey) {
-                core.info(`Restored ${cacheKey} from cache to ${artifactFile}`)
+                this.debug(`Restored ${cacheKey} from cache to ${artifactFile}`)
             } else {
                 core.warning(
                     `Failed to restore from ${cacheKey} to ${artifactFile}`
                 )
             }
         } else {
-            core.debug(
+            this.debug(
                 `Artifact file already exists, not restoring: ${artifactFile}`
             )
         }
     }
 
     private async reportCacheEntrySize(label: string): Promise<void> {
+        if (!this.cacheDebuggingEnabled) {
+            return
+        }
         const gradleUserHome = path.resolve(os.homedir(), '.gradle')
         if (!fs.existsSync(gradleUserHome)) {
             return
@@ -130,8 +135,13 @@ export class GradleUserHomeCache extends AbstractCache {
         const processes: Promise<void>[] = []
         for (const artifactFile of commonArtifactFiles) {
             const p = this.saveCommonArtifact(artifactFile)
+            // Run sequentially when debugging enabled
+            if (this.cacheDebuggingEnabled) {
+                await p
+            }
             processes.push(p)
         }
+
         await Promise.all(processes)
     }
 
@@ -144,7 +154,8 @@ export class GradleUserHomeCache extends AbstractCache {
                 artifactFile
             )
             const cacheKey = `gradle-artifact-${filePath}`
-            core.info(`Caching ${artifactFile} with cache key: ${cacheKey}`)
+
+            this.debug(`Caching ${artifactFile} with cache key: ${cacheKey}`)
             try {
                 await cache.saveCache([artifactFile], cacheKey)
             } catch (error) {
@@ -165,7 +176,7 @@ export class GradleUserHomeCache extends AbstractCache {
             // Write the marker file that will stand in place of the original
             fs.writeFileSync(markerFile, 'cached')
         } else {
-            core.debug(
+            this.debug(
                 `Marker file already exists: ${markerFile}. Not caching ${artifactFile}`
             )
         }
