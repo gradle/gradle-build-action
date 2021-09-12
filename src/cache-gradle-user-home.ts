@@ -34,9 +34,9 @@ export class GradleUserHomeCache extends AbstractCache {
 
     async restore(): Promise<void> {
         await super.restore()
-        await this.reportCacheEntrySize('excluding common artifacts')
+        await this.reportCacheEntrySize('as restored from cache')
         await this.restoreCommonArtifacts()
-        await this.reportCacheEntrySize('including common artifacts')
+        await this.reportCacheEntrySize('after restoring common artifacts')
     }
 
     private async restoreCommonArtifacts(): Promise<void> {
@@ -91,11 +91,30 @@ export class GradleUserHomeCache extends AbstractCache {
         if (!fs.existsSync(gradleUserHome)) {
             return
         }
-        core.info(`Gradle User Home cache entry: ${label}`)
-        await exec.exec('du', ['-h', '-c', '-t', '5M'], {
-            cwd: gradleUserHome,
-            ignoreReturnCode: true
-        })
+        const result = await exec.getExecOutput(
+            'du',
+            ['-h', '-c', '-t', '5M'],
+            {
+                cwd: gradleUserHome,
+                silent: true,
+                ignoreReturnCode: true
+            }
+        )
+
+        core.info(`Gradle User Home cache entry (directories >5M): ${label}`)
+
+        core.info(
+            result.stdout
+                .trimEnd()
+                .replace(/\t/g, '    ')
+                .split('\n')
+                .map(it => {
+                    return `  ${it}`
+                })
+                .join('\n')
+        )
+
+        core.info('-----------------------')
     }
 
     async save(): Promise<void> {
