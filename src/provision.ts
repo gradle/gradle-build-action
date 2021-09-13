@@ -94,6 +94,14 @@ async function findGradleVersionDeclaration(
 async function provisionGradle(
     versionInfo: GradleVersionInfo
 ): Promise<string> {
+    return core.group(`Provision Gradle ${versionInfo.version}`, async () => {
+        return locateGradleAndDownloadIfRequired(versionInfo)
+    })
+}
+
+async function locateGradleAndDownloadIfRequired(
+    versionInfo: GradleVersionInfo
+): Promise<string> {
     const installsDir = path.join(os.homedir(), 'gradle-installations/installs')
     const installDir = path.join(installsDir, `gradle-${versionInfo.version}`)
     if (fs.existsSync(installDir)) {
