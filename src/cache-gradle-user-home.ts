@@ -8,23 +8,25 @@ import * as exec from '@actions/exec'
 
 import {AbstractCache} from './cache-utils'
 
-// Paths to artifacts that are common to all/many Gradle User Home caches
-// These artifacts are cached separately to avoid blowing out the size of each GUH cache
-const COMMON_ARTIFACT_PATHS = [
-    '~/.gradle/wrapper/dists/*/*/*.zip',
-    '~/.gradle/caches/*/generated-gradle-jars/*.jar',
-    '~/.gradle/caches/modules-*/files-*/**/*.jar'
-]
-
 // When a common artifact is cached separately, it is replaced by a marker file to allow for restore.
 const MARKER_FILE_EXTENSION = '.cached'
 
 // Which paths under Gradle User Home should be cached
 // TODO: This should adapt for the `GRADLE_USER_HOME` environment variable
+// TODO: Allow the user to override / tweak this set
 const CACHE_PATH = [
-    '~/.gradle/caches', // All directories in 'caches'
+    '~/.gradle/caches',
     '~/.gradle/notifications', // Prevent the re-rendering of first-use message for version
-    `~/.gradle/wrapper/dists/*/*/*.zip${MARKER_FILE_EXTENSION}` // Only wrapper zips are required : We do not want to cache the exploded distributions
+    `~/.gradle/wrapper/dists/*/*/*.zip${MARKER_FILE_EXTENSION}` // Only cache/restore wrapper zips: Gradle will automatically expand these on startup if required
+]
+
+// Paths to artifacts that are common to all/many Gradle User Home caches
+// These artifacts are cached separately to avoid blowing out the size of each GUH cache
+// TODO: Allow the user to override / tweak this set
+const COMMON_ARTIFACT_PATHS = [
+    '~/.gradle/caches/*/generated-gradle-jars/*.jar',
+    '~/.gradle/caches/modules-*/files-*/**/*.jar',
+    '~/.gradle/wrapper/dists/*/*/*.zip'
 ]
 
 export class GradleUserHomeCache extends AbstractCache {

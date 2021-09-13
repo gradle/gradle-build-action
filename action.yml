@@ -23,7 +23,9 @@ inputs:
   cache-read-only:
     description: When 'true', existing entries will be read from the cache but no entries will be written
     required: false
-    default: false
+    # TODO: It might be useful to default to read-only for PRs, or non-main branch.
+    default: false 
+  
   workflow-job-context:
     description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users.
     required: false

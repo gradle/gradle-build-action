@@ -30,6 +30,8 @@ export async function run(): Promise<void> {
 
         if (result.buildScanUrl) {
             core.setOutput('build-scan-url', result.buildScanUrl)
+            // TODO Include context about the invocation (eg step name) in this message
+            // Unfortunately it doesn't seem possible to access the current step name here
             core.notice(`Gradle build scan: ${result.buildScanUrl}`)
         }
 

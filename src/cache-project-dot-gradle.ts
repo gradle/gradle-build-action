@@ -2,6 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import {AbstractCache} from './cache-utils'
 
+// TODO: Maybe allow the user to override / tweak this set
 const PATHS_TO_CACHE = [
     'configuration-cache' // Only configuration-cache is stored at present
 ]
