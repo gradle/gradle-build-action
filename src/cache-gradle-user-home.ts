@@ -3,7 +3,6 @@ import fs from 'fs'
 import os from 'os'
 import * as core from '@actions/core'
 import * as glob from '@actions/glob'
-import * as cache from '@actions/cache'
 import * as exec from '@actions/exec'
 
 import {AbstractCache} from './cache-utils'
@@ -72,22 +71,13 @@ export class GradleUserHomeCache extends AbstractCache {
             const key = path.relative(this.getGradleUserHome(), artifactFile)
             const cacheKey = `gradle-artifact-${key}`
 
-            try {
-                const restoreKey = await cache.restoreCache(
-                    [artifactFile],
-                    cacheKey
+            const restoreKey = await this.restoreCache([artifactFile], cacheKey)
+            if (restoreKey) {
+                this.debug(`Restored ${cacheKey} from cache to ${artifactFile}`)
+            } else {
+                this.debug(
+                    `Failed to restore from ${cacheKey} to ${artifactFile}`
                 )
-                if (restoreKey) {
-                    this.debug(
-                        `Restored ${cacheKey} from cache to ${artifactFile}`
-                    )
-                } else {
-                    core.warning(
-                        `Failed to restore from ${cacheKey} to ${artifactFile}`
-                    )
-                }
-            } catch (error) {
-                core.warning(`Error restoring ${cacheKey}: ${error}`)
             }
         } else {
             this.debug(
@@ -164,21 +154,7 @@ export class GradleUserHomeCache extends AbstractCache {
             const cacheKey = `gradle-artifact-${filePath}`
 
             this.debug(`Caching ${artifactFile} with cache key: ${cacheKey}`)
-            try {
-                await cache.saveCache([artifactFile], cacheKey)
-            } catch (error) {
-                // Fail on validation errors or non-errors (the latter to keep Typescript happy)
-                if (error instanceof cache.ValidationError) {
-                    throw error
-                } else if (error instanceof cache.ReserveCacheError) {
-                    // These are expected if the artifact is already cached
-                    this.debug(error.message)
-                } else if (error instanceof Error) {
-                    core.warning(error.message)
-                } else {
-                    core.warning(`${error}`)
-                }
-            }
+            await this.saveCache([artifactFile], cacheKey)
 
             // Write the marker file that will stand in place of the original
             fs.writeFileSync(markerFile, 'cached')

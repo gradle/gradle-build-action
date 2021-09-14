@@ -91,7 +91,7 @@ export abstract class AbstractCache {
 
         core.saveState(this.cacheKeyStateKey, cacheKey.key)
 
-        const cacheResult = await cache.restoreCache(
+        const cacheResult = await this.restoreCache(
             this.getCachePath(),
             cacheKey.key,
             cacheKey.restoreKeys
@@ -110,6 +110,28 @@ export abstract class AbstractCache {
             `${this.cacheDescription} restored from cache key: ${cacheResult}`
         )
         return
+    }
+
+    protected async restoreCache(
+        cachePath: string[],
+        cacheKey: string,
+        cacheRestoreKeys: string[] = []
+    ): Promise<string | undefined> {
+        try {
+            return await cache.restoreCache(
+                cachePath,
+                cacheKey,
+                cacheRestoreKeys
+            )
+        } catch (error) {
+            if (error instanceof cache.ValidationError) {
+                // Validation errors should fail the build action
+                throw error
+            }
+            // Warn about any other error and continue
+            core.warning(`Failed to restore ${cacheKey}: ${error}`)
+            return undefined
+        }
     }
 
     async save(): Promise<void> {
@@ -138,20 +160,30 @@ export abstract class AbstractCache {
         core.info(
             `Caching ${this.cacheDescription} with cache key: ${cacheKey}`
         )
-        try {
-            await cache.saveCache(this.getCachePath(), cacheKey)
-        } catch (error) {
-            // Fail on validation errors or non-errors (the latter to keep Typescript happy)
-            if (
-                error instanceof cache.ValidationError ||
-                !(error instanceof Error)
-            ) {
-                throw error
-            }
-            core.warning(error.message)
-        }
+        const cachePath = this.getCachePath()
+        await this.saveCache(cachePath, cacheKey)
 
         return
+    }
+
+    protected async saveCache(
+        cachePath: string[],
+        cacheKey: string
+    ): Promise<void> {
+        try {
+            await cache.saveCache(cachePath, cacheKey)
+        } catch (error) {
+            if (error instanceof cache.ValidationError) {
+                // Validation errors should fail the build action
+                throw error
+            } else if (error instanceof cache.ReserveCacheError) {
+                // Reserve cache errors are expected if the artifact has been previously cached
+                this.debug(error.message)
+            } else {
+                // Warn about any other error and continue
+                core.warning(String(error))
+            }
+        }
     }
 
     protected debug(message: string): void {
