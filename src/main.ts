@@ -9,12 +9,12 @@ import * as provision from './provision'
 
 // Invoked by GitHub Actions
 export async function run(): Promise<void> {
-    const workspaceDirectory = process.env[`GITHUB_WORKSPACE`] || ''
-    const buildRootDirectory = resolveBuildRootDirectory(workspaceDirectory)
-
-    await caches.restore(buildRootDirectory)
-
     try {
+        const workspaceDirectory = process.env[`GITHUB_WORKSPACE`] || ''
+        const buildRootDirectory = resolveBuildRootDirectory(workspaceDirectory)
+
+        await caches.restore(buildRootDirectory)
+
         const args: string[] = parseCommandLineArguments()
         // TODO: instead of running with no-daemon, run `--stop` in post action.
         args.push('--no-daemon')
@@ -39,10 +39,10 @@ export async function run(): Promise<void> {
             core.setFailed(`Gradle process exited with status ${result.status}`)
         }
     } catch (error) {
-        if (!(error instanceof Error)) {
-            throw error
+        core.setFailed(String(error))
+        if (error instanceof Error && error.stack) {
+            core.info(error.stack)
         }
-        core.setFailed(error.message)
     }
 }
 
