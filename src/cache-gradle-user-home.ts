@@ -72,16 +72,22 @@ export class GradleUserHomeCache extends AbstractCache {
             const key = path.relative(this.getGradleUserHome(), artifactFile)
             const cacheKey = `gradle-artifact-${key}`
 
-            const restoreKey = await cache.restoreCache(
-                [artifactFile],
-                cacheKey
-            )
-            if (restoreKey) {
-                this.debug(`Restored ${cacheKey} from cache to ${artifactFile}`)
-            } else {
-                core.warning(
-                    `Failed to restore from ${cacheKey} to ${artifactFile}`
+            try {
+                const restoreKey = await cache.restoreCache(
+                    [artifactFile],
+                    cacheKey
                 )
+                if (restoreKey) {
+                    this.debug(
+                        `Restored ${cacheKey} from cache to ${artifactFile}`
+                    )
+                } else {
+                    core.warning(
+                        `Failed to restore from ${cacheKey} to ${artifactFile}`
+                    )
+                }
+            } catch (error) {
+                core.warning(`Error restoring ${cacheKey}: ${error}`)
             }
         } else {
             this.debug(
@@ -162,16 +168,15 @@ export class GradleUserHomeCache extends AbstractCache {
                 await cache.saveCache([artifactFile], cacheKey)
             } catch (error) {
                 // Fail on validation errors or non-errors (the latter to keep Typescript happy)
-                if (
-                    error instanceof cache.ValidationError ||
-                    !(error instanceof Error)
-                ) {
+                if (error instanceof cache.ValidationError) {
                     throw error
                 } else if (error instanceof cache.ReserveCacheError) {
                     // These are expected if the artifact is already cached
                     this.debug(error.message)
-                } else {
+                } else if (error instanceof Error) {
                     core.warning(error.message)
+                } else {
+                    core.warning(`${error}`)
                 }
             }
 
