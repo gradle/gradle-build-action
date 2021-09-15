@@ -24,7 +24,6 @@ const CACHE_PATH = [
 // TODO: Allow the user to override / tweak this set
 const COMMON_ARTIFACT_PATHS = [
     '~/.gradle/caches/*/generated-gradle-jars/*.jar',
-    '~/.gradle/caches/modules-*/files-*/**/*.jar',
     '~/.gradle/wrapper/dists/*/*/*.zip'
 ]
 
