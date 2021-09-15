@@ -32,8 +32,7 @@ export class GradleUserHomeCache extends AbstractCache {
         super('gradle', 'Gradle User Home')
     }
 
-    async restore(): Promise<void> {
-        await super.restore()
+    async afterRestore(): Promise<void> {
         await this.reportCacheEntrySize('as restored from cache')
         await this.restoreCommonArtifacts()
         await this.reportCacheEntrySize('after restoring common artifacts')
@@ -119,9 +118,8 @@ export class GradleUserHomeCache extends AbstractCache {
         core.info('-----------------------')
     }
 
-    async save(): Promise<void> {
+    async beforeSave(): Promise<void> {
         await this.saveCommonArtifacts()
-        await super.save()
     }
 
     private async saveCommonArtifacts(): Promise<void> {

@@ -109,6 +109,9 @@ export abstract class AbstractCache {
         core.info(
             `${this.cacheDescription} restored from cache key: ${cacheResult}`
         )
+
+        await this.afterRestore()
+
         return
     }
 
@@ -134,6 +137,8 @@ export abstract class AbstractCache {
         }
     }
 
+    protected async afterRestore(): Promise<void> {}
+
     async save(): Promise<void> {
         if (!this.cacheOutputExists()) {
             this.debug(`No ${this.cacheDescription} to cache.`)
@@ -157,6 +162,8 @@ export abstract class AbstractCache {
             return
         }
 
+        await this.beforeSave()
+
         core.info(
             `Caching ${this.cacheDescription} with cache key: ${cacheKey}`
         )
@@ -165,6 +172,8 @@ export abstract class AbstractCache {
 
         return
     }
+
+    protected async beforeSave(): Promise<void> {}
 
     protected async saveCache(
         cachePath: string[],
