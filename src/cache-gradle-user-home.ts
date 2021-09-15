@@ -5,27 +5,19 @@ import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 import * as exec from '@actions/exec'
 
-import {AbstractCache} from './cache-utils'
-
-// When a common artifact is cached separately, it is replaced by a marker file to allow for restore.
-const MARKER_FILE_EXTENSION = '.cached'
+import {AbstractCache, hashStrings} from './cache-utils'
 
 // Which paths under Gradle User Home should be cached
 // TODO: This should adapt for the `GRADLE_USER_HOME` environment variable
 // TODO: Allow the user to override / tweak this set
-const CACHE_PATH = [
-    '~/.gradle/caches',
-    '~/.gradle/notifications', // Prevent the re-rendering of first-use message for version
-    `~/.gradle/wrapper/dists/*/*/*.zip${MARKER_FILE_EXTENSION}` // Only cache/restore wrapper zips: Gradle will automatically expand these on startup if required
-]
+const CACHE_PATH = ['~/.gradle/caches', '~/.gradle/notifications']
 
-// Paths to artifacts that are common to all/many Gradle User Home caches
-// These artifacts are cached separately to avoid blowing out the size of each GUH cache
-// TODO: Allow the user to override / tweak this set
-const COMMON_ARTIFACT_PATHS = [
-    '~/.gradle/caches/*/generated-gradle-jars/*.jar',
-    '~/.gradle/wrapper/dists/*/*/*.zip'
-]
+const COMMON_ARTIFACT_CACHES = new Map([
+    ['generated-gradle-jars', '~/.gradle/caches/*/generated-gradle-jars/*.jar'],
+    ['wrapper-zips', '~/.gradle/wrapper/dists/*/*/*.zip'],
+    ['dependency-jars', '~/.gradle/caches/modules-*/files-*/**/*.jar'],
+    ['instrumented-jars', '~/.gradle/caches/jars-*/*/*.jar']
+])
 
 export class GradleUserHomeCache extends AbstractCache {
     constructor() {
@@ -39,16 +31,9 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     private async restoreCommonArtifacts(): Promise<void> {
-        const markerFilePatterns = COMMON_ARTIFACT_PATHS.map(targetPath => {
-            return targetPath + MARKER_FILE_EXTENSION
-        }).join('\n')
-
-        const globber = await glob.create(markerFilePatterns)
-        const markerFiles = await globber.glob()
-
         const processes: Promise<void>[] = []
-        for (const markerFile of markerFiles) {
-            const p = this.restoreCommonArtifact(markerFile)
+        for (const [bundle, pattern] of COMMON_ARTIFACT_CACHES) {
+            const p = this.restoreCommonArtifactBundle(bundle, pattern)
             // Run sequentially when debugging enabled
             if (this.cacheDebuggingEnabled) {
                 await p
@@ -59,29 +44,36 @@ export class GradleUserHomeCache extends AbstractCache {
         await Promise.all(processes)
     }
 
-    private async restoreCommonArtifact(markerFile: string): Promise<void> {
-        const artifactFile = markerFile.substring(
-            0,
-            markerFile.length - MARKER_FILE_EXTENSION.length
-        )
-
-        if (!fs.existsSync(artifactFile)) {
-            const key = path.relative(this.getGradleUserHome(), artifactFile)
-            const cacheKey = `gradle-artifact-${key}`
-
-            const restoreKey = await this.restoreCache([artifactFile], cacheKey)
+    private async restoreCommonArtifactBundle(
+        bundle: string,
+        pattern: string
+    ): Promise<void> {
+        const cacheMetaFile = this.getCacheMetaFile(bundle)
+        if (fs.existsSync(cacheMetaFile)) {
+            const cacheKey = fs.readFileSync(cacheMetaFile, 'utf-8').trim()
+            const restoreKey = await this.restoreCache([pattern], cacheKey)
             if (restoreKey) {
-                this.debug(`Restored ${cacheKey} from cache to ${artifactFile}`)
+                this.debug(
+                    `Restored ${bundle} with key ${cacheKey} to ${pattern}`
+                )
             } else {
                 this.debug(
-                    `Failed to restore from ${cacheKey} to ${artifactFile}`
+                    `Failed to restore ${bundle} with key ${cacheKey} to ${pattern}`
                 )
             }
         } else {
             this.debug(
-                `Artifact file already exists, not restoring: ${artifactFile}`
+                `No metafile found to restore ${bundle}: ${cacheMetaFile}`
             )
         }
+    }
+
+    private getCacheMetaFile(name: string): string {
+        return path.resolve(
+            this.getGradleUserHome(),
+            'caches',
+            `.gradle-build-action.${name}.cache`
+        )
     }
 
     private async reportCacheEntrySize(label: string): Promise<void> {
@@ -123,13 +115,9 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     private async saveCommonArtifacts(): Promise<void> {
-        const artifactFilePatterns = COMMON_ARTIFACT_PATHS.join('\n')
-        const globber = await glob.create(artifactFilePatterns)
-        const commonArtifactFiles = await globber.glob()
-
         const processes: Promise<void>[] = []
-        for (const artifactFile of commonArtifactFiles) {
-            const p = this.saveCommonArtifact(artifactFile)
+        for (const [bundle, pattern] of COMMON_ARTIFACT_CACHES) {
+            const p = this.saveCommonArtifactBundle(bundle, pattern)
             // Run sequentially when debugging enabled
             if (this.cacheDebuggingEnabled) {
                 await p
@@ -140,30 +128,49 @@ export class GradleUserHomeCache extends AbstractCache {
         await Promise.all(processes)
     }
 
-    private async saveCommonArtifact(artifactFile: string): Promise<void> {
-        const markerFile = `${artifactFile}${MARKER_FILE_EXTENSION}`
+    private async saveCommonArtifactBundle(
+        bundle: string,
+        pattern: string
+    ): Promise<void> {
+        const cacheMetaFile = this.getCacheMetaFile(bundle)
 
-        if (!fs.existsSync(markerFile)) {
-            const filePath = path.relative(
-                this.getGradleUserHome(),
-                artifactFile
-            )
-            const cacheKey = `gradle-artifact-${filePath}`
+        const globber = await glob.create(pattern)
+        const commonArtifactFiles = await globber.glob()
 
-            this.debug(`Caching ${artifactFile} with cache key: ${cacheKey}`)
-            await this.saveCache([artifactFile], cacheKey)
-
-            // Write the marker file that will stand in place of the original
-            fs.writeFileSync(markerFile, 'cached')
-        } else {
-            this.debug(
-                `Marker file already exists: ${markerFile}. Not caching ${artifactFile}`
-            )
+        // Handle no matching files
+        if (commonArtifactFiles.length === 0) {
+            this.debug(`No files found to cache for ${bundle}`)
+            if (fs.existsSync(cacheMetaFile)) {
+                fs.unlinkSync(cacheMetaFile)
+            }
+            return
         }
 
-        // TODO : Should not need to delete. Just exclude from cache path.
-        // Delete the original artifact file
-        fs.unlinkSync(artifactFile)
+        const previouslyRestoredKey = fs.existsSync(cacheMetaFile)
+            ? fs.readFileSync(cacheMetaFile, 'utf-8').trim()
+            : ''
+        const cacheKey = this.createCacheKey(hashStrings(commonArtifactFiles))
+
+        if (previouslyRestoredKey === cacheKey) {
+            this.debug(
+                `No change to previously restored ${bundle}. Not caching.`
+            )
+        } else {
+            this.debug(`Caching ${bundle} with cache key: ${cacheKey}`)
+            await this.saveCache([pattern], cacheKey)
+
+            this.debug(`Writing cache metafile: ${cacheMetaFile}`)
+            fs.writeFileSync(cacheMetaFile, cacheKey)
+        }
+
+        for (const file of commonArtifactFiles) {
+            fs.unlinkSync(file)
+        }
+    }
+
+    protected createCacheKey(key: string): string {
+        const cacheKeyPrefix = process.env['CACHE_KEY_PREFIX'] || ''
+        return `${cacheKeyPrefix}${key}`
     }
 
     protected getGradleUserHome(): string {
