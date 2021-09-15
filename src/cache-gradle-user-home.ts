@@ -53,7 +53,7 @@ export class GradleUserHomeCache extends AbstractCache {
             const cacheKey = fs.readFileSync(cacheMetaFile, 'utf-8').trim()
             const restoreKey = await this.restoreCache([pattern], cacheKey)
             if (restoreKey) {
-                this.debug(
+                core.info(
                     `Restored ${bundle} with key ${cacheKey} to ${pattern}`
                 )
             } else {
@@ -149,14 +149,17 @@ export class GradleUserHomeCache extends AbstractCache {
         const previouslyRestoredKey = fs.existsSync(cacheMetaFile)
             ? fs.readFileSync(cacheMetaFile, 'utf-8').trim()
             : ''
-        const cacheKey = this.createCacheKey(hashStrings(commonArtifactFiles))
+        const cacheKey = this.createCacheKey(
+            bundle,
+            hashStrings(commonArtifactFiles)
+        )
 
         if (previouslyRestoredKey === cacheKey) {
             this.debug(
                 `No change to previously restored ${bundle}. Not caching.`
             )
         } else {
-            this.debug(`Caching ${bundle} with cache key: ${cacheKey}`)
+            core.info(`Caching ${bundle} with cache key: ${cacheKey}`)
             await this.saveCache([pattern], cacheKey)
 
             this.debug(`Writing cache metafile: ${cacheMetaFile}`)
@@ -168,9 +171,9 @@ export class GradleUserHomeCache extends AbstractCache {
         }
     }
 
-    protected createCacheKey(key: string): string {
+    protected createCacheKey(bundle: string, key: string): string {
         const cacheKeyPrefix = process.env['CACHE_KEY_PREFIX'] || ''
-        return `${cacheKeyPrefix}${key}`
+        return `${cacheKeyPrefix}${bundle}-${key}`
     }
 
     protected getGradleUserHome(): string {

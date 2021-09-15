@@ -107,7 +107,7 @@ export abstract class AbstractCache {
         core.saveState(this.cacheResultStateKey, cacheResult)
 
         core.info(
-            `${this.cacheDescription} restored from cache key: ${cacheResult}`
+            `Restored ${this.cacheDescription} from cache key: ${cacheResult}`
         )
 
         await this.afterRestore()
