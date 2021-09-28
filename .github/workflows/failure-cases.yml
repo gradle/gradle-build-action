@@ -1,8 +1,6 @@
 name: Execute failure cases
 
 on:
-  pull_request:
-  push:
   workflow_dispatch:
 
 env:
