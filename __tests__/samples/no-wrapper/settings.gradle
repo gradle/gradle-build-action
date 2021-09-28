@@ -1,3 +1,16 @@
+plugins {
+    id("com.gradle.enterprise") version("3.7")
+}
+
+gradleEnterprise {
+    buildScan {
+        termsOfServiceUrl = "https://gradle.com/terms-of-service"
+        termsOfServiceAgree = "yes"
+        publishAlways()
+        uploadInBackground = false
+    }
+}
+
 rootProject.name = 'no-wrapper'
 
 println "Using Gradle version: ${gradle.gradleVersion}"

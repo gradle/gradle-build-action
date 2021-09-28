@@ -16,8 +16,6 @@ export async function run(): Promise<void> {
         await caches.restore(buildRootDirectory)
 
         const args: string[] = parseCommandLineArguments()
-        // TODO: instead of running with no-daemon, run `--stop` in post action.
-        args.push('--no-daemon')
 
         const result = await execution.execute(
             await resolveGradleExecutable(
