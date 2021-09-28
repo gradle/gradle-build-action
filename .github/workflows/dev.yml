@@ -1,5 +1,4 @@
-# make sure the build works and doesn't produce spurious changes
-name: dev
+name: Verify generated outputs
 
 on:
   pull_request:
