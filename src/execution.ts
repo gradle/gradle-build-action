@@ -1,7 +1,7 @@
 import * as exec from '@actions/exec'
 import fs from 'fs'
 import path from 'path'
-import {writeInitScript} from './gradle-init'
+import {writeInitScript} from './build-scan-capture'
 
 export async function execute(
     executable: string,
