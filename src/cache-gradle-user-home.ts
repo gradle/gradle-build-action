@@ -8,20 +8,21 @@ import * as exec from '@actions/exec'
 import {AbstractCache, hashStrings} from './cache-utils'
 
 // Which paths under Gradle User Home should be cached
-// TODO: This should adapt for the `GRADLE_USER_HOME` environment variable
-// TODO: Allow the user to override / tweak this set
-const CACHE_PATH = ['~/.gradle/caches', '~/.gradle/notifications']
+const CACHE_PATH = ['caches', 'notifications']
 
 const COMMON_ARTIFACT_CACHES = new Map([
-    ['generated-gradle-jars', '~/.gradle/caches/*/generated-gradle-jars/*.jar'],
-    ['wrapper-zips', '~/.gradle/wrapper/dists/*/*/*.zip'],
-    ['dependency-jars', '~/.gradle/caches/modules-*/files-*/**/*.jar'],
-    ['instrumented-jars', '~/.gradle/caches/jars-*/*/*.jar']
+    ['generated-gradle-jars', 'caches/*/generated-gradle-jars/*.jar'],
+    ['wrapper-zips', 'wrapper/dists/*/*/*.zip'],
+    ['dependency-jars', 'caches/modules-*/files-*/**/*.jar'],
+    ['instrumented-jars', 'caches/jars-*/*/*.jar']
 ])
 
 export class GradleUserHomeCache extends AbstractCache {
-    constructor() {
+    private gradleUserHome: string
+
+    constructor(rootDir: string) {
         super('gradle', 'Gradle User Home')
+        this.gradleUserHome = this.determineGradleUserHome(rootDir)
     }
 
     async afterRestore(): Promise<void> {
@@ -32,7 +33,7 @@ export class GradleUserHomeCache extends AbstractCache {
 
     private async restoreCommonArtifacts(): Promise<void> {
         const processes: Promise<void>[] = []
-        for (const [bundle, pattern] of COMMON_ARTIFACT_CACHES) {
+        for (const [bundle, pattern] of this.getCommonArtifactPaths()) {
             const p = this.restoreCommonArtifactBundle(bundle, pattern)
             // Run sequentially when debugging enabled
             if (this.cacheDebuggingEnabled) {
@@ -46,19 +47,19 @@ export class GradleUserHomeCache extends AbstractCache {
 
     private async restoreCommonArtifactBundle(
         bundle: string,
-        pattern: string
+        artifactPath: string
     ): Promise<void> {
         const cacheMetaFile = this.getCacheMetaFile(bundle)
         if (fs.existsSync(cacheMetaFile)) {
             const cacheKey = fs.readFileSync(cacheMetaFile, 'utf-8').trim()
-            const restoreKey = await this.restoreCache([pattern], cacheKey)
+            const restoreKey = await this.restoreCache([artifactPath], cacheKey)
             if (restoreKey) {
                 core.info(
-                    `Restored ${bundle} with key ${cacheKey} to ${pattern}`
+                    `Restored ${bundle} with key ${cacheKey} to ${artifactPath}`
                 )
             } else {
                 this.debug(
-                    `Failed to restore ${bundle} with key ${cacheKey} to ${pattern}`
+                    `Failed to restore ${bundle} with key ${cacheKey} to ${artifactPath}`
                 )
             }
         } else {
@@ -70,7 +71,7 @@ export class GradleUserHomeCache extends AbstractCache {
 
     private getCacheMetaFile(name: string): string {
         return path.resolve(
-            this.getGradleUserHome(),
+            this.gradleUserHome,
             'caches',
             `.gradle-build-action.${name}.cache`
         )
@@ -80,15 +81,14 @@ export class GradleUserHomeCache extends AbstractCache {
         if (!this.cacheDebuggingEnabled) {
             return
         }
-        const gradleUserHome = path.resolve(os.homedir(), '.gradle')
-        if (!fs.existsSync(gradleUserHome)) {
+        if (!fs.existsSync(this.gradleUserHome)) {
             return
         }
         const result = await exec.getExecOutput(
             'du',
             ['-h', '-c', '-t', '5M'],
             {
-                cwd: gradleUserHome,
+                cwd: this.gradleUserHome,
                 silent: true,
                 ignoreReturnCode: true
             }
@@ -116,7 +116,7 @@ export class GradleUserHomeCache extends AbstractCache {
 
     private async saveCommonArtifacts(): Promise<void> {
         const processes: Promise<void>[] = []
-        for (const [bundle, pattern] of COMMON_ARTIFACT_CACHES) {
+        for (const [bundle, pattern] of this.getCommonArtifactPaths()) {
             const p = this.saveCommonArtifactBundle(bundle, pattern)
             // Run sequentially when debugging enabled
             if (this.cacheDebuggingEnabled) {
@@ -130,11 +130,11 @@ export class GradleUserHomeCache extends AbstractCache {
 
     private async saveCommonArtifactBundle(
         bundle: string,
-        pattern: string
+        artifactPath: string
     ): Promise<void> {
         const cacheMetaFile = this.getCacheMetaFile(bundle)
 
-        const globber = await glob.create(pattern)
+        const globber = await glob.create(artifactPath)
         const commonArtifactFiles = await globber.glob()
 
         // Handle no matching files
@@ -160,7 +160,7 @@ export class GradleUserHomeCache extends AbstractCache {
             )
         } else {
             core.info(`Caching ${bundle} with cache key: ${cacheKey}`)
-            await this.saveCache([pattern], cacheKey)
+            await this.saveCache([artifactPath], cacheKey)
 
             this.debug(`Writing cache metafile: ${cacheMetaFile}`)
             fs.writeFileSync(cacheMetaFile, cacheKey)
@@ -176,17 +176,31 @@ export class GradleUserHomeCache extends AbstractCache {
         return `${cacheKeyPrefix}${bundle}-${key}`
     }
 
-    protected getGradleUserHome(): string {
+    protected determineGradleUserHome(rootDir: string): string {
+        const customGradleUserHome = process.env['GRADLE_USER_HOME']
+        if (customGradleUserHome) {
+            return path.resolve(rootDir, customGradleUserHome)
+        }
+
         return path.resolve(os.homedir(), '.gradle')
     }
 
     protected cacheOutputExists(): boolean {
         // Need to check for 'caches' directory to avoid incorrect detection on MacOS agents
-        const dir = path.resolve(this.getGradleUserHome(), 'caches')
+        const dir = path.resolve(this.gradleUserHome, 'caches')
         return fs.existsSync(dir)
     }
 
     protected getCachePath(): string[] {
-        return CACHE_PATH
+        return CACHE_PATH.map(x => path.resolve(this.gradleUserHome, x))
+    }
+
+    private getCommonArtifactPaths(): Map<string, string> {
+        return new Map(
+            Array.from(COMMON_ARTIFACT_CACHES, ([key, value]) => [
+                key,
+                path.resolve(this.gradleUserHome, value)
+            ])
+        )
     }
 }
