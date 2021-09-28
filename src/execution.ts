@@ -1,28 +1,35 @@
 import * as exec from '@actions/exec'
+import fs from 'fs'
+import path from 'path'
+import {writeInitScript} from './gradle-init'
 
 export async function execute(
     executable: string,
     root: string,
-    argv: string[]
+    args: string[]
 ): Promise<BuildResult> {
-    let publishing = false
     let buildScanUrl: string | undefined
 
-    const status: number = await exec.exec(executable, argv, {
+    // TODO: instead of running with no-daemon, run `--stop` in post action.
+    args.push('--no-daemon')
+
+    const initScript = writeInitScript()
+    args.push('--init-script')
+    args.push(initScript)
+
+    const buildScanFile = path.resolve(root, 'gradle-build-scan.txt')
+    if (fs.existsSync(buildScanFile)) {
+        fs.unlinkSync(buildScanFile)
+    }
+
+    const status: number = await exec.exec(executable, args, {
         cwd: root,
-        ignoreReturnCode: true,
-        listeners: {
-            stdline: (line: string) => {
-                if (line.includes('Publishing build scan...')) {
-                    publishing = true
-                }
-                if (publishing && line.startsWith('http')) {
-                    buildScanUrl = line.trim()
-                    publishing = false
-                }
-            }
-        }
+        ignoreReturnCode: true
     })
+
+    if (fs.existsSync(buildScanFile)) {
+        buildScanUrl = fs.readFileSync(buildScanFile, 'utf-8')
+    }
 
     return new BuildResultImpl(status, buildScanUrl)
 }
