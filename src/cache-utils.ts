@@ -2,6 +2,7 @@ import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 import * as github from '@actions/github'
 import * as crypto from 'crypto'
+import * as path from 'path'
 
 export function isCacheDisabled(): boolean {
     return core.getBooleanInput('cache-disabled')
@@ -51,6 +52,12 @@ export function hashStrings(values: string[]): string {
         hash.update(value)
     }
     return hash.digest('hex')
+}
+
+export function hashFileNames(fileNames: string[]): string {
+    return hashStrings(
+        fileNames.map(x => x.replace(new RegExp(`\\${path.sep}`, 'g'), '/'))
+    )
 }
 
 class CacheKey {

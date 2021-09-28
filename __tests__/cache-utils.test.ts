@@ -11,5 +11,11 @@ describe('cacheUtils-utils', () => {
             const hash = cacheUtils.hashStrings(['foo', 'bar', 'baz'])
             expect(hash).toBe('6df23dc03f9b54cc38a0fc1483df6e21')
         })
+        it('normalized filenames', async () => {
+            const fileNames = ['/foo/bar/baz.zip', '../boo.html']
+            const posixHash = cacheUtils.hashFileNames(fileNames)
+            const windowsHash = cacheUtils.hashFileNames(fileNames)
+            expect(posixHash).toBe(windowsHash)
+        })
     })
 })

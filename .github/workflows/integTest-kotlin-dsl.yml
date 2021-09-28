@@ -1,5 +1,4 @@
- # Make sure the action works on a clean machine without building
-name: integration-testing-kotlin-dsl
+name: Test caching with Kotlin DSL
 
 on:
   pull_request:

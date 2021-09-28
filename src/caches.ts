@@ -14,7 +14,7 @@ export async function restore(buildRootDirectory: string): Promise<void> {
     await core.group('Restore Gradle state from cache', async () => {
         core.saveState(BUILD_ROOT_DIR, buildRootDirectory)
         return Promise.all([
-            new GradleUserHomeCache().restore(),
+            new GradleUserHomeCache(buildRootDirectory).restore(),
             new ProjectDotGradleCache(buildRootDirectory).restore()
         ])
     })
@@ -29,7 +29,7 @@ export async function save(): Promise<void> {
     await core.group('Caching Gradle state', async () => {
         const buildRootDirectory = core.getState(BUILD_ROOT_DIR)
         return Promise.all([
-            new GradleUserHomeCache().save(),
+            new GradleUserHomeCache(buildRootDirectory).save(),
             new ProjectDotGradleCache(buildRootDirectory).save()
         ])
     })

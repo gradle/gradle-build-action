@@ -1,0 +1,52 @@
+name: Test caching with a custom GRADLE_USER_HOME
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+env:
+  CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+  GRADLE_USER_HOME: custom/gradle/home
+
+jobs:
+  # Run initial Gradle builds to push initial cache entries
+  # These builds should start fresh without cache hits, due to the seed injected into the cache key above.
+  seed-build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Build using Gradle wrapper
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/basic
+        arguments: test
+
+  # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
+  dependencies-cache:
+    needs: seed-build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Execute Gradle build with --offline
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/basic
+        arguments: test --offline
+        cache-read-only: true
+
+  # Test that the gradle-user-home cache will cache and restore local build-cache
+  build-cache:
+    needs: seed-build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Execute Gradle build and verify tasks from cache
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/basic
+        arguments: test -DverifyCachedBuild=true
+        cache-read-only: true

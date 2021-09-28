@@ -1,10 +1,6 @@
- # Run builds under certain failure conditions to allow the output to be manually inspected.
-# These build invocations are informational only, and are expected to fail
-name: failure-cases
+name: Execute failure cases
 
 on:
-  pull_request:
-  push:
   workflow_dispatch:
 
 env:
