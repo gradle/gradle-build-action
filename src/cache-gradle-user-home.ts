@@ -5,7 +5,7 @@ import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 import * as exec from '@actions/exec'
 
-import {AbstractCache, hashStrings} from './cache-utils'
+import {AbstractCache, hashFileNames} from './cache-utils'
 
 // Which paths under Gradle User Home should be cached
 const CACHE_PATH = ['caches', 'notifications']
@@ -149,10 +149,7 @@ export class GradleUserHomeCache extends AbstractCache {
         const previouslyRestoredKey = fs.existsSync(cacheMetaFile)
             ? fs.readFileSync(cacheMetaFile, 'utf-8').trim()
             : ''
-        const cacheKey = this.createCacheKey(
-            bundle,
-            hashStrings(commonArtifactFiles)
-        )
+        const cacheKey = this.createCacheKey(bundle, commonArtifactFiles)
 
         if (previouslyRestoredKey === cacheKey) {
             this.debug(
@@ -171,8 +168,13 @@ export class GradleUserHomeCache extends AbstractCache {
         }
     }
 
-    protected createCacheKey(bundle: string, key: string): string {
+    protected createCacheKey(bundle: string, files: string[]): string {
         const cacheKeyPrefix = process.env['CACHE_KEY_PREFIX'] || ''
+        const relativeFiles = files.map(x =>
+            path.relative(this.gradleUserHome, x)
+        )
+        const key = hashFileNames(relativeFiles)
+
         return `${cacheKeyPrefix}${bundle}-${key}`
     }
 
