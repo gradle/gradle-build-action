@@ -37,6 +37,6 @@ jobs:
     - name: Test use defined Gradle executable
       uses: ./
       with:
-        gradle-executable: __tests__/samples/basic/gradlew${{ matrix.script-suffix }}
+        gradle-executable: __tests__/samples/groovy-dsl/gradlew${{ matrix.script-suffix }}
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help -DgradleVersionCheck=7.1.1

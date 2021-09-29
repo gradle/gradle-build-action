@@ -22,12 +22,12 @@ jobs:
     - name: Build using Gradle wrapper
       uses: ./
       with:
-        build-root-directory: __tests__/samples/basic
+        build-root-directory: __tests__/samples/groovy-dsl
         arguments: test
     - name: Build with configuration-cache enabled
       uses: ./
       with:
-        build-root-directory: __tests__/samples/basic
+        build-root-directory: __tests__/samples/groovy-dsl
         arguments: test --configuration-cache
 
   # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
@@ -43,7 +43,7 @@ jobs:
     - name: Execute Gradle build with --offline
       uses: ./
       with:
-        build-root-directory: __tests__/samples/basic
+        build-root-directory: __tests__/samples/groovy-dsl
         arguments: test --offline
         cache-read-only: true
 
@@ -60,7 +60,7 @@ jobs:
     - name: Execute Gradle build and verify tasks from cache
       uses: ./
       with:
-        build-root-directory: __tests__/samples/basic
+        build-root-directory: __tests__/samples/groovy-dsl
         arguments: test -DverifyCachedBuild=true
         cache-read-only: true
 
@@ -79,6 +79,6 @@ jobs:
       env: 
         VERIFY_CACHED_CONFIGURATION: true
       with:
-        build-root-directory: __tests__/samples/basic
+        build-root-directory: __tests__/samples/groovy-dsl
         arguments: test --configuration-cache
         cache-read-only: true
