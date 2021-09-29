@@ -59,6 +59,12 @@ jobs:
         gradle-version: 7.2
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help -DgradleVersionCheck=7.2
+    - name: Check Gradle 7 scan
+      if: ${{ !steps.gradle7.outputs.build-scan-url }}
+      uses: actions/github-script@v3
+      with:
+        script: |
+          core.setFailed('No build scan detected')    
     - name: Test Gradle 6
       uses: ./
       id: gradle6
@@ -66,6 +72,12 @@ jobs:
         gradle-version: 6.9
         build-root-directory: __tests__/samples/no-wrapper
         arguments: help -DgradleVersionCheck=6.9
+    - name: Check Gradle 6 scan
+      if: ${{ !steps.gradle6.outputs.build-scan-url }}
+      uses: actions/github-script@v3
+      with:
+        script: |
+          core.setFailed('No build scan detected')    
     - name: Test Gradle 5
       uses: ./
       id: gradle5
@@ -73,6 +85,12 @@ jobs:
         gradle-version: 5.6.4
         build-root-directory: __tests__/samples/no-wrapper-gradle-5
         arguments: help -DgradleVersionCheck=5.6.4
+    - name: Check Gradle 5 scan
+      if: ${{ !steps.gradle5.outputs.build-scan-url }}
+      uses: actions/github-script@v3
+      with:
+        script: |
+          core.setFailed('No build scan detected')    
     - name: Test Gradle 4
       uses: ./
       id: gradle4
@@ -80,4 +98,10 @@ jobs:
         gradle-version: 4.10.3
         build-root-directory: __tests__/samples/no-wrapper-gradle-4
         arguments: help -DgradleVersionCheck=4.10.3
-    
+    - name: Check Gradle 4 scan
+      if: ${{ !steps.gradle4.outputs.build-scan-url }}
+      uses: actions/github-script@v3
+      with:
+        script: |
+          core.setFailed('No build scan detected')    
+   
