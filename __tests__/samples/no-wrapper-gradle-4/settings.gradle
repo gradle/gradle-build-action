@@ -1,0 +1,8 @@
+rootProject.name = 'no-wrapper'
+
+println "Using Gradle version: ${gradle.gradleVersion}"
+
+def gradleVersionCheck = System.properties.gradleVersionCheck
+if (gradleVersionCheck && gradle.gradleVersion != gradleVersionCheck) {
+    throw new RuntimeException("Got the wrong version: expected ${gradleVersionCheck} but was ${gradle.gradleVersion}")
+}
