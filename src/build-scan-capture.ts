@@ -18,31 +18,29 @@ import org.gradle.util.GradleVersion
 def isTopLevelBuild = gradle.getParent() == null
 if (isTopLevelBuild) {
     def version = GradleVersion.current().baseVersion
-    def atLeastGradle5 = version >= GradleVersion.version("5.0")
+    def atLeastGradle4 = version >= GradleVersion.version("4.0")
     def atLeastGradle6 = version >= GradleVersion.version("6.0")
 
     if (atLeastGradle6) {
         settingsEvaluated { settings ->
             if (settings.pluginManager.hasPlugin("com.gradle.enterprise")) {
-                registerCallbacks(settings.extensions["gradleEnterprise"], settings.rootProject.name)
+                registerCallbacks(settings.extensions["gradleEnterprise"].buildScan, settings.rootProject.name)
             }
         }
-    } else if (atLeastGradle5) {
+    } else if (atLeastGradle4) {
         projectsEvaluated { gradle ->
             if (gradle.rootProject.pluginManager.hasPlugin("com.gradle.build-scan")) {
-                registerCallbacks(gradle.rootProject.extensions["gradleEnterprise"], gradle.rootProject.name)
+                registerCallbacks(gradle.rootProject.extensions["buildScan"], gradle.rootProject.name)
             }
         }
     }
 }
 
-def registerCallbacks(gradleEnterprise, rootProjectName) {
-    gradleEnterprise.with {
-        buildScan {
-            def scanFile = new File("gradle-build-scan.txt")
-            buildScanPublished { buildScan ->
-                scanFile.text = buildScan.buildScanUri
-            }
+def registerCallbacks(buildScanExtension, rootProjectName) {
+    buildScanExtension.with {
+        def scanFile = new File("gradle-build-scan.txt")
+        buildScanPublished { buildScan ->
+            scanFile.text = buildScan.buildScanUri
         }
     }
 }
