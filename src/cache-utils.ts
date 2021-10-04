@@ -3,6 +3,7 @@ import * as cache from '@actions/cache'
 import * as github from '@actions/github'
 import * as crypto from 'crypto'
 import * as path from 'path'
+import * as fs from 'fs'
 
 export function isCacheDisabled(): boolean {
     return core.getBooleanInput('cache-disabled')
@@ -58,6 +59,29 @@ export function hashFileNames(fileNames: string[]): string {
     return hashStrings(
         fileNames.map(x => x.replace(new RegExp(`\\${path.sep}`, 'g'), '/'))
     )
+}
+
+/**
+ * Attempt to delete a file, waiting to allow locks to be released
+ */
+export async function tryDelete(file: string): Promise<void> {
+    for (let count = 0; count < 3; count++) {
+        try {
+            fs.unlinkSync(file)
+            return
+        } catch (error) {
+            if (count === 2) {
+                throw error
+            } else {
+                core.warning(String(error))
+                await delay(1000)
+            }
+        }
+    }
+}
+
+async function delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 class CacheKey {

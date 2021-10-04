@@ -5,7 +5,7 @@ import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 import * as exec from '@actions/exec'
 
-import {AbstractCache, hashFileNames} from './cache-utils'
+import {AbstractCache, hashFileNames, tryDelete} from './cache-utils'
 
 // Which paths under Gradle User Home should be cached
 const CACHE_PATH = ['caches', 'notifications']
@@ -141,7 +141,7 @@ export class GradleUserHomeCache extends AbstractCache {
         if (commonArtifactFiles.length === 0) {
             this.debug(`No files found to cache for ${bundle}`)
             if (fs.existsSync(cacheMetaFile)) {
-                fs.unlinkSync(cacheMetaFile)
+                tryDelete(cacheMetaFile)
             }
             return
         }
@@ -164,7 +164,7 @@ export class GradleUserHomeCache extends AbstractCache {
         }
 
         for (const file of commonArtifactFiles) {
-            fs.unlinkSync(file)
+            tryDelete(file)
         }
     }
 
