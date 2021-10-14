@@ -182,6 +182,15 @@ You can enable read-only caching for any of the caches as follows:
 cache-read-only: true
 ```
 
+### Cache debugging
+
+It is possible to enable additional debug logging for cache operations. You do via the `CACHE_DEBUG_ENABLED` environment variable:
+
+```yaml
+env:
+  CACHE_DEBUG_ENABLED: true
+```
+
 ## Build scans
 
 If your build publishes a [build scan](https://gradle.com/build-scans/) the `gradle-build-action` action will:
