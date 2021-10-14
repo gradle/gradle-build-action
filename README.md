@@ -191,6 +191,8 @@ env:
   CACHE_DEBUG_ENABLED: true
 ```
 
+Note that this setting will also prevent certain cache operations from running in parallel, further assisting with debugging.
+
 ## Build scans
 
 If your build publishes a [build scan](https://gradle.com/build-scans/) the `gradle-build-action` action will:
