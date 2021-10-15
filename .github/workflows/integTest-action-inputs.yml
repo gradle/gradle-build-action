@@ -21,5 +21,7 @@ jobs:
         arguments: |
             --configuration-cache
             --build-cache
+            -DsystemProperty=FOO
+            -PgradleProperty=BAR
             test
             jar

@@ -14,7 +14,7 @@ inputs:
     description: Path to the root directory of the build
     required: false
   arguments:
-    description: Gradle command line arguments, see gradle --help
+    description: Gradle command line arguments (supports multi-line input)
     required: false
   cache-disabled:
     description: When 'true', all caching is disabled. No entries will be written to or read from the cache.

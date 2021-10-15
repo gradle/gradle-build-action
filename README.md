@@ -47,6 +47,7 @@ Each invocation will start its run with the filesystem state remaining from the 
 ### Command-line arguments
 
 The `arguments` input can used to pass arbitrary arguments to the `gradle` command line.
+Arguments can be supplied in a single line, or as a multi-line input.
 
 Here are some valid examples:
 ```yaml
@@ -54,8 +55,11 @@ arguments: build
 arguments: check --scan
 arguments: some arbitrary tasks
 arguments: build -PgradleProperty=foo
-arguments: build -DsystemProperty=bar
-....
+arguments: |
+    build
+    --scan
+    -PgradleProperty=foo
+    -DsystemProperty=bar
 ```
 
 See `gradle --help` for more information.
