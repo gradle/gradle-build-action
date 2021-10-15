@@ -38,7 +38,7 @@ inputs:
           ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
           ["wrapper-zips", "wrapper/dists/*/*/*.zip"],
           ["dependency-jars", "caches/modules-*/files-*/**/*.jar"],
-          ["instrumented-jars", "caches/jars-*/*/*.jar"]
+          ["instrumented-jars", "caches/jars-*/*"]
         ]
 
 outputs:
