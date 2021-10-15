@@ -1,0 +1,25 @@
+name: Test different action inputs
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+env:
+  CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+
+jobs:
+  action-inputs:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Invoke with multi-line arguments
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/groovy-dsl
+        arguments: |
+            --configuration-cache
+            --build-cache
+            test
+            jar
