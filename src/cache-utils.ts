@@ -122,6 +122,12 @@ export abstract class AbstractCache {
 
         core.saveState(this.cacheKeyStateKey, cacheKey.key)
 
+        this.debug(
+            `Requesting ${this.cacheDescription} with
+                key:${cacheKey.key}
+                restoreKeys:[${cacheKey.restoreKeys}]`
+        )
+
         const cacheResult = await this.restoreCache(
             this.getCachePath(),
             cacheKey.key,
@@ -141,7 +147,13 @@ export abstract class AbstractCache {
             `Restored ${this.cacheDescription} from cache key: ${cacheResult}`
         )
 
-        await this.afterRestore()
+        try {
+            await this.afterRestore()
+        } catch (error) {
+            core.warning(
+                `Restore ${this.cacheDescription} failed in 'afterRestore': ${error}`
+            )
+        }
 
         return
     }
@@ -193,7 +205,14 @@ export abstract class AbstractCache {
             return
         }
 
-        await this.beforeSave()
+        try {
+            await this.beforeSave()
+        } catch (error) {
+            core.warning(
+                `Save ${this.cacheDescription} failed in 'beforeSave': ${error}`
+            )
+            return
+        }
 
         core.info(
             `Caching ${this.cacheDescription} with cache key: ${cacheKey}`
