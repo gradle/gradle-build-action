@@ -62,12 +62,17 @@ export function hashFileNames(fileNames: string[]): string {
 }
 
 /**
- * Attempt to delete a file, waiting to allow locks to be released
+ * Attempt to delete a file or directory, waiting to allow locks to be released
  */
 export async function tryDelete(file: string): Promise<void> {
+    const stat = fs.lstatSync(file)
     for (let count = 0; count < 3; count++) {
         try {
-            fs.unlinkSync(file)
+            if (stat.isDirectory()) {
+                fs.rmdirSync(file, {recursive: true})
+            } else {
+                fs.unlinkSync(file)
+            }
             return
         } catch (error) {
             if (count === 2) {

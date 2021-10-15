@@ -30,6 +30,16 @@ inputs:
     description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users.
     required: false
     default: ${{ toJSON(matrix) }}
+  cache-artifact-bundles:
+    description: Names and patterns of artifact bundles to cache separately. For internal use only.
+    required: false
+    default: |
+        [
+          ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
+          ["wrapper-zips", "wrapper/dists/*/*/*.zip"],
+          ["dependency-jars", "caches/modules-*/files-*/**/*.jar"],
+          ["instrumented-jars", "caches/jars-*/*"]
+        ]
 
 outputs:
   build-scan-url:
