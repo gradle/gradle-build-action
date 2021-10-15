@@ -82,3 +82,19 @@ jobs:
         build-root-directory: __tests__/samples/groovy-dsl
         arguments: test --configuration-cache
         cache-read-only: true
+
+  # Check that the build can run when no bundles are restored
+  no-bundles-restored:
+    needs: seed-build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Execute Gradle build with no cache artifact bundles restored
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/groovy-dsl
+        arguments: test
+        cache-artifact-bundles: '[]'
+        cache-read-only: true
+
