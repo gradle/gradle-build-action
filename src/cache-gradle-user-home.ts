@@ -10,13 +10,6 @@ import {AbstractCache, hashFileNames, tryDelete} from './cache-utils'
 // Which paths under Gradle User Home should be cached
 const CACHE_PATH = ['caches', 'notifications']
 
-const CACHE_ARTIFACT_BUNDLES = [
-    ['generated-gradle-jars', 'caches/*/generated-gradle-jars/*.jar'],
-    ['wrapper-zips', 'wrapper/dists/*/*/*.zip'],
-    ['dependency-jars', 'caches/modules-*/files-*/**/*.jar'],
-    ['instrumented-jars', 'caches/jars-*/*/*.jar']
-]
-
 export class GradleUserHomeCache extends AbstractCache {
     private gradleUserHome: string
 
@@ -171,8 +164,13 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     private getArtifactBundles(): Map<string, string> {
+        const artifactBundleDefinition = core.getInput('cache-artifact-bundles')
+        this.debug(
+            `Using artifact bundle definition: ${artifactBundleDefinition}`
+        )
+        const artifactBundles = JSON.parse(artifactBundleDefinition)
         return new Map(
-            Array.from(CACHE_ARTIFACT_BUNDLES, ([key, value]) => [
+            Array.from(artifactBundles, ([key, value]) => [
                 key,
                 path.resolve(this.gradleUserHome, value)
             ])
