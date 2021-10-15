@@ -122,6 +122,12 @@ export abstract class AbstractCache {
 
         core.saveState(this.cacheKeyStateKey, cacheKey.key)
 
+        this.debug(
+            `Requesting ${this.cacheDescription} with
+                key:${cacheKey.key}
+                restoreKeys:[${cacheKey.restoreKeys}]`
+        )
+
         const cacheResult = await this.restoreCache(
             this.getCachePath(),
             cacheKey.key,

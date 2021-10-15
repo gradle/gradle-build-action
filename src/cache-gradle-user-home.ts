@@ -26,9 +26,9 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     async afterRestore(): Promise<void> {
-        await this.reportCacheEntrySize('as restored from cache')
+        await this.reportGradleUserHomeSize('as restored from cache')
         await this.restoreCommonArtifacts()
-        await this.reportCacheEntrySize('after restoring common artifacts')
+        await this.reportGradleUserHomeSize('after restoring common artifacts')
     }
 
     private async restoreCommonArtifacts(): Promise<void> {
@@ -59,7 +59,7 @@ export class GradleUserHomeCache extends AbstractCache {
                 )
             } else {
                 this.debug(
-                    `Failed to restore ${bundle} with key ${cacheKey} to ${artifactPath}`
+                    `Did not restore ${bundle} with key ${cacheKey} to ${artifactPath}`
                 )
             }
         } else {
@@ -77,41 +77,10 @@ export class GradleUserHomeCache extends AbstractCache {
         )
     }
 
-    private async reportCacheEntrySize(label: string): Promise<void> {
-        if (!this.cacheDebuggingEnabled) {
-            return
-        }
-        if (!fs.existsSync(this.gradleUserHome)) {
-            return
-        }
-        const result = await exec.getExecOutput(
-            'du',
-            ['-h', '-c', '-t', '5M'],
-            {
-                cwd: this.gradleUserHome,
-                silent: true,
-                ignoreReturnCode: true
-            }
-        )
-
-        core.info(`Gradle User Home cache entry (directories >5M): ${label}`)
-
-        core.info(
-            result.stdout
-                .trimEnd()
-                .replace(/\t/g, '    ')
-                .split('\n')
-                .map(it => {
-                    return `  ${it}`
-                })
-                .join('\n')
-        )
-
-        core.info('-----------------------')
-    }
-
     async beforeSave(): Promise<void> {
+        await this.reportGradleUserHomeSize('before saving common artifacts')
         await this.saveCommonArtifacts()
+        await this.reportGradleUserHomeSize('after saving common artifacts')
     }
 
     private async saveCommonArtifacts(): Promise<void> {
@@ -175,6 +144,10 @@ export class GradleUserHomeCache extends AbstractCache {
         )
         const key = hashFileNames(relativeFiles)
 
+        this.debug(
+            `Generating cache key for ${bundle} from files: ${relativeFiles}`
+        )
+
         return `${cacheKeyPrefix}${bundle}-${key}`
     }
 
@@ -204,5 +177,38 @@ export class GradleUserHomeCache extends AbstractCache {
                 path.resolve(this.gradleUserHome, value)
             ])
         )
+    }
+
+    private async reportGradleUserHomeSize(label: string): Promise<void> {
+        if (!this.cacheDebuggingEnabled) {
+            return
+        }
+        if (!fs.existsSync(this.gradleUserHome)) {
+            return
+        }
+        const result = await exec.getExecOutput(
+            'du',
+            ['-h', '-c', '-t', '5M'],
+            {
+                cwd: this.gradleUserHome,
+                silent: true,
+                ignoreReturnCode: true
+            }
+        )
+
+        core.info(`Gradle User Home cache entry (directories >5M): ${label}`)
+
+        core.info(
+            result.stdout
+                .trimEnd()
+                .replace(/\t/g, '    ')
+                .split('\n')
+                .map(it => {
+                    return `  ${it}`
+                })
+                .join('\n')
+        )
+
+        core.info('-----------------------')
     }
 }
