@@ -18,8 +18,8 @@ export function isCacheDebuggingEnabled(): boolean {
 }
 
 function generateCacheKey(cacheName: string): CacheKey {
-    // Prefix can be used to force change all cache keys
-    const cacheKeyPrefix = process.env['CACHE_KEY_PREFIX'] || ''
+    // Prefix can be used to force change all cache keys (defaults to cache protocol version)
+    const cacheKeyPrefix = process.env['CACHE_KEY_PREFIX'] || 'v2-'
 
     // At the most general level, share caches for all executions on the same OS
     const runnerOs = process.env['RUNNER_OS'] || ''
