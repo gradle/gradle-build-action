@@ -78,7 +78,9 @@ export class GradleUserHomeCache extends AbstractCache {
     async beforeSave(): Promise<void> {
         await this.reportGradleUserHomeSize('before saving common artifacts')
         await this.saveArtifactBundles()
-        await this.reportGradleUserHomeSize('after saving common artifacts')
+        await this.reportGradleUserHomeSize(
+            'after saving common artifacts (./wrapper dir is not cached)'
+        )
     }
 
     private async saveArtifactBundles(): Promise<void> {
@@ -202,7 +204,7 @@ export class GradleUserHomeCache extends AbstractCache {
             }
         )
 
-        core.info(`Gradle User Home cache entry (directories >5M): ${label}`)
+        core.info(`Gradle User Home (directories >5M): ${label}`)
 
         core.info(
             result.stdout
