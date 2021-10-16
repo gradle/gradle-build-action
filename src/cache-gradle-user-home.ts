@@ -101,7 +101,10 @@ export class GradleUserHomeCache extends AbstractCache {
     ): Promise<void> {
         const bundleMetaFile = this.getBundleMetaFile(bundle)
 
-        const globber = await glob.create(artifactPath)
+        const globber = await glob.create(artifactPath, {
+            implicitDescendants: false,
+            followSymbolicLinks: false
+        })
         const bundleFiles = await globber.glob()
 
         // Handle no matching files
