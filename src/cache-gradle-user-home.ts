@@ -74,10 +74,25 @@ export class GradleUserHomeCache extends AbstractCache {
 
     async beforeSave(): Promise<void> {
         await this.reportGradleUserHomeSize('before saving common artifacts')
+        this.removeExcludedPaths()
         await this.saveArtifactBundles()
         await this.reportGradleUserHomeSize(
-            'after saving common artifacts (./wrapper dir is not cached)'
+            "after saving common artifacts (only 'caches' and 'notifications' will be stored)"
         )
+    }
+
+    private removeExcludedPaths(): void {
+        const rawPaths: string[] = JSON.parse(
+            core.getInput('cache-exclude-paths')
+        )
+        const resolvedPaths = rawPaths.map(x =>
+            path.resolve(this.gradleUserHome, x)
+        )
+
+        for (const p of resolvedPaths) {
+            this.debug(`Deleting excluded path: ${p}`)
+            tryDelete(p)
+        }
     }
 
     private async saveArtifactBundles(): Promise<void> {
@@ -177,9 +192,7 @@ export class GradleUserHomeCache extends AbstractCache {
     private resolveCachePath(rawPath: string): string {
         if (rawPath.startsWith('!')) {
             const resolved = this.resolveCachePath(rawPath.substring(1))
-            const negated = `!${resolved}`
-            this.debug(`Negate cache path: ${negated}`)
-            return negated
+            return `!${resolved}`
         }
         return path.resolve(this.gradleUserHome, rawPath)
     }
