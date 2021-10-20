@@ -26,12 +26,22 @@ inputs:
     # TODO: It might be useful to default to read-only for PRs, or non-main branch.
     default: false 
   
+
+  # EXPERIMENTAL & INTERNAL CONFIGURATION PROPERTIES
+  # The following action properties allow fine-grained tweaking of the action caching behaviour.
+  # These properties are not designed for production use, and may change without notice in a subsequent release of `gradle-build-action`.
+  # Use at your own risk!
   workflow-job-context:
-    description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users.
+    description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users (INTERNAL).
     required: false
     default: ${{ toJSON(matrix) }}
+  cache-paths:
+    description: Paths in Gradle User Home to cache. (EXPERIMENTAL - may be changed/removed without notice)
+    required: false
+    default: |
+        ["caches", "notifications"]
   cache-artifact-bundles:
-    description: Names and patterns of artifact bundles to cache separately. For internal use only.
+    description: Names and patterns of artifact bundles to cache separately. (EXPERIMENTAL - may be changed/removed without notice)
     required: false
     default: |
         [

@@ -12,9 +12,6 @@ import {
     tryDelete
 } from './cache-utils'
 
-// Which paths under Gradle User Home should be cached
-const CACHE_PATH = ['caches', 'notifications']
-
 export class GradleUserHomeCache extends AbstractCache {
     private gradleUserHome: string
 
@@ -170,7 +167,21 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     protected getCachePath(): string[] {
-        return CACHE_PATH.map(x => path.resolve(this.gradleUserHome, x))
+        const rawPaths: string[] = JSON.parse(core.getInput('cache-paths'))
+        rawPaths.push(META_FILE_DIR)
+        const resolvedPaths = rawPaths.map(x => this.resolveCachePath(x))
+        this.debug(`Using cache paths: ${resolvedPaths}`)
+        return resolvedPaths
+    }
+
+    private resolveCachePath(rawPath: string): string {
+        if (rawPath.startsWith('!')) {
+            const resolved = this.resolveCachePath(rawPath.substring(1))
+            const negated = `!${resolved}`
+            this.debug(`Negate cache path: ${negated}`)
+            return negated
+        }
+        return path.resolve(this.gradleUserHome, rawPath)
     }
 
     private getArtifactBundles(): Map<string, string> {
