@@ -12,6 +12,8 @@ import {
     tryDelete
 } from './cache-utils'
 
+const META_FILE_DIR = '.gradle-build-action'
+
 export class GradleUserHomeCache extends AbstractCache {
     private gradleUserHome: string
 
@@ -65,11 +67,7 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     private getBundleMetaFile(name: string): string {
-        return path.resolve(
-            this.gradleUserHome,
-            'caches',
-            `.gradle-build-action.${name}.cache`
-        )
+        return path.resolve(this.gradleUserHome, META_FILE_DIR, `${name}.cache`)
     }
 
     async beforeSave(): Promise<void> {
@@ -142,9 +140,7 @@ export class GradleUserHomeCache extends AbstractCache {
         } else {
             core.info(`Caching ${bundle} with cache key: ${cacheKey}`)
             await this.saveCache([artifactPath], cacheKey)
-
-            this.debug(`Writing cache metafile: ${bundleMetaFile}`)
-            fs.writeFileSync(bundleMetaFile, cacheKey)
+            this.writeBundleMetaFile(bundleMetaFile, cacheKey)
         }
 
         for (const file of bundleFiles) {
@@ -164,6 +160,17 @@ export class GradleUserHomeCache extends AbstractCache {
         )
 
         return `${cacheKeyPrefix}${bundle}-${key}`
+    }
+
+    private writeBundleMetaFile(metaFile: string, cacheKey: string): void {
+        this.debug(`Writing bundle metafile: ${metaFile}`)
+
+        const dirName = path.dirname(metaFile)
+        if (!fs.existsSync(dirName)) {
+            fs.mkdirSync(dirName)
+        }
+
+        fs.writeFileSync(metaFile, cacheKey)
     }
 
     protected determineGradleUserHome(rootDir: string): string {
