@@ -12,7 +12,10 @@ env:
 jobs:
   # Use kotlin-dsl project to verify caching of generated jars and compiled scripts
   seed-build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
@@ -25,7 +28,10 @@ jobs:
   # Check that the build can run --offline
   verify-build:
     needs: seed-build
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
