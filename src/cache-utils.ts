@@ -19,7 +19,7 @@ export function isCacheDebuggingEnabled(): boolean {
 
 export function getCacheKeyPrefix(): string {
     // Prefix can be used to force change all cache keys (defaults to cache protocol version)
-    return process.env['CACHE_KEY_PREFIX'] || 'v2-'
+    return process.env['CACHE_KEY_PREFIX'] || 'v3-'
 }
 
 function generateCacheKey(cacheName: string): CacheKey {

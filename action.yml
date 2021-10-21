@@ -7,38 +7,63 @@ inputs:
   gradle-executable:
     description: Path to the Gradle executable
     required: false
+
   gradle-version:
     description: Gradle version to use
     required: false
+
   build-root-directory:
     description: Path to the root directory of the build
     required: false
+
   arguments:
     description: Gradle command line arguments (supports multi-line input)
     required: false
+
   cache-disabled:
     description: When 'true', all caching is disabled. No entries will be written to or read from the cache.
     required: false
     default: false
+
   cache-read-only:
     description: When 'true', existing entries will be read from the cache but no entries will be written
     required: false
     # TODO: It might be useful to default to read-only for PRs, or non-main branch.
     default: false 
-  
+
+
+  # EXPERIMENTAL & INTERNAL CONFIGURATION PROPERTIES
+  # The following action properties allow fine-grained tweaking of the action caching behaviour.
+  # These properties are not designed for production use, and may change without notice in a subsequent release of `gradle-build-action`.
+  # Use at your own risk!
   workflow-job-context:
-    description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users.
+    description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users (INTERNAL).
     required: false
     default: ${{ toJSON(matrix) }}
+
+  cache-paths:
+    description: Paths in Gradle User Home to cache. (EXPERIMENTAL - may be changed/removed without notice)
+    required: false
+    default: |
+        ["caches", "notifications"]
+
+  cache-exclude-paths:
+    description: Paths in Gradle User Home to exclude from cache. (EXPERIMENTAL - may be changed/removed without notice)
+    required: false
+    # eg ["caches/build-cache-1"] will prevent the local build cache from being saved/restored. 
+    default: |
+        [] 
+
   cache-artifact-bundles:
-    description: Names and patterns of artifact bundles to cache separately. For internal use only.
+    description: Names and patterns of artifact bundles to cache separately. (EXPERIMENTAL - may be changed/removed without notice)
     required: false
     default: |
         [
           ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
           ["wrapper-zips", "wrapper/dists/*/*/*.zip"],
           ["dependency-jars", "caches/modules-*/files-*/**/*.jar"],
-          ["instrumented-jars", "caches/jars-*/*/"]
+          ["instrumented-jars", "caches/jars-*/*/"],
+          ["kotlin-dsl", "caches/*/kotlin-dsl/*/*/"]
         ]
 
 outputs:

@@ -12,8 +12,7 @@ import {
     tryDelete
 } from './cache-utils'
 
-// Which paths under Gradle User Home should be cached
-const CACHE_PATH = ['caches', 'notifications']
+const META_FILE_DIR = '.gradle-build-action'
 
 export class GradleUserHomeCache extends AbstractCache {
     private gradleUserHome: string
@@ -68,19 +67,30 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     private getBundleMetaFile(name: string): string {
-        return path.resolve(
-            this.gradleUserHome,
-            'caches',
-            `.gradle-build-action.${name}.cache`
-        )
+        return path.resolve(this.gradleUserHome, META_FILE_DIR, `${name}.cache`)
     }
 
     async beforeSave(): Promise<void> {
         await this.reportGradleUserHomeSize('before saving common artifacts')
+        this.removeExcludedPaths()
         await this.saveArtifactBundles()
         await this.reportGradleUserHomeSize(
-            'after saving common artifacts (./wrapper dir is not cached)'
+            "after saving common artifacts (only 'caches' and 'notifications' will be stored)"
         )
+    }
+
+    private removeExcludedPaths(): void {
+        const rawPaths: string[] = JSON.parse(
+            core.getInput('cache-exclude-paths')
+        )
+        const resolvedPaths = rawPaths.map(x =>
+            path.resolve(this.gradleUserHome, x)
+        )
+
+        for (const p of resolvedPaths) {
+            this.debug(`Deleting excluded path: ${p}`)
+            tryDelete(p)
+        }
     }
 
     private async saveArtifactBundles(): Promise<void> {
@@ -130,9 +140,7 @@ export class GradleUserHomeCache extends AbstractCache {
         } else {
             core.info(`Caching ${bundle} with cache key: ${cacheKey}`)
             await this.saveCache([artifactPath], cacheKey)
-
-            this.debug(`Writing cache metafile: ${bundleMetaFile}`)
-            fs.writeFileSync(bundleMetaFile, cacheKey)
+            this.writeBundleMetaFile(bundleMetaFile, cacheKey)
         }
 
         for (const file of bundleFiles) {
@@ -154,6 +162,17 @@ export class GradleUserHomeCache extends AbstractCache {
         return `${cacheKeyPrefix}${bundle}-${key}`
     }
 
+    private writeBundleMetaFile(metaFile: string, cacheKey: string): void {
+        this.debug(`Writing bundle metafile: ${metaFile}`)
+
+        const dirName = path.dirname(metaFile)
+        if (!fs.existsSync(dirName)) {
+            fs.mkdirSync(dirName)
+        }
+
+        fs.writeFileSync(metaFile, cacheKey)
+    }
+
     protected determineGradleUserHome(rootDir: string): string {
         const customGradleUserHome = process.env['GRADLE_USER_HOME']
         if (customGradleUserHome) {
@@ -170,7 +189,19 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     protected getCachePath(): string[] {
-        return CACHE_PATH.map(x => path.resolve(this.gradleUserHome, x))
+        const rawPaths: string[] = JSON.parse(core.getInput('cache-paths'))
+        rawPaths.push(META_FILE_DIR)
+        const resolvedPaths = rawPaths.map(x => this.resolveCachePath(x))
+        this.debug(`Using cache paths: ${resolvedPaths}`)
+        return resolvedPaths
+    }
+
+    private resolveCachePath(rawPath: string): string {
+        if (rawPath.startsWith('!')) {
+            const resolved = this.resolveCachePath(rawPath.substring(1))
+            return `!${resolved}`
+        }
+        return path.resolve(this.gradleUserHome, rawPath)
     }
 
     private getArtifactBundles(): Map<string, string> {

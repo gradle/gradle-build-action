@@ -1,0 +1,71 @@
+name: Test caching configuration
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+env:
+  CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+  CACHE_DEBUG_ENABLED: true
+
+jobs:
+  # Run initial Gradle builds to push initial cache entries
+  # These builds should start fresh without cache hits, due to the seed injected into the cache key above.
+  seed-build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Build using Gradle wrapper
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/groovy-dsl
+        arguments: test
+        # Add "wrapper" to main cache entry and remove 'wrapper-zips' bundle
+        # Exclude build-cache from main cache entry
+        cache-paths: |
+            ["caches", "notifications", "wrapper"]
+        cache-exclude-paths: |
+            ["caches/build-cache-1"]
+        cache-artifact-bundles: |
+            [
+              ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
+              ["dependency-jars", "caches/modules-*/files-*/**/*.jar"],
+              ["instrumented-jars", "caches/jars-*/*/"],
+              ["kotlin-dsl", "caches/*/kotlin-dsl/*/*/"]
+            ]
+
+  # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
+  verify-build:
+    needs: seed-build
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Execute Gradle build with --offline
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/groovy-dsl
+        arguments: test --offline
+        cache-read-only: true
+        # Need the same configuration when restoring state from cache
+        cache-paths: |
+            ["caches", "notifications", "wrapper"]
+        cache-exclude-paths: |
+            ["caches/build-cache-1"]
+        cache-artifact-bundles: |
+            [
+              ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
+              ["dependency-jars", "caches/modules-*/files-*/**/*.jar"],
+              ["instrumented-jars", "caches/jars-*/*/"],
+              ["kotlin-dsl", "caches/*/kotlin-dsl/*/*/"]
+            ]
+
+
