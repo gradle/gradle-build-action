@@ -26,11 +26,26 @@ inputs:
     default: false
 
   cache-read-only:
-    description: When 'true', existing entries will be read from the cache but no entries will be written
+    description: When 'true', existing entries will be read from the cache but no entries will be written.
     required: false
-    # TODO: It might be useful to default to read-only for PRs, or non-main branch.
     default: false 
+  # e.g. Use the following setting to only write cache entries from your 'main' branch
+  #     cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
+  gradle-home-cache-includes:
+    description: Paths within Gradle User Home to cache.
+    required: false
+    default: |
+        ["caches", "notifications"]
+
+  gradle-home-cache-excludes:
+    description: Paths within Gradle User Home to exclude from cache.
+    required: false
+    default: |
+        [] 
+  # e.g. Use the following setting to prevent the local build cache from being saved/restored
+  #      gradle-home-cache-excludes: |
+  #           ["caches/build-cache-1"]
 
   # EXPERIMENTAL & INTERNAL CONFIGURATION PROPERTIES
   # The following action properties allow fine-grained tweaking of the action caching behaviour.
@@ -40,21 +55,7 @@ inputs:
     description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users (INTERNAL).
     required: false
     default: ${{ toJSON(matrix) }}
-
-  cache-paths:
-    description: Paths in Gradle User Home to cache. (EXPERIMENTAL - may be changed/removed without notice)
-    required: false
-    default: |
-        ["caches", "notifications"]
-
-  cache-exclude-paths:
-    description: Paths in Gradle User Home to exclude from cache. (EXPERIMENTAL - may be changed/removed without notice)
-    required: false
-    # eg ["caches/build-cache-1"] will prevent the local build cache from being saved/restored. 
-    default: |
-        [] 
-
-  cache-artifact-bundles:
+  gradle-home-cache-artifact-bundles:
     description: Names and patterns of artifact bundles to cache separately. (EXPERIMENTAL - may be changed/removed without notice)
     required: false
     default: |

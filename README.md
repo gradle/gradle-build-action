@@ -159,12 +159,9 @@ Caching is enabled by default. You can disable caching for the action as follows
 cache-disabled: true
 ```
 
-At this time it is not possible to fine-tune the caching performed by this action. 
-If you have a legitimate use case for fine-grained caching or restricting which files are cached, please raise an issue.
-
 ### Cache keys
 
-For cached distributions, the cache key is unique to the downloaded distribution. This will not change over time.
+For cached distributions outside of Gradle User Home, the cache key is unique to the downloaded distribution. This will not change over time.
 
 The state of the Gradle User Home and configuration-cache are highly dependent on the Gradle execution, so the cache key is composed of the current commit hash and the GitHub actions job id.
 As such, the cache key is likely to change on each subsequent run of GitHub actions. 
@@ -183,16 +180,36 @@ For example, you may want to write cache entries for builds on your `main` branc
 You can enable read-only caching for any of the caches as follows:
 
 ```yaml
-cache-read-only: true
+# Only write to the cache for builds on the 'main' branch.
+# Builds on other branches will only read existing entries from the cache.
+cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 ```
+
+### Gradle User Home cache tuning
+
+As well as any wrapper distributions, the action will attempt to save and restore the `caches` and `notifications` directories from Gradle User Home.
+
+The contents to be cached can be fine tuned by including and excluding certain paths with Gradle User Home.
+
+```yaml
+# Cache downloaded JDKs in addition to the default directories.
+gradle-home-cache-includes: |
+    ["caches", "notifications", "jdks"]
+# Exclude the local build-cache from the directories cached.
+gradle-home-cache-excludes: |
+    ["caches/build-cache-1"]
+```
+
+You can specify any number of fixed paths or patterns to include or exclude. 
+File pattern support is documented at https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#patterns-to-match-file-paths.
 
 ### Cache debugging
 
-It is possible to enable additional debug logging for cache operations. You do via the `CACHE_DEBUG_ENABLED` environment variable:
+It is possible to enable additional debug logging for cache operations. You do via the `GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED` environment variable:
 
 ```yaml
 env:
-  CACHE_DEBUG_ENABLED: true
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 ```
 
 Note that this setting will also prevent certain cache operations from running in parallel, further assisting with debugging.

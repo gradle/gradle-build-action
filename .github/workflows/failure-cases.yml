@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
 
 jobs:
 

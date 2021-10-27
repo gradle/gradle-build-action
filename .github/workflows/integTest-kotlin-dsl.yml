@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
-  CACHE_DEBUG_ENABLED: true
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
   # Use kotlin-dsl project to verify caching of generated jars and compiled scripts
