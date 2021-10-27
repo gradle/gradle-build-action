@@ -5,21 +5,27 @@ import * as crypto from 'crypto'
 import * as path from 'path'
 import * as fs from 'fs'
 
+const CACHE_DISABLED_PARAMETER = 'cache-disabled'
+const CACHE_READONLY_PARAMETER = 'cache-read-only'
+const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
+const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED'
+const CACHE_PREFIX_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX'
+
 export function isCacheDisabled(): boolean {
-    return core.getBooleanInput('cache-disabled')
+    return core.getBooleanInput(CACHE_DISABLED_PARAMETER)
 }
 
 export function isCacheReadOnly(): boolean {
-    return core.getBooleanInput('cache-read-only')
+    return core.getBooleanInput(CACHE_READONLY_PARAMETER)
 }
 
 export function isCacheDebuggingEnabled(): boolean {
-    return process.env['CACHE_DEBUG_ENABLED'] ? true : false
+    return process.env[CACHE_DEBUG_VAR] ? true : false
 }
 
 export function getCacheKeyPrefix(): string {
     // Prefix can be used to force change all cache keys (defaults to cache protocol version)
-    return process.env['CACHE_KEY_PREFIX'] || 'v3-'
+    return process.env[CACHE_PREFIX_VAR] || 'v3-'
 }
 
 function generateCacheKey(cacheName: string): CacheKey {
@@ -47,7 +53,7 @@ function generateCacheKey(cacheName: string): CacheKey {
 
 function determineJobContext(): string {
     // By default, we hash the full `matrix` data for the run, to uniquely identify this job invocation
-    const workflowJobContext = core.getInput('workflow-job-context')
+    const workflowJobContext = core.getInput(JOB_CONTEXT_PARAMETER)
     return hashStrings([workflowJobContext])
 }
 

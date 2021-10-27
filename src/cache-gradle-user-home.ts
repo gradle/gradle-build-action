@@ -14,6 +14,10 @@ import {
 
 const META_FILE_DIR = '.gradle-build-action'
 
+const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes'
+const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes'
+const ARTIFACT_BUNDLES_PARAMETER = 'gradle-home-cache-artifact-bundles'
+
 export class GradleUserHomeCache extends AbstractCache {
     private gradleUserHome: string
 
@@ -81,7 +85,7 @@ export class GradleUserHomeCache extends AbstractCache {
 
     private removeExcludedPaths(): void {
         const rawPaths: string[] = JSON.parse(
-            core.getInput('cache-exclude-paths')
+            core.getInput(EXCLUDE_PATHS_PARAMETER)
         )
         const resolvedPaths = rawPaths.map(x =>
             path.resolve(this.gradleUserHome, x)
@@ -189,7 +193,9 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     protected getCachePath(): string[] {
-        const rawPaths: string[] = JSON.parse(core.getInput('cache-paths'))
+        const rawPaths: string[] = JSON.parse(
+            core.getInput(INCLUDE_PATHS_PARAMETER)
+        )
         rawPaths.push(META_FILE_DIR)
         const resolvedPaths = rawPaths.map(x => this.resolveCachePath(x))
         this.debug(`Using cache paths: ${resolvedPaths}`)
@@ -205,7 +211,9 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     private getArtifactBundles(): Map<string, string> {
-        const artifactBundleDefinition = core.getInput('cache-artifact-bundles')
+        const artifactBundleDefinition = core.getInput(
+            ARTIFACT_BUNDLES_PARAMETER
+        )
         this.debug(
             `Using artifact bundle definition: ${artifactBundleDefinition}`
         )
