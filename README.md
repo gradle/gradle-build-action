@@ -2,9 +2,6 @@
 
 This GitHub Action can be used to execute a Gradle build on any platform supported by GitHub Actions.
 
-**Note:** The following documentation is for `gradle/gradle-build-action@v2`, currently in Beta release.
-You can view the documentation for the latest stable release (v1.5.1) [on the GitHub Marketplace](https://github.com/marketplace/actions/gradle-build-action?version=v1.5.1). 
-
 ## Usage
 
 The following workflow will run `./gradlew build` on ubuntu, macos and windows. 
