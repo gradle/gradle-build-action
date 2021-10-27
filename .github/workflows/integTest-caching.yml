@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
 
 jobs:
   # Run initial Gradle builds to push initial cache entries
@@ -98,6 +98,6 @@ jobs:
       with:
         build-root-directory: __tests__/samples/groovy-dsl
         arguments: test
-        cache-artifact-bundles: '[]'
         cache-read-only: true
+        gradle-home-cache-artifact-bundles: '[]'
 
