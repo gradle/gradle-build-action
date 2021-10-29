@@ -36,13 +36,13 @@ inputs:
     description: Paths within Gradle User Home to cache.
     required: false
     default: |
-        ["caches", "notifications"]
+        caches
+        notifications
 
   gradle-home-cache-excludes:
     description: Paths within Gradle User Home to exclude from cache.
     required: false
-    default: |
-        [] 
+  
   # e.g. Use the following setting to prevent the local build cache from being saved/restored
   #      gradle-home-cache-excludes: |
   #           ["caches/build-cache-1"]

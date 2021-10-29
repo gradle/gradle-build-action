@@ -191,10 +191,12 @@ The contents to be cached can be fine tuned by including and excluding certain p
 ```yaml
 # Cache downloaded JDKs in addition to the default directories.
 gradle-home-cache-includes: |
-    ["caches", "notifications", "jdks"]
+    caches
+    notifications
+    jdks
 # Exclude the local build-cache from the directories cached.
 gradle-home-cache-excludes: |
-    ["caches/build-cache-1"]
+    caches/build-cache-1
 ```
 
 You can specify any number of fixed paths or patterns to include or exclude. 

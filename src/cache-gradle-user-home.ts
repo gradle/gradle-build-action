@@ -84,8 +84,8 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     private removeExcludedPaths(): void {
-        const rawPaths: string[] = JSON.parse(
-            core.getInput(EXCLUDE_PATHS_PARAMETER)
+        const rawPaths: string[] = core.getMultilineInput(
+            EXCLUDE_PATHS_PARAMETER
         )
         const resolvedPaths = rawPaths.map(x =>
             path.resolve(this.gradleUserHome, x)
@@ -193,8 +193,8 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     protected getCachePath(): string[] {
-        const rawPaths: string[] = JSON.parse(
-            core.getInput(INCLUDE_PATHS_PARAMETER)
+        const rawPaths: string[] = core.getMultilineInput(
+            INCLUDE_PATHS_PARAMETER
         )
         rawPaths.push(META_FILE_DIR)
         const resolvedPaths = rawPaths.map(x => this.resolveCachePath(x))
