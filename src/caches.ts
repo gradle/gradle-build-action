@@ -7,9 +7,7 @@ const BUILD_ROOT_DIR = 'BUILD_ROOT_DIR'
 
 export async function restore(buildRootDirectory: string): Promise<void> {
     if (isCacheDisabled()) {
-        core.info(
-            'Cache is disabled: will not restore state from previous builds.'
-        )
+        core.info('Cache is disabled: will not restore state from previous builds.')
         return
     }
 
@@ -24,9 +22,7 @@ export async function restore(buildRootDirectory: string): Promise<void> {
 
 export async function save(): Promise<void> {
     if (isCacheReadOnly()) {
-        core.info(
-            'Cache is read-only: will not save state for use in subsequent builds.'
-        )
+        core.info('Cache is read-only: will not save state for use in subsequent builds.')
         return
     }
 

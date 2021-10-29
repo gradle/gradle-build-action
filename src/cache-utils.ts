@@ -44,11 +44,7 @@ function generateCacheKey(cacheName: string): CacheKey {
     // Exact match on Git SHA
     const cacheKey = `${cacheKeyForJobContext}-${github.context.sha}`
 
-    return new CacheKey(cacheKey, [
-        cacheKeyForJobContext,
-        cacheKeyForJob,
-        cacheKeyForOs
-    ])
+    return new CacheKey(cacheKey, [cacheKeyForJobContext, cacheKeyForJob, cacheKeyForOs])
 }
 
 function determineJobContext(): string {
@@ -66,9 +62,7 @@ export function hashStrings(values: string[]): string {
 }
 
 export function hashFileNames(fileNames: string[]): string {
-    return hashStrings(
-        fileNames.map(x => x.replace(new RegExp(`\\${path.sep}`, 'g'), '/'))
-    )
+    return hashStrings(fileNames.map(x => x.replace(new RegExp(`\\${path.sep}`, 'g'), '/')))
 }
 
 /**
@@ -127,9 +121,7 @@ export abstract class AbstractCache {
 
     async restore(): Promise<void> {
         if (this.cacheOutputExists()) {
-            core.info(
-                `${this.cacheDescription} already exists. Not restoring from cache.`
-            )
+            core.info(`${this.cacheDescription} already exists. Not restoring from cache.`)
             return
         }
 
@@ -143,31 +135,21 @@ export abstract class AbstractCache {
                 restoreKeys:[${cacheKey.restoreKeys}]`
         )
 
-        const cacheResult = await this.restoreCache(
-            this.getCachePath(),
-            cacheKey.key,
-            cacheKey.restoreKeys
-        )
+        const cacheResult = await this.restoreCache(this.getCachePath(), cacheKey.key, cacheKey.restoreKeys)
 
         if (!cacheResult) {
-            core.info(
-                `${this.cacheDescription} cache not found. Will start with empty.`
-            )
+            core.info(`${this.cacheDescription} cache not found. Will start with empty.`)
             return
         }
 
         core.saveState(this.cacheResultStateKey, cacheResult)
 
-        core.info(
-            `Restored ${this.cacheDescription} from cache key: ${cacheResult}`
-        )
+        core.info(`Restored ${this.cacheDescription} from cache key: ${cacheResult}`)
 
         try {
             await this.afterRestore()
         } catch (error) {
-            core.warning(
-                `Restore ${this.cacheDescription} failed in 'afterRestore': ${error}`
-            )
+            core.warning(`Restore ${this.cacheDescription} failed in 'afterRestore': ${error}`)
         }
 
         return
@@ -179,11 +161,7 @@ export abstract class AbstractCache {
         cacheRestoreKeys: string[] = []
     ): Promise<string | undefined> {
         try {
-            return await cache.restoreCache(
-                cachePath,
-                cacheKey,
-                cacheRestoreKeys
-            )
+            return await cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys)
         } catch (error) {
             if (error instanceof cache.ValidationError) {
                 // Validation errors should fail the build action
@@ -207,31 +185,23 @@ export abstract class AbstractCache {
         const cacheResult = core.getState(this.cacheResultStateKey)
 
         if (!cacheKey) {
-            this.debug(
-                `${this.cacheDescription} existed prior to cache restore. Not saving.`
-            )
+            this.debug(`${this.cacheDescription} existed prior to cache restore. Not saving.`)
             return
         }
 
         if (cacheResult && cacheKey === cacheResult) {
-            core.info(
-                `Cache hit occurred on the cache key ${cacheKey}, not saving cache.`
-            )
+            core.info(`Cache hit occurred on the cache key ${cacheKey}, not saving cache.`)
             return
         }
 
         try {
             await this.beforeSave()
         } catch (error) {
-            core.warning(
-                `Save ${this.cacheDescription} failed in 'beforeSave': ${error}`
-            )
+            core.warning(`Save ${this.cacheDescription} failed in 'beforeSave': ${error}`)
             return
         }
 
-        core.info(
-            `Caching ${this.cacheDescription} with cache key: ${cacheKey}`
-        )
+        core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKey}`)
         const cachePath = this.getCachePath()
         await this.saveCache(cachePath, cacheKey)
 
@@ -240,10 +210,7 @@ export abstract class AbstractCache {
 
     protected async beforeSave(): Promise<void> {}
 
-    protected async saveCache(
-        cachePath: string[],
-        cacheKey: string
-    ): Promise<void> {
+    protected async saveCache(cachePath: string[], cacheKey: string): Promise<void> {
         try {
             await cache.saveCache(cachePath, cacheKey)
         } catch (error) {

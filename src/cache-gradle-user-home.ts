@@ -5,12 +5,7 @@ import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 import * as exec from '@actions/exec'
 
-import {
-    AbstractCache,
-    getCacheKeyPrefix,
-    hashFileNames,
-    tryDelete
-} from './cache-utils'
+import {AbstractCache, getCacheKeyPrefix, hashFileNames, tryDelete} from './cache-utils'
 
 const META_FILE_DIR = '.gradle-build-action'
 
@@ -46,27 +41,18 @@ export class GradleUserHomeCache extends AbstractCache {
         await Promise.all(processes)
     }
 
-    private async restoreArtifactBundle(
-        bundle: string,
-        artifactPath: string
-    ): Promise<void> {
+    private async restoreArtifactBundle(bundle: string, artifactPath: string): Promise<void> {
         const bundleMetaFile = this.getBundleMetaFile(bundle)
         if (fs.existsSync(bundleMetaFile)) {
             const cacheKey = fs.readFileSync(bundleMetaFile, 'utf-8').trim()
             const restoreKey = await this.restoreCache([artifactPath], cacheKey)
             if (restoreKey) {
-                core.info(
-                    `Restored ${bundle} with key ${cacheKey} to ${artifactPath}`
-                )
+                core.info(`Restored ${bundle} with key ${cacheKey} to ${artifactPath}`)
             } else {
-                this.debug(
-                    `Did not restore ${bundle} with key ${cacheKey} to ${artifactPath}`
-                )
+                this.debug(`Did not restore ${bundle} with key ${cacheKey} to ${artifactPath}`)
             }
         } else {
-            this.debug(
-                `No metafile found to restore ${bundle}: ${bundleMetaFile}`
-            )
+            this.debug(`No metafile found to restore ${bundle}: ${bundleMetaFile}`)
         }
     }
 
@@ -84,12 +70,8 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     private removeExcludedPaths(): void {
-        const rawPaths: string[] = core.getMultilineInput(
-            EXCLUDE_PATHS_PARAMETER
-        )
-        const resolvedPaths = rawPaths.map(x =>
-            path.resolve(this.gradleUserHome, x)
-        )
+        const rawPaths: string[] = core.getMultilineInput(EXCLUDE_PATHS_PARAMETER)
+        const resolvedPaths = rawPaths.map(x => path.resolve(this.gradleUserHome, x))
 
         for (const p of resolvedPaths) {
             this.debug(`Deleting excluded path: ${p}`)
@@ -111,10 +93,7 @@ export class GradleUserHomeCache extends AbstractCache {
         await Promise.all(processes)
     }
 
-    private async saveArtifactBundle(
-        bundle: string,
-        artifactPath: string
-    ): Promise<void> {
+    private async saveArtifactBundle(bundle: string, artifactPath: string): Promise<void> {
         const bundleMetaFile = this.getBundleMetaFile(bundle)
 
         const globber = await glob.create(artifactPath, {
@@ -138,9 +117,7 @@ export class GradleUserHomeCache extends AbstractCache {
         const cacheKey = this.createCacheKey(bundle, bundleFiles)
 
         if (previouslyRestoredKey === cacheKey) {
-            this.debug(
-                `No change to previously restored ${bundle}. Not caching.`
-            )
+            this.debug(`No change to previously restored ${bundle}. Not caching.`)
         } else {
             core.info(`Caching ${bundle} with cache key: ${cacheKey}`)
             await this.saveCache([artifactPath], cacheKey)
@@ -154,14 +131,10 @@ export class GradleUserHomeCache extends AbstractCache {
 
     protected createCacheKey(bundle: string, files: string[]): string {
         const cacheKeyPrefix = getCacheKeyPrefix()
-        const relativeFiles = files.map(x =>
-            path.relative(this.gradleUserHome, x)
-        )
+        const relativeFiles = files.map(x => path.relative(this.gradleUserHome, x))
         const key = hashFileNames(relativeFiles)
 
-        this.debug(
-            `Generating cache key for ${bundle} from files: ${relativeFiles}`
-        )
+        this.debug(`Generating cache key for ${bundle} from files: ${relativeFiles}`)
 
         return `${cacheKeyPrefix}${bundle}-${key}`
     }
@@ -193,9 +166,7 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     protected getCachePath(): string[] {
-        const rawPaths: string[] = core.getMultilineInput(
-            INCLUDE_PATHS_PARAMETER
-        )
+        const rawPaths: string[] = core.getMultilineInput(INCLUDE_PATHS_PARAMETER)
         rawPaths.push(META_FILE_DIR)
         const resolvedPaths = rawPaths.map(x => this.resolveCachePath(x))
         this.debug(`Using cache paths: ${resolvedPaths}`)
@@ -211,19 +182,10 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     private getArtifactBundles(): Map<string, string> {
-        const artifactBundleDefinition = core.getInput(
-            ARTIFACT_BUNDLES_PARAMETER
-        )
-        this.debug(
-            `Using artifact bundle definition: ${artifactBundleDefinition}`
-        )
+        const artifactBundleDefinition = core.getInput(ARTIFACT_BUNDLES_PARAMETER)
+        this.debug(`Using artifact bundle definition: ${artifactBundleDefinition}`)
         const artifactBundles = JSON.parse(artifactBundleDefinition)
-        return new Map(
-            Array.from(artifactBundles, ([key, value]) => [
-                key,
-                path.resolve(this.gradleUserHome, value)
-            ])
-        )
+        return new Map(Array.from(artifactBundles, ([key, value]) => [key, path.resolve(this.gradleUserHome, value)]))
     }
 
     private async reportGradleUserHomeSize(label: string): Promise<void> {
@@ -233,15 +195,11 @@ export class GradleUserHomeCache extends AbstractCache {
         if (!fs.existsSync(this.gradleUserHome)) {
             return
         }
-        const result = await exec.getExecOutput(
-            'du',
-            ['-h', '-c', '-t', '5M'],
-            {
-                cwd: this.gradleUserHome,
-                silent: true,
-                ignoreReturnCode: true
-            }
-        )
+        const result = await exec.getExecOutput('du', ['-h', '-c', '-t', '5M'], {
+            cwd: this.gradleUserHome,
+            silent: true,
+            ignoreReturnCode: true
+        })
 
         core.info(`Gradle User Home (directories >5M): ${label}`)
 

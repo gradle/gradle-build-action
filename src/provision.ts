@@ -19,9 +19,7 @@ export async function gradleVersion(version: string): Promise<string> {
         case 'current':
             return gradleCurrent()
         case 'rc':
-            core.warning(
-                `Specifying gradle-version 'rc' has been deprecated. Use 'release-candidate' instead.`
-            )
+            core.warning(`Specifying gradle-version 'rc' has been deprecated. Use 'release-candidate' instead.`)
             return gradleReleaseCandidate()
         case 'release-candidate':
             return gradleReleaseCandidate()
@@ -35,16 +33,12 @@ export async function gradleVersion(version: string): Promise<string> {
 }
 
 async function gradleCurrent(): Promise<string> {
-    const versionInfo = await gradleVersionDeclaration(
-        `${gradleVersionsBaseUrl}/current`
-    )
+    const versionInfo = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/current`)
     return provisionGradle(versionInfo)
 }
 
 async function gradleReleaseCandidate(): Promise<string> {
-    const versionInfo = await gradleVersionDeclaration(
-        `${gradleVersionsBaseUrl}/release-candidate`
-    )
+    const versionInfo = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-candidate`)
     if (versionInfo && versionInfo.version && versionInfo.downloadUrl) {
         return provisionGradle(versionInfo)
     }
@@ -53,16 +47,12 @@ async function gradleReleaseCandidate(): Promise<string> {
 }
 
 async function gradleNightly(): Promise<string> {
-    const versionInfo = await gradleVersionDeclaration(
-        `${gradleVersionsBaseUrl}/nightly`
-    )
+    const versionInfo = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/nightly`)
     return provisionGradle(versionInfo)
 }
 
 async function gradleReleaseNightly(): Promise<string> {
-    const versionInfo = await gradleVersionDeclaration(
-        `${gradleVersionsBaseUrl}/release-nightly`
-    )
+    const versionInfo = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-nightly`)
     return provisionGradle(versionInfo)
 }
 
@@ -74,34 +64,24 @@ async function gradle(version: string): Promise<string> {
     return provisionGradle(versionInfo)
 }
 
-async function gradleVersionDeclaration(
-    url: string
-): Promise<GradleVersionInfo> {
+async function gradleVersionDeclaration(url: string): Promise<GradleVersionInfo> {
     return await httpGetGradleVersion(url)
 }
 
-async function findGradleVersionDeclaration(
-    version: string
-): Promise<GradleVersionInfo | undefined> {
-    const gradleVersions = await httpGetGradleVersions(
-        `${gradleVersionsBaseUrl}/all`
-    )
+async function findGradleVersionDeclaration(version: string): Promise<GradleVersionInfo | undefined> {
+    const gradleVersions = await httpGetGradleVersions(`${gradleVersionsBaseUrl}/all`)
     return gradleVersions.find((entry: GradleVersionInfo) => {
         return entry.version === version
     })
 }
 
-async function provisionGradle(
-    versionInfo: GradleVersionInfo
-): Promise<string> {
+async function provisionGradle(versionInfo: GradleVersionInfo): Promise<string> {
     return core.group(`Provision Gradle ${versionInfo.version}`, async () => {
         return locateGradleAndDownloadIfRequired(versionInfo)
     })
 }
 
-async function locateGradleAndDownloadIfRequired(
-    versionInfo: GradleVersionInfo
-): Promise<string> {
+async function locateGradleAndDownloadIfRequired(versionInfo: GradleVersionInfo): Promise<string> {
     const installsDir = path.join(os.homedir(), 'gradle-installations/installs')
     const installDir = path.join(installsDir, `gradle-${versionInfo.version}`)
     if (fs.existsSync(installDir)) {
@@ -120,13 +100,8 @@ async function locateGradleAndDownloadIfRequired(
     return executable
 }
 
-async function downloadAndCacheGradleDistribution(
-    versionInfo: GradleVersionInfo
-): Promise<string> {
-    const downloadPath = path.join(
-        os.homedir(),
-        `gradle-installations/downloads/gradle-${versionInfo.version}-bin.zip`
-    )
+async function downloadAndCacheGradleDistribution(versionInfo: GradleVersionInfo): Promise<string> {
+    const downloadPath = path.join(os.homedir(), `gradle-installations/downloads/gradle-${versionInfo.version}-bin.zip`)
 
     if (isCacheDisabled()) {
         await downloadGradleDistribution(versionInfo, downloadPath)
@@ -136,14 +111,10 @@ async function downloadAndCacheGradleDistribution(
     const cacheKey = `gradle-${versionInfo.version}`
     const restoreKey = await cache.restoreCache([downloadPath], cacheKey)
     if (restoreKey) {
-        core.info(
-            `Restored Gradle distribution ${cacheKey} from cache to ${downloadPath}`
-        )
+        core.info(`Restored Gradle distribution ${cacheKey} from cache to ${downloadPath}`)
         return downloadPath
     }
-    core.info(
-        `Gradle distribution ${versionInfo.version} not found in cache. Will download.`
-    )
+    core.info(`Gradle distribution ${versionInfo.version} not found in cache. Will download.`)
     await downloadGradleDistribution(versionInfo, downloadPath)
 
     if (!isCacheReadOnly()) {
@@ -151,10 +122,7 @@ async function downloadAndCacheGradleDistribution(
             await cache.saveCache([downloadPath], cacheKey)
         } catch (error) {
             // Fail on validation errors or non-errors (the latter to keep Typescript happy)
-            if (
-                error instanceof cache.ValidationError ||
-                !(error instanceof Error)
-            ) {
+            if (error instanceof cache.ValidationError || !(error instanceof Error)) {
                 throw error
             }
             core.warning(error.message)
@@ -163,16 +131,9 @@ async function downloadAndCacheGradleDistribution(
     return downloadPath
 }
 
-async function downloadGradleDistribution(
-    versionInfo: GradleVersionInfo,
-    downloadPath: string
-): Promise<void> {
+async function downloadGradleDistribution(versionInfo: GradleVersionInfo, downloadPath: string): Promise<void> {
     await toolCache.downloadTool(versionInfo.downloadUrl, downloadPath)
-    core.info(
-        `Downloaded ${versionInfo.downloadUrl} to ${downloadPath} (size ${
-            fs.statSync(downloadPath).size
-        })`
-    )
+    core.info(`Downloaded ${versionInfo.downloadUrl} to ${downloadPath} (size ${fs.statSync(downloadPath).size})`)
 }
 
 function executableFrom(installDir: string): string {
@@ -183,9 +144,7 @@ async function httpGetGradleVersion(url: string): Promise<GradleVersionInfo> {
     return JSON.parse(await httpGetString(url))
 }
 
-async function httpGetGradleVersions(
-    url: string
-): Promise<GradleVersionInfo[]> {
+async function httpGetGradleVersions(url: string): Promise<GradleVersionInfo[]> {
     return JSON.parse(await httpGetString(url))
 }
 
