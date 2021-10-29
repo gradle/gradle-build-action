@@ -106,10 +106,44 @@ class CacheKey {
 }
 
 export class CachingReport {
-    fullyRestored: boolean
+    cacheEntryReports: CacheEntryReport[] = []
 
-    constructor(fullyRestored: boolean) {
-        this.fullyRestored = fullyRestored
+    get fullyRestored(): boolean {
+        return this.cacheEntryReports.every(x => !x.wasRequestedButNotRestored())
+    }
+
+    addEntryReport(name: string): CacheEntryReport {
+        const report = new CacheEntryReport(name)
+        this.cacheEntryReports.push(report)
+        return report
+    }
+}
+
+export class CacheEntryReport {
+    entryName: string
+    requestedKey: string | undefined
+    requestedRestoreKeys: string[] | undefined
+    restoredKey: string | undefined
+    restoredSize: number | undefined
+
+    savedKey: string | undefined
+    savedSize: number | undefined
+
+    constructor(entryName: string) {
+        this.entryName = entryName
+    }
+
+    wasRequestedButNotRestored(): boolean {
+        return this.requestedKey !== undefined && this.restoredKey === undefined
+    }
+
+    markRequested(key: string, restoreKeys: string[] = []): void {
+        this.requestedKey = key
+        this.requestedRestoreKeys = restoreKeys
+    }
+
+    markRestored(key: string): void {
+        this.restoredKey = key
     }
 }
 
@@ -129,13 +163,15 @@ export abstract class AbstractCache {
         this.cacheDebuggingEnabled = isCacheDebuggingEnabled()
     }
 
-    async restore(): Promise<CachingReport> {
+    async restore(report: CachingReport): Promise<void> {
         if (this.cacheOutputExists()) {
             core.info(`${this.cacheDescription} already exists. Not restoring from cache.`)
-            return new CachingReport(false)
+            return
         }
 
         const cacheKey = this.prepareCacheKey()
+        const entryReport = report.addEntryReport(this.cacheName)
+        entryReport.markRequested(cacheKey.key, cacheKey.restoreKeys)
 
         this.debug(
             `Requesting ${this.cacheDescription} with
@@ -147,21 +183,18 @@ export abstract class AbstractCache {
 
         if (!cacheResult) {
             core.info(`${this.cacheDescription} cache not found. Will start with empty.`)
-            return new CachingReport(false)
+            return
         }
 
         core.saveState(this.cacheResultStateKey, cacheResult)
-
+        entryReport.markRestored(cacheResult)
         core.info(`Restored ${this.cacheDescription} from cache key: ${cacheResult}`)
 
-        const report = new CachingReport(true)
         try {
             await this.afterRestore(report)
         } catch (error) {
             core.warning(`Restore ${this.cacheDescription} failed in 'afterRestore': ${error}`)
         }
-
-        return report
     }
 
     prepareCacheKey(): CacheKey {

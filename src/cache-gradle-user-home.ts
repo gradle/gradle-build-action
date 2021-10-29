@@ -5,7 +5,14 @@ import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 import * as exec from '@actions/exec'
 
-import {AbstractCache, CachingReport, getCacheKeyPrefix, hashFileNames, tryDelete} from './cache-utils'
+import {
+    AbstractCache,
+    CacheEntryReport,
+    CachingReport,
+    getCacheKeyPrefix,
+    hashFileNames,
+    tryDelete
+} from './cache-utils'
 
 const META_FILE_DIR = '.gradle-build-action'
 
@@ -23,17 +30,33 @@ export class GradleUserHomeCache extends AbstractCache {
 
     async afterRestore(report: CachingReport): Promise<void> {
         await this.reportGradleUserHomeSize('as restored from cache')
-        const result = await this.restoreArtifactBundles()
+        await this.restoreArtifactBundles(report)
         await this.reportGradleUserHomeSize('after restoring common artifacts')
-        if (!result) {
-            report.fullyRestored = false
-        }
     }
 
-    private async restoreArtifactBundles(): Promise<boolean> {
-        const processes: Promise<boolean>[] = []
+    private async restoreArtifactBundles(report: CachingReport): Promise<void> {
+        const processes: Promise<void>[] = []
+
+        // This is special logic that allows the tests to simulate a "not restored" state by configuring an empty set of bundles
+        // This is similar to how the primary implementation should work:
+        // - Iterate over bundle meta-files as the basis for restoring content.
+        // - Leave bundle meta-files for successful restore.
+        // - Remove bundle meta-files that are not restored.
+        if (this.getArtifactBundles().size === 0) {
+            const bundleMetaFiles = await this.getBundleMetaFiles()
+
+            for (const bundleMetaFile of bundleMetaFiles) {
+                const bundle = path.basename(bundleMetaFile, '.cache')
+
+                core.info(`Found bundle metafile for ${bundle} but no such bundle configured`)
+                report.addEntryReport(bundleMetaFile).markRequested('BUNDLE_NOT_CONFIGURED')
+                tryDelete(bundleMetaFile)
+            }
+        }
+
         for (const [bundle, pattern] of this.getArtifactBundles()) {
-            const p = this.restoreArtifactBundle(bundle, pattern)
+            const bundleEntryReport = report.addEntryReport(bundle)
+            const p = this.restoreArtifactBundle(bundle, pattern, bundleEntryReport)
             // Run sequentially when debugging enabled
             if (this.cacheDebuggingEnabled) {
                 await p
@@ -41,30 +64,37 @@ export class GradleUserHomeCache extends AbstractCache {
             processes.push(p)
         }
 
-        const results = await Promise.all(processes)
-        // Assume that no-bundles means not-fully-restored
-        return results.length > 0 && results.every(Boolean)
+        await Promise.all(processes)
     }
 
-    private async restoreArtifactBundle(bundle: string, artifactPath: string): Promise<boolean> {
+    private async restoreArtifactBundle(bundle: string, artifactPath: string, report: CacheEntryReport): Promise<void> {
         const bundleMetaFile = this.getBundleMetaFile(bundle)
         if (fs.existsSync(bundleMetaFile)) {
             const cacheKey = fs.readFileSync(bundleMetaFile, 'utf-8').trim()
-            const restoreKey = await this.restoreCache([artifactPath], cacheKey)
-            if (restoreKey) {
+            report.markRequested(cacheKey)
+
+            const restoredKey = await this.restoreCache([artifactPath], cacheKey)
+            if (restoredKey) {
                 core.info(`Restored ${bundle} with key ${cacheKey} to ${artifactPath}`)
+                report.markRestored(restoredKey)
             } else {
-                this.debug(`Did not restore ${bundle} with key ${cacheKey} to ${artifactPath}`)
-                return false
+                core.info(`Did not restore ${bundle} with key ${cacheKey} to ${artifactPath}`)
+                // TODO Remove the .cache file here?
             }
         } else {
             this.debug(`No metafile found to restore ${bundle}: ${bundleMetaFile}`)
         }
-        return true
     }
 
     private getBundleMetaFile(name: string): string {
         return path.resolve(this.gradleUserHome, META_FILE_DIR, `${name}.cache`)
+    }
+
+    private async getBundleMetaFiles(): Promise<string[]> {
+        const metaFiles = path.resolve(this.gradleUserHome, META_FILE_DIR, '*.cache')
+        const globber = await glob.create(metaFiles)
+        const bundleFiles = await globber.glob()
+        return bundleFiles
     }
 
     async beforeSave(): Promise<void> {
