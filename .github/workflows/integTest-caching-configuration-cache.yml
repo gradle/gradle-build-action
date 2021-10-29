@@ -1,4 +1,4 @@
-name: Test caching
+name: Test save/restore configuration-cache state
 
 on:
   pull_request:
@@ -7,6 +7,7 @@ on:
 
 env:
   GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
   # Run initial Gradle builds to push initial cache entries
@@ -19,50 +20,11 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Build using Gradle wrapper
-      uses: ./
-      with:
-        build-root-directory: __tests__/samples/groovy-dsl
-        arguments: test
     - name: Build with configuration-cache enabled
       uses: ./
       with:
         build-root-directory: __tests__/samples/groovy-dsl
         arguments: test --configuration-cache
-
-  # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
-  dependencies-cache:
-    needs: seed-build
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Execute Gradle build with --offline
-      uses: ./
-      with:
-        build-root-directory: __tests__/samples/groovy-dsl
-        arguments: test --offline
-        cache-read-only: true
-
-  # Test that the gradle-user-home cache will cache and restore local build-cache
-  build-cache:
-    needs: seed-build
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Execute Gradle build and verify tasks from cache
-      uses: ./
-      with:
-        build-root-directory: __tests__/samples/groovy-dsl
-        arguments: test -DverifyCachedBuild=true
-        cache-read-only: true
 
   # Test that the project-dot-gradle cache will cache and restore configuration-cache
   configuration-cache:
@@ -97,7 +59,7 @@ jobs:
       uses: ./
       with:
         build-root-directory: __tests__/samples/groovy-dsl
-        arguments: test
+        arguments: test --configuration-cache
         cache-read-only: true
         gradle-home-cache-artifact-bundles: '[]'
 
