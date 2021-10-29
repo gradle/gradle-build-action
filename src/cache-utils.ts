@@ -112,10 +112,30 @@ export class CachingReport {
         return this.cacheEntryReports.every(x => !x.wasRequestedButNotRestored())
     }
 
-    addEntryReport(name: string): CacheEntryReport {
-        const report = new CacheEntryReport(name)
-        this.cacheEntryReports.push(report)
-        return report
+    entryReport(name: string): CacheEntryReport {
+        for (const report of this.cacheEntryReports) {
+            if (report.entryName === name) {
+                return report
+            }
+        }
+
+        const newReport = new CacheEntryReport(name)
+        this.cacheEntryReports.push(newReport)
+        return newReport
+    }
+
+    stringify(): string {
+        return JSON.stringify(this)
+    }
+
+    static rehydrate(stringRep: string): CachingReport {
+        const rehydrated: CachingReport = Object.assign(new CachingReport(), JSON.parse(stringRep))
+        const entryReports = rehydrated.cacheEntryReports
+        for (let index = 0; index < entryReports.length; index++) {
+            const rawEntryReport = entryReports[index]
+            entryReports[index] = Object.assign(new CacheEntryReport(rawEntryReport.entryName), rawEntryReport)
+        }
+        return rehydrated
     }
 }
 
@@ -137,13 +157,20 @@ export class CacheEntryReport {
         return this.requestedKey !== undefined && this.restoredKey === undefined
     }
 
-    markRequested(key: string, restoreKeys: string[] = []): void {
+    markRequested(key: string, restoreKeys: string[] = []): CacheEntryReport {
         this.requestedKey = key
         this.requestedRestoreKeys = restoreKeys
+        return this
     }
 
-    markRestored(key: string): void {
+    markRestored(key: string): CacheEntryReport {
         this.restoredKey = key
+        return this
+    }
+
+    markSaved(key: string): CacheEntryReport {
+        this.savedKey = key
+        return this
     }
 }
 
@@ -170,7 +197,7 @@ export abstract class AbstractCache {
         }
 
         const cacheKey = this.prepareCacheKey()
-        const entryReport = report.addEntryReport(this.cacheName)
+        const entryReport = report.entryReport(this.cacheName)
         entryReport.markRequested(cacheKey.key, cacheKey.restoreKeys)
 
         this.debug(
@@ -224,7 +251,7 @@ export abstract class AbstractCache {
 
     protected async afterRestore(_report: CachingReport): Promise<void> {}
 
-    async save(): Promise<void> {
+    async save(report: CachingReport): Promise<void> {
         if (!this.cacheOutputExists()) {
             this.debug(`No ${this.cacheDescription} to cache.`)
             return
@@ -244,7 +271,7 @@ export abstract class AbstractCache {
         }
 
         try {
-            await this.beforeSave()
+            await this.beforeSave(report)
         } catch (error) {
             core.warning(`Save ${this.cacheDescription} failed in 'beforeSave': ${error}`)
             return
@@ -254,10 +281,12 @@ export abstract class AbstractCache {
         const cachePath = this.getCachePath()
         await this.saveCache(cachePath, cacheKey)
 
+        report.entryReport(this.cacheName).markSaved(cacheKey)
+
         return
     }
 
-    protected async beforeSave(): Promise<void> {}
+    protected async beforeSave(_report: CachingReport): Promise<void> {}
 
     protected async saveCache(cachePath: string[], cacheKey: string): Promise<void> {
         try {
