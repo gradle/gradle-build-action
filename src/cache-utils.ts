@@ -5,6 +5,8 @@ import * as crypto from 'crypto'
 import * as path from 'path'
 import * as fs from 'fs'
 
+const CACHE_PROTOCOL_VERSION = 'v4-'
+
 const CACHE_DISABLED_PARAMETER = 'cache-disabled'
 const CACHE_READONLY_PARAMETER = 'cache-read-only'
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
@@ -25,7 +27,7 @@ export function isCacheDebuggingEnabled(): boolean {
 
 export function getCacheKeyPrefix(): string {
     // Prefix can be used to force change all cache keys (defaults to cache protocol version)
-    return process.env[CACHE_PREFIX_VAR] || 'v3-'
+    return process.env[CACHE_PREFIX_VAR] || CACHE_PROTOCOL_VERSION
 }
 
 function generateCacheKey(cacheName: string): CacheKey {

@@ -62,7 +62,7 @@ inputs:
         [
           ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
           ["wrapper-zips", "wrapper/dists/*/*/*.zip"],
-          ["dependency-jars", "caches/modules-*/files-*/**/*.jar"],
+          ["dependencies", "caches/modules-*/files-*/*/*/*/*/"],
           ["instrumented-jars", "caches/jars-*/*/"],
           ["kotlin-dsl", "caches/*/kotlin-dsl/*/*/"]
         ]

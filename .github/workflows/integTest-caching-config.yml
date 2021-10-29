@@ -36,7 +36,7 @@ jobs:
         gradle-home-cache-artifact-bundles: |
             [
               ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
-              ["dependency-jars", "caches/modules-*/files-*/**/*.jar"],
+              ["dependencies", "caches/modules-*/files-*/*/*/*/*/"],
               ["instrumented-jars", "caches/jars-*/*/"],
               ["kotlin-dsl", "caches/*/kotlin-dsl/*/*/"]
             ]
@@ -67,7 +67,7 @@ jobs:
         gradle-home-cache-artifact-bundles: |
             [
               ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
-              ["dependency-jars", "caches/modules-*/files-*/**/*.jar"],
+              ["dependencies", "caches/modules-*/files-*/*/*/*/*/"],
               ["instrumented-jars", "caches/jars-*/*/"],
               ["kotlin-dsl", "caches/*/kotlin-dsl/*/*/"]
             ]
