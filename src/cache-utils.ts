@@ -105,6 +105,14 @@ class CacheKey {
     }
 }
 
+export class CachingReport {
+    fullyRestored: boolean
+
+    constructor(fullyRestored: boolean) {
+        this.fullyRestored = fullyRestored
+    }
+}
+
 export abstract class AbstractCache {
     private cacheName: string
     private cacheDescription: string
@@ -121,15 +129,13 @@ export abstract class AbstractCache {
         this.cacheDebuggingEnabled = isCacheDebuggingEnabled()
     }
 
-    async restore(): Promise<void> {
+    async restore(): Promise<CachingReport> {
         if (this.cacheOutputExists()) {
             core.info(`${this.cacheDescription} already exists. Not restoring from cache.`)
-            return
+            return new CachingReport(false)
         }
 
-        const cacheKey = generateCacheKey(this.cacheName)
-
-        core.saveState(this.cacheKeyStateKey, cacheKey.key)
+        const cacheKey = this.prepareCacheKey()
 
         this.debug(
             `Requesting ${this.cacheDescription} with
@@ -141,20 +147,28 @@ export abstract class AbstractCache {
 
         if (!cacheResult) {
             core.info(`${this.cacheDescription} cache not found. Will start with empty.`)
-            return
+            return new CachingReport(false)
         }
 
         core.saveState(this.cacheResultStateKey, cacheResult)
 
         core.info(`Restored ${this.cacheDescription} from cache key: ${cacheResult}`)
 
+        const report = new CachingReport(true)
         try {
-            await this.afterRestore()
+            await this.afterRestore(report)
         } catch (error) {
             core.warning(`Restore ${this.cacheDescription} failed in 'afterRestore': ${error}`)
         }
 
-        return
+        return report
+    }
+
+    prepareCacheKey(): CacheKey {
+        const cacheKey = generateCacheKey(this.cacheName)
+
+        core.saveState(this.cacheKeyStateKey, cacheKey.key)
+        return cacheKey
     }
 
     protected async restoreCache(
@@ -175,7 +189,7 @@ export abstract class AbstractCache {
         }
     }
 
-    protected async afterRestore(): Promise<void> {}
+    protected async afterRestore(_report: CachingReport): Promise<void> {}
 
     async save(): Promise<void> {
         if (!this.cacheOutputExists()) {

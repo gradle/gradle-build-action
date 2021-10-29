@@ -13,10 +13,16 @@ export async function restore(buildRootDirectory: string): Promise<void> {
 
     await core.group('Restore Gradle state from cache', async () => {
         core.saveState(BUILD_ROOT_DIR, buildRootDirectory)
-        return Promise.all([
-            new GradleUserHomeCache(buildRootDirectory).restore(),
-            new ProjectDotGradleCache(buildRootDirectory).restore()
-        ])
+        const gradleHomeRestore = await new GradleUserHomeCache(buildRootDirectory).restore()
+
+        const projectDotGradleCache = new ProjectDotGradleCache(buildRootDirectory)
+        if (gradleHomeRestore.fullyRestored) {
+            // Only restore the configuration-cache if the Gradle Home is fully restored
+            await projectDotGradleCache.restore()
+        } else {
+            // Otherwise, prepare the cache key for later save()
+            projectDotGradleCache.prepareCacheKey()
+        }
     })
 }
 

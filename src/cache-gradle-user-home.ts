@@ -5,7 +5,7 @@ import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 import * as exec from '@actions/exec'
 
-import {AbstractCache, getCacheKeyPrefix, hashFileNames, tryDelete} from './cache-utils'
+import {AbstractCache, CachingReport, getCacheKeyPrefix, hashFileNames, tryDelete} from './cache-utils'
 
 const META_FILE_DIR = '.gradle-build-action'
 
@@ -21,14 +21,17 @@ export class GradleUserHomeCache extends AbstractCache {
         this.gradleUserHome = this.determineGradleUserHome(rootDir)
     }
 
-    async afterRestore(): Promise<void> {
+    async afterRestore(report: CachingReport): Promise<void> {
         await this.reportGradleUserHomeSize('as restored from cache')
-        await this.restoreArtifactBundles()
+        const result = await this.restoreArtifactBundles()
         await this.reportGradleUserHomeSize('after restoring common artifacts')
+        if (!result) {
+            report.fullyRestored = false
+        }
     }
 
-    private async restoreArtifactBundles(): Promise<void> {
-        const processes: Promise<void>[] = []
+    private async restoreArtifactBundles(): Promise<boolean> {
+        const processes: Promise<boolean>[] = []
         for (const [bundle, pattern] of this.getArtifactBundles()) {
             const p = this.restoreArtifactBundle(bundle, pattern)
             // Run sequentially when debugging enabled
@@ -38,10 +41,12 @@ export class GradleUserHomeCache extends AbstractCache {
             processes.push(p)
         }
 
-        await Promise.all(processes)
+        const results = await Promise.all(processes)
+        // Assume that no-bundles means not-fully-restored
+        return results.length > 0 && results.every(Boolean)
     }
 
-    private async restoreArtifactBundle(bundle: string, artifactPath: string): Promise<void> {
+    private async restoreArtifactBundle(bundle: string, artifactPath: string): Promise<boolean> {
         const bundleMetaFile = this.getBundleMetaFile(bundle)
         if (fs.existsSync(bundleMetaFile)) {
             const cacheKey = fs.readFileSync(bundleMetaFile, 'utf-8').trim()
@@ -50,10 +55,12 @@ export class GradleUserHomeCache extends AbstractCache {
                 core.info(`Restored ${bundle} with key ${cacheKey} to ${artifactPath}`)
             } else {
                 this.debug(`Did not restore ${bundle} with key ${cacheKey} to ${artifactPath}`)
+                return false
             }
         } else {
             this.debug(`No metafile found to restore ${bundle}: ${bundleMetaFile}`)
         }
+        return true
     }
 
     private getBundleMetaFile(name: string): string {
