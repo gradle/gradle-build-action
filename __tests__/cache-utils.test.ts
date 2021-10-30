@@ -1,5 +1,4 @@
 import * as cacheUtils from '../src/cache-utils'
-import * as path from 'path'
 
 describe('cacheUtils-utils', () => {
     describe('can hash', () => {

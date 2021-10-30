@@ -1,6 +1,6 @@
 import path from 'path'
 import fs from 'fs'
-import {AbstractCache} from './cache-utils'
+import {AbstractCache} from './cache-base'
 
 // TODO: Maybe allow the user to override / tweak this set
 const PATHS_TO_CACHE = [
@@ -10,7 +10,7 @@ const PATHS_TO_CACHE = [
 export class ProjectDotGradleCache extends AbstractCache {
     private rootDir: string
     constructor(rootDir: string) {
-        super('project', 'Project .gradle directory')
+        super('project', 'Project configuration cache')
         this.rootDir = rootDir
     }
 

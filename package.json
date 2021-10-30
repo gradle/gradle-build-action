@@ -4,6 +4,7 @@
   "private": true,
   "description": "Execute Gradle Build",
   "scripts": {
+    "postinstall": "patch-package",
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
     "lint": "eslint src/**/*.ts",
@@ -30,6 +31,7 @@
     "@actions/glob": "0.2.0",
     "@actions/http-client": "1.0.11",
     "@actions/tool-cache": "1.7.1",
+    "patch-package": "6.4.7",
     "string-argv": "0.3.1"
   },
   "devDependencies": {
