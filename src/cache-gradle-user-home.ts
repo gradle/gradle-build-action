@@ -5,7 +5,7 @@ import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 import * as exec from '@actions/exec'
 
-import {AbstractCache, CacheEntryReport, CachingReport} from './cache-base'
+import {AbstractCache, CacheEntryListener, CacheListener} from './cache-base'
 import {getCacheKeyPrefix, hashFileNames, tryDelete} from './cache-utils'
 
 const META_FILE_DIR = '.gradle-build-action'
@@ -22,13 +22,13 @@ export class GradleUserHomeCache extends AbstractCache {
         this.gradleUserHome = this.determineGradleUserHome(rootDir)
     }
 
-    async afterRestore(report: CachingReport): Promise<void> {
+    async afterRestore(listener: CacheListener): Promise<void> {
         await this.reportGradleUserHomeSize('as restored from cache')
-        await this.restoreArtifactBundles(report)
+        await this.restoreArtifactBundles(listener)
         await this.reportGradleUserHomeSize('after restoring common artifacts')
     }
 
-    private async restoreArtifactBundles(report: CachingReport): Promise<void> {
+    private async restoreArtifactBundles(listener: CacheListener): Promise<void> {
         const processes: Promise<void>[] = []
 
         const bundleMetaFiles = await this.getBundleMetaFiles()
@@ -37,16 +37,16 @@ export class GradleUserHomeCache extends AbstractCache {
         // Iterate over all bundle meta files and try to restore
         for (const bundleMetaFile of bundleMetaFiles) {
             const bundle = path.basename(bundleMetaFile, '.cache')
-            const bundleEntryReport = report.entryReport(bundle)
+            const entryListener = listener.entry(bundle)
             const bundlePattern = bundlePatterns.get(bundle)
 
             // Handle case where the 'artifactBundlePatterns' have been changed
             if (bundlePattern === undefined) {
                 core.info(`Found bundle metafile for ${bundle} but no such bundle defined`)
-                bundleEntryReport.markRequested('BUNDLE_NOT_CONFIGURED')
+                entryListener.markRequested('BUNDLE_NOT_CONFIGURED')
                 tryDelete(bundleMetaFile)
             } else {
-                const p = this.restoreArtifactBundle(bundle, bundlePattern, bundleMetaFile, bundleEntryReport)
+                const p = this.restoreArtifactBundle(bundle, bundlePattern, bundleMetaFile, entryListener)
                 // Run sequentially when debugging enabled
                 if (this.cacheDebuggingEnabled) {
                     await p
@@ -62,15 +62,15 @@ export class GradleUserHomeCache extends AbstractCache {
         bundle: string,
         bundlePattern: string,
         bundleMetaFile: string,
-        report: CacheEntryReport
+        listener: CacheEntryListener
     ): Promise<void> {
         const cacheKey = fs.readFileSync(bundleMetaFile, 'utf-8').trim()
-        report.markRequested(cacheKey)
+        listener.markRequested(cacheKey)
 
         const restoredKey = await this.restoreCache([bundlePattern], cacheKey)
         if (restoredKey) {
             core.info(`Restored ${bundle} with key ${cacheKey} to ${bundlePattern}`)
-            report.markRestored(restoredKey)
+            listener.markRestored(restoredKey)
         } else {
             core.info(`Did not restore ${bundle} with key ${cacheKey} to ${bundlePattern}`)
             tryDelete(bundleMetaFile)
@@ -88,10 +88,10 @@ export class GradleUserHomeCache extends AbstractCache {
         return bundleFiles
     }
 
-    async beforeSave(report: CachingReport): Promise<void> {
+    async beforeSave(listener: CacheListener): Promise<void> {
         await this.reportGradleUserHomeSize('before saving common artifacts')
         this.removeExcludedPaths()
-        await this.saveArtifactBundles(report)
+        await this.saveArtifactBundles(listener)
         await this.reportGradleUserHomeSize(
             "after saving common artifacts (only 'caches' and 'notifications' will be stored)"
         )
@@ -107,12 +107,12 @@ export class GradleUserHomeCache extends AbstractCache {
         }
     }
 
-    private async saveArtifactBundles(report: CachingReport): Promise<void> {
+    private async saveArtifactBundles(listener: CacheListener): Promise<void> {
         const processes: Promise<void>[] = []
         for (const [bundle, pattern] of this.getArtifactBundles()) {
-            const bundleEntryReport = report.entryReport(bundle)
+            const entryListener = listener.entry(bundle)
 
-            const p = this.saveArtifactBundle(bundle, pattern, bundleEntryReport)
+            const p = this.saveArtifactBundle(bundle, pattern, entryListener)
             // Run sequentially when debugging enabled
             if (this.cacheDebuggingEnabled) {
                 await p
@@ -123,7 +123,11 @@ export class GradleUserHomeCache extends AbstractCache {
         await Promise.all(processes)
     }
 
-    private async saveArtifactBundle(bundle: string, artifactPath: string, report: CacheEntryReport): Promise<void> {
+    private async saveArtifactBundle(
+        bundle: string,
+        artifactPath: string,
+        listener: CacheEntryListener
+    ): Promise<void> {
         const bundleMetaFile = this.getBundleMetaFile(bundle)
 
         const globber = await glob.create(artifactPath, {
@@ -152,7 +156,7 @@ export class GradleUserHomeCache extends AbstractCache {
             core.info(`Caching ${bundle} with cache key: ${cacheKey}`)
             await this.saveCache([artifactPath], cacheKey)
             this.writeBundleMetaFile(bundleMetaFile, cacheKey)
-            report.markSaved(cacheKey)
+            listener.markSaved(cacheKey)
         }
 
         for (const file of bundleFiles) {

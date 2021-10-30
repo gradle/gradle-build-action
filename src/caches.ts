@@ -2,7 +2,7 @@ import {GradleUserHomeCache} from './cache-gradle-user-home'
 import {ProjectDotGradleCache} from './cache-project-dot-gradle'
 import * as core from '@actions/core'
 import {isCacheDisabled, isCacheReadOnly} from './cache-utils'
-import {CachingReport} from './cache-base'
+import {CacheListener} from './cache-base'
 
 const BUILD_ROOT_DIR = 'BUILD_ROOT_DIR'
 const CACHING_REPORT = 'CACHING_REPORT'
@@ -16,20 +16,20 @@ export async function restore(buildRootDirectory: string): Promise<void> {
     await core.group('Restore Gradle state from cache', async () => {
         core.saveState(BUILD_ROOT_DIR, buildRootDirectory)
 
-        const cachingReport = new CachingReport()
-        await new GradleUserHomeCache(buildRootDirectory).restore(cachingReport)
+        const cacheListener = new CacheListener()
+        await new GradleUserHomeCache(buildRootDirectory).restore(cacheListener)
 
         const projectDotGradleCache = new ProjectDotGradleCache(buildRootDirectory)
-        if (cachingReport.fullyRestored) {
+        if (cacheListener.fullyRestored) {
             // Only restore the configuration-cache if the Gradle Home is fully restored
-            await projectDotGradleCache.restore(cachingReport)
+            await projectDotGradleCache.restore(cacheListener)
         } else {
             // Otherwise, prepare the cache key for later save()
             core.info('Gradle Home cache not fully restored: not restoring configuration-cache state')
             projectDotGradleCache.prepareCacheKey()
         }
 
-        core.saveState(CACHING_REPORT, cachingReport.stringify())
+        core.saveState(CACHING_REPORT, cacheListener.stringify())
     })
 }
 
@@ -39,7 +39,7 @@ export async function save(): Promise<void> {
         return
     }
 
-    const cachingReport: CachingReport = CachingReport.rehydrate(core.getState(CACHING_REPORT))
+    const cachingReport: CacheListener = CacheListener.rehydrate(core.getState(CACHING_REPORT))
 
     await core.group('Caching Gradle state', async () => {
         const buildRootDirectory = core.getState(BUILD_ROOT_DIR)
@@ -52,6 +52,6 @@ export async function save(): Promise<void> {
     logCachingReport(cachingReport)
 }
 
-function logCachingReport(report: CachingReport): void {
+function logCachingReport(report: CacheListener): void {
     core.info(JSON.stringify(report, null, 2))
 }
