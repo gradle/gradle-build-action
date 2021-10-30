@@ -37,52 +37,50 @@ export class GradleUserHomeCache extends AbstractCache {
     private async restoreArtifactBundles(report: CachingReport): Promise<void> {
         const processes: Promise<void>[] = []
 
-        // This is special logic that allows the tests to simulate a "not restored" state by configuring an empty set of bundles
-        // This is similar to how the primary implementation should work:
-        // - Iterate over bundle meta-files as the basis for restoring content.
-        // - Leave bundle meta-files for successful restore.
-        // - Remove bundle meta-files that are not restored.
-        if (this.getArtifactBundles().size === 0) {
-            const bundleMetaFiles = await this.getBundleMetaFiles()
+        const bundleMetaFiles = await this.getBundleMetaFiles()
+        const bundlePatterns = this.getArtifactBundles()
 
-            for (const bundleMetaFile of bundleMetaFiles) {
-                const bundle = path.basename(bundleMetaFile, '.cache')
-
-                core.info(`Found bundle metafile for ${bundle} but no such bundle configured`)
-                report.addEntryReport(bundleMetaFile).markRequested('BUNDLE_NOT_CONFIGURED')
-                tryDelete(bundleMetaFile)
-            }
-        }
-
-        for (const [bundle, pattern] of this.getArtifactBundles()) {
+        // Iterate over all bundle meta files and try to restore
+        for (const bundleMetaFile of bundleMetaFiles) {
+            const bundle = path.basename(bundleMetaFile, '.cache')
             const bundleEntryReport = report.addEntryReport(bundle)
-            const p = this.restoreArtifactBundle(bundle, pattern, bundleEntryReport)
-            // Run sequentially when debugging enabled
-            if (this.cacheDebuggingEnabled) {
-                await p
+            const bundlePattern = bundlePatterns.get(bundle)
+
+            // Handle case where the 'artifactBundlePatterns' have been changed
+            if (bundlePattern === undefined) {
+                core.info(`Found bundle metafile for ${bundle} but no such bundle defined`)
+                bundleEntryReport.markRequested('BUNDLE_NOT_CONFIGURED')
+                tryDelete(bundleMetaFile)
+                return
+            } else {
+                const p = this.restoreArtifactBundle(bundle, bundlePattern, bundleMetaFile, bundleEntryReport)
+                // Run sequentially when debugging enabled
+                if (this.cacheDebuggingEnabled) {
+                    await p
+                }
+                processes.push(p)
             }
-            processes.push(p)
         }
 
         await Promise.all(processes)
     }
 
-    private async restoreArtifactBundle(bundle: string, artifactPath: string, report: CacheEntryReport): Promise<void> {
-        const bundleMetaFile = this.getBundleMetaFile(bundle)
-        if (fs.existsSync(bundleMetaFile)) {
-            const cacheKey = fs.readFileSync(bundleMetaFile, 'utf-8').trim()
-            report.markRequested(cacheKey)
+    private async restoreArtifactBundle(
+        bundle: string,
+        bundlePattern: string,
+        bundleMetaFile: string,
+        report: CacheEntryReport
+    ): Promise<void> {
+        const cacheKey = fs.readFileSync(bundleMetaFile, 'utf-8').trim()
+        report.markRequested(cacheKey)
 
-            const restoredKey = await this.restoreCache([artifactPath], cacheKey)
-            if (restoredKey) {
-                core.info(`Restored ${bundle} with key ${cacheKey} to ${artifactPath}`)
-                report.markRestored(restoredKey)
-            } else {
-                core.info(`Did not restore ${bundle} with key ${cacheKey} to ${artifactPath}`)
-                // TODO Remove the .cache file here?
-            }
+        const restoredKey = await this.restoreCache([bundlePattern], cacheKey)
+        if (restoredKey) {
+            core.info(`Restored ${bundle} with key ${cacheKey} to ${bundlePattern}`)
+            report.markRestored(restoredKey)
         } else {
-            this.debug(`No metafile found to restore ${bundle}: ${bundleMetaFile}`)
+            core.info(`Did not restore ${bundle} with key ${cacheKey} to ${bundlePattern}`)
+            tryDelete(bundleMetaFile)
         }
     }
 
