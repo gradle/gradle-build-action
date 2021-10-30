@@ -1,6 +1,6 @@
 import path from 'path'
 import fs from 'fs'
-import {AbstractCache} from './cache-utils'
+import {AbstractCache} from './cache-base'
 
 // TODO: Maybe allow the user to override / tweak this set
 const PATHS_TO_CACHE = [

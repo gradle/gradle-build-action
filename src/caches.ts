@@ -1,7 +1,8 @@
 import {GradleUserHomeCache} from './cache-gradle-user-home'
 import {ProjectDotGradleCache} from './cache-project-dot-gradle'
 import * as core from '@actions/core'
-import {CachingReport, isCacheDisabled, isCacheReadOnly} from './cache-utils'
+import {isCacheDisabled, isCacheReadOnly} from './cache-utils'
+import {CachingReport} from './cache-base'
 
 const BUILD_ROOT_DIR = 'BUILD_ROOT_DIR'
 const CACHING_REPORT = 'CACHING_REPORT'
