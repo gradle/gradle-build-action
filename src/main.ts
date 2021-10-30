@@ -18,10 +18,7 @@ export async function run(): Promise<void> {
         const args: string[] = parseCommandLineArguments()
 
         const result = await execution.execute(
-            await resolveGradleExecutable(
-                workspaceDirectory,
-                buildRootDirectory
-            ),
+            await resolveGradleExecutable(workspaceDirectory, buildRootDirectory),
             buildRootDirectory,
             args
         )
@@ -34,9 +31,7 @@ export async function run(): Promise<void> {
             if (result.buildScanUrl) {
                 core.setFailed(`Gradle build failed: ${result.buildScanUrl}`)
             } else {
-                core.setFailed(
-                    `Gradle build failed: process exited with status ${result.status}`
-                )
+                core.setFailed(`Gradle build failed: process exited with status ${result.status}`)
             }
         } else {
             if (result.buildScanUrl) {
@@ -53,10 +48,7 @@ export async function run(): Promise<void> {
 
 run()
 
-async function resolveGradleExecutable(
-    workspaceDirectory: string,
-    buildRootDirectory: string
-): Promise<string> {
+async function resolveGradleExecutable(workspaceDirectory: string, buildRootDirectory: string): Promise<string> {
     const gradleVersion = core.getInput('gradle-version')
     if (gradleVersion !== '' && gradleVersion !== 'wrapper') {
         return path.resolve(await provision.gradleVersion(gradleVersion))
@@ -73,9 +65,7 @@ async function resolveGradleExecutable(
 function resolveBuildRootDirectory(baseDirectory: string): string {
     const buildRootDirectory = core.getInput('build-root-directory')
     const resolvedBuildRootDirectory =
-        buildRootDirectory === ''
-            ? path.resolve(baseDirectory)
-            : path.resolve(baseDirectory, buildRootDirectory)
+        buildRootDirectory === '' ? path.resolve(baseDirectory) : path.resolve(baseDirectory, buildRootDirectory)
     return resolvedBuildRootDirectory
 }
 

@@ -5,6 +5,8 @@ import * as crypto from 'crypto'
 import * as path from 'path'
 import * as fs from 'fs'
 
+const CACHE_PROTOCOL_VERSION = 'v4-'
+
 const CACHE_DISABLED_PARAMETER = 'cache-disabled'
 const CACHE_READONLY_PARAMETER = 'cache-read-only'
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
@@ -25,7 +27,7 @@ export function isCacheDebuggingEnabled(): boolean {
 
 export function getCacheKeyPrefix(): string {
     // Prefix can be used to force change all cache keys (defaults to cache protocol version)
-    return process.env[CACHE_PREFIX_VAR] || 'v3-'
+    return process.env[CACHE_PREFIX_VAR] || CACHE_PROTOCOL_VERSION
 }
 
 function generateCacheKey(cacheName: string): CacheKey {
@@ -44,11 +46,7 @@ function generateCacheKey(cacheName: string): CacheKey {
     // Exact match on Git SHA
     const cacheKey = `${cacheKeyForJobContext}-${github.context.sha}`
 
-    return new CacheKey(cacheKey, [
-        cacheKeyForJobContext,
-        cacheKeyForJob,
-        cacheKeyForOs
-    ])
+    return new CacheKey(cacheKey, [cacheKeyForJobContext, cacheKeyForJob, cacheKeyForOs])
 }
 
 function determineJobContext(): string {
@@ -66,9 +64,7 @@ export function hashStrings(values: string[]): string {
 }
 
 export function hashFileNames(fileNames: string[]): string {
-    return hashStrings(
-        fileNames.map(x => x.replace(new RegExp(`\\${path.sep}`, 'g'), '/'))
-    )
+    return hashStrings(fileNames.map(x => x.replace(new RegExp(`\\${path.sep}`, 'g'), '/')))
 }
 
 /**
@@ -109,6 +105,48 @@ class CacheKey {
     }
 }
 
+export class CachingReport {
+    cacheEntryReports: CacheEntryReport[] = []
+
+    get fullyRestored(): boolean {
+        return this.cacheEntryReports.every(x => !x.wasRequestedButNotRestored())
+    }
+
+    addEntryReport(name: string): CacheEntryReport {
+        const report = new CacheEntryReport(name)
+        this.cacheEntryReports.push(report)
+        return report
+    }
+}
+
+export class CacheEntryReport {
+    entryName: string
+    requestedKey: string | undefined
+    requestedRestoreKeys: string[] | undefined
+    restoredKey: string | undefined
+    restoredSize: number | undefined
+
+    savedKey: string | undefined
+    savedSize: number | undefined
+
+    constructor(entryName: string) {
+        this.entryName = entryName
+    }
+
+    wasRequestedButNotRestored(): boolean {
+        return this.requestedKey !== undefined && this.restoredKey === undefined
+    }
+
+    markRequested(key: string, restoreKeys: string[] = []): void {
+        this.requestedKey = key
+        this.requestedRestoreKeys = restoreKeys
+    }
+
+    markRestored(key: string): void {
+        this.restoredKey = key
+    }
+}
+
 export abstract class AbstractCache {
     private cacheName: string
     private cacheDescription: string
@@ -125,17 +163,15 @@ export abstract class AbstractCache {
         this.cacheDebuggingEnabled = isCacheDebuggingEnabled()
     }
 
-    async restore(): Promise<void> {
+    async restore(report: CachingReport): Promise<void> {
         if (this.cacheOutputExists()) {
-            core.info(
-                `${this.cacheDescription} already exists. Not restoring from cache.`
-            )
+            core.info(`${this.cacheDescription} already exists. Not restoring from cache.`)
             return
         }
 
-        const cacheKey = generateCacheKey(this.cacheName)
-
-        core.saveState(this.cacheKeyStateKey, cacheKey.key)
+        const cacheKey = this.prepareCacheKey()
+        const entryReport = report.addEntryReport(this.cacheName)
+        entryReport.markRequested(cacheKey.key, cacheKey.restoreKeys)
 
         this.debug(
             `Requesting ${this.cacheDescription} with
@@ -143,34 +179,29 @@ export abstract class AbstractCache {
                 restoreKeys:[${cacheKey.restoreKeys}]`
         )
 
-        const cacheResult = await this.restoreCache(
-            this.getCachePath(),
-            cacheKey.key,
-            cacheKey.restoreKeys
-        )
+        const cacheResult = await this.restoreCache(this.getCachePath(), cacheKey.key, cacheKey.restoreKeys)
 
         if (!cacheResult) {
-            core.info(
-                `${this.cacheDescription} cache not found. Will start with empty.`
-            )
+            core.info(`${this.cacheDescription} cache not found. Will start with empty.`)
             return
         }
 
         core.saveState(this.cacheResultStateKey, cacheResult)
-
-        core.info(
-            `Restored ${this.cacheDescription} from cache key: ${cacheResult}`
-        )
+        entryReport.markRestored(cacheResult)
+        core.info(`Restored ${this.cacheDescription} from cache key: ${cacheResult}`)
 
         try {
-            await this.afterRestore()
+            await this.afterRestore(report)
         } catch (error) {
-            core.warning(
-                `Restore ${this.cacheDescription} failed in 'afterRestore': ${error}`
-            )
+            core.warning(`Restore ${this.cacheDescription} failed in 'afterRestore': ${error}`)
         }
+    }
 
-        return
+    prepareCacheKey(): CacheKey {
+        const cacheKey = generateCacheKey(this.cacheName)
+
+        core.saveState(this.cacheKeyStateKey, cacheKey.key)
+        return cacheKey
     }
 
     protected async restoreCache(
@@ -179,11 +210,7 @@ export abstract class AbstractCache {
         cacheRestoreKeys: string[] = []
     ): Promise<string | undefined> {
         try {
-            return await cache.restoreCache(
-                cachePath,
-                cacheKey,
-                cacheRestoreKeys
-            )
+            return await cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys)
         } catch (error) {
             if (error instanceof cache.ValidationError) {
                 // Validation errors should fail the build action
@@ -195,7 +222,7 @@ export abstract class AbstractCache {
         }
     }
 
-    protected async afterRestore(): Promise<void> {}
+    protected async afterRestore(_report: CachingReport): Promise<void> {}
 
     async save(): Promise<void> {
         if (!this.cacheOutputExists()) {
@@ -207,31 +234,23 @@ export abstract class AbstractCache {
         const cacheResult = core.getState(this.cacheResultStateKey)
 
         if (!cacheKey) {
-            this.debug(
-                `${this.cacheDescription} existed prior to cache restore. Not saving.`
-            )
+            this.debug(`${this.cacheDescription} existed prior to cache restore. Not saving.`)
             return
         }
 
         if (cacheResult && cacheKey === cacheResult) {
-            core.info(
-                `Cache hit occurred on the cache key ${cacheKey}, not saving cache.`
-            )
+            core.info(`Cache hit occurred on the cache key ${cacheKey}, not saving cache.`)
             return
         }
 
         try {
             await this.beforeSave()
         } catch (error) {
-            core.warning(
-                `Save ${this.cacheDescription} failed in 'beforeSave': ${error}`
-            )
+            core.warning(`Save ${this.cacheDescription} failed in 'beforeSave': ${error}`)
             return
         }
 
-        core.info(
-            `Caching ${this.cacheDescription} with cache key: ${cacheKey}`
-        )
+        core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKey}`)
         const cachePath = this.getCachePath()
         await this.saveCache(cachePath, cacheKey)
 
@@ -240,10 +259,7 @@ export abstract class AbstractCache {
 
     protected async beforeSave(): Promise<void> {}
 
-    protected async saveCache(
-        cachePath: string[],
-        cacheKey: string
-    ): Promise<void> {
+    protected async saveCache(cachePath: string[], cacheKey: string): Promise<void> {
         try {
             await cache.saveCache(cachePath, cacheKey)
         } catch (error) {

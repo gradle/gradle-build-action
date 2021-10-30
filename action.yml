@@ -36,13 +36,13 @@ inputs:
     description: Paths within Gradle User Home to cache.
     required: false
     default: |
-        ["caches", "notifications"]
+        caches
+        notifications
 
   gradle-home-cache-excludes:
     description: Paths within Gradle User Home to exclude from cache.
     required: false
-    default: |
-        [] 
+  
   # e.g. Use the following setting to prevent the local build cache from being saved/restored
   #      gradle-home-cache-excludes: |
   #           ["caches/build-cache-1"]
@@ -62,7 +62,7 @@ inputs:
         [
           ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
           ["wrapper-zips", "wrapper/dists/*/*/*.zip"],
-          ["dependency-jars", "caches/modules-*/files-*/**/*.jar"],
+          ["dependencies", "caches/modules-*/files-*/*/*/*/*/"],
           ["instrumented-jars", "caches/jars-*/*/"],
           ["kotlin-dsl", "caches/*/kotlin-dsl/*/*/"]
         ]

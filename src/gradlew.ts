@@ -17,10 +17,7 @@ export function locateGradleWrapperScript(buildRootDirectory: string): string {
 }
 
 function validateGradleWrapper(buildRootDirectory: string): void {
-    const wrapperProperties = path.resolve(
-        buildRootDirectory,
-        'gradle/wrapper/gradle-wrapper.properties'
-    )
+    const wrapperProperties = path.resolve(buildRootDirectory, 'gradle/wrapper/gradle-wrapper.properties')
     if (!fs.existsSync(wrapperProperties)) {
         throw new Error(
             `Cannot locate a Gradle wrapper properties file at '${wrapperProperties}'. Specify 'gradle-version' or 'gradle-executable' for projects without Gradle wrapper configured.`

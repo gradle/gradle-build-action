@@ -7,6 +7,8 @@ import * as exec from '@actions/exec'
 
 import {
     AbstractCache,
+    CacheEntryReport,
+    CachingReport,
     getCacheKeyPrefix,
     hashFileNames,
     tryDelete
@@ -26,21 +28,38 @@ export class GradleUserHomeCache extends AbstractCache {
         this.gradleUserHome = this.determineGradleUserHome(rootDir)
     }
 
-    async afterRestore(): Promise<void> {
+    async afterRestore(report: CachingReport): Promise<void> {
         await this.reportGradleUserHomeSize('as restored from cache')
-        await this.restoreArtifactBundles()
+        await this.restoreArtifactBundles(report)
         await this.reportGradleUserHomeSize('after restoring common artifacts')
     }
 
-    private async restoreArtifactBundles(): Promise<void> {
+    private async restoreArtifactBundles(report: CachingReport): Promise<void> {
         const processes: Promise<void>[] = []
-        for (const [bundle, pattern] of this.getArtifactBundles()) {
-            const p = this.restoreArtifactBundle(bundle, pattern)
-            // Run sequentially when debugging enabled
-            if (this.cacheDebuggingEnabled) {
-                await p
+
+        const bundleMetaFiles = await this.getBundleMetaFiles()
+        const bundlePatterns = this.getArtifactBundles()
+
+        // Iterate over all bundle meta files and try to restore
+        for (const bundleMetaFile of bundleMetaFiles) {
+            const bundle = path.basename(bundleMetaFile, '.cache')
+            const bundleEntryReport = report.addEntryReport(bundle)
+            const bundlePattern = bundlePatterns.get(bundle)
+
+            // Handle case where the 'artifactBundlePatterns' have been changed
+            if (bundlePattern === undefined) {
+                core.info(`Found bundle metafile for ${bundle} but no such bundle defined`)
+                bundleEntryReport.markRequested('BUNDLE_NOT_CONFIGURED')
+                tryDelete(bundleMetaFile)
+                return
+            } else {
+                const p = this.restoreArtifactBundle(bundle, bundlePattern, bundleMetaFile, bundleEntryReport)
+                // Run sequentially when debugging enabled
+                if (this.cacheDebuggingEnabled) {
+                    await p
+                }
+                processes.push(p)
             }
-            processes.push(p)
         }
 
         await Promise.all(processes)
@@ -48,30 +67,32 @@ export class GradleUserHomeCache extends AbstractCache {
 
     private async restoreArtifactBundle(
         bundle: string,
-        artifactPath: string
+        bundlePattern: string,
+        bundleMetaFile: string,
+        report: CacheEntryReport
     ): Promise<void> {
-        const bundleMetaFile = this.getBundleMetaFile(bundle)
-        if (fs.existsSync(bundleMetaFile)) {
-            const cacheKey = fs.readFileSync(bundleMetaFile, 'utf-8').trim()
-            const restoreKey = await this.restoreCache([artifactPath], cacheKey)
-            if (restoreKey) {
-                core.info(
-                    `Restored ${bundle} with key ${cacheKey} to ${artifactPath}`
-                )
-            } else {
-                this.debug(
-                    `Did not restore ${bundle} with key ${cacheKey} to ${artifactPath}`
-                )
-            }
+        const cacheKey = fs.readFileSync(bundleMetaFile, 'utf-8').trim()
+        report.markRequested(cacheKey)
+
+        const restoredKey = await this.restoreCache([bundlePattern], cacheKey)
+        if (restoredKey) {
+            core.info(`Restored ${bundle} with key ${cacheKey} to ${bundlePattern}`)
+            report.markRestored(restoredKey)
         } else {
-            this.debug(
-                `No metafile found to restore ${bundle}: ${bundleMetaFile}`
-            )
+            core.info(`Did not restore ${bundle} with key ${cacheKey} to ${bundlePattern}`)
+            tryDelete(bundleMetaFile)
         }
     }
 
     private getBundleMetaFile(name: string): string {
         return path.resolve(this.gradleUserHome, META_FILE_DIR, `${name}.cache`)
+    }
+
+    private async getBundleMetaFiles(): Promise<string[]> {
+        const metaFiles = path.resolve(this.gradleUserHome, META_FILE_DIR, '*.cache')
+        const globber = await glob.create(metaFiles)
+        const bundleFiles = await globber.glob()
+        return bundleFiles
     }
 
     async beforeSave(): Promise<void> {
@@ -84,12 +105,8 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     private removeExcludedPaths(): void {
-        const rawPaths: string[] = JSON.parse(
-            core.getInput(EXCLUDE_PATHS_PARAMETER)
-        )
-        const resolvedPaths = rawPaths.map(x =>
-            path.resolve(this.gradleUserHome, x)
-        )
+        const rawPaths: string[] = core.getMultilineInput(EXCLUDE_PATHS_PARAMETER)
+        const resolvedPaths = rawPaths.map(x => path.resolve(this.gradleUserHome, x))
 
         for (const p of resolvedPaths) {
             this.debug(`Deleting excluded path: ${p}`)
@@ -111,10 +128,7 @@ export class GradleUserHomeCache extends AbstractCache {
         await Promise.all(processes)
     }
 
-    private async saveArtifactBundle(
-        bundle: string,
-        artifactPath: string
-    ): Promise<void> {
+    private async saveArtifactBundle(bundle: string, artifactPath: string): Promise<void> {
         const bundleMetaFile = this.getBundleMetaFile(bundle)
 
         const globber = await glob.create(artifactPath, {
@@ -138,9 +152,7 @@ export class GradleUserHomeCache extends AbstractCache {
         const cacheKey = this.createCacheKey(bundle, bundleFiles)
 
         if (previouslyRestoredKey === cacheKey) {
-            this.debug(
-                `No change to previously restored ${bundle}. Not caching.`
-            )
+            this.debug(`No change to previously restored ${bundle}. Not caching.`)
         } else {
             core.info(`Caching ${bundle} with cache key: ${cacheKey}`)
             await this.saveCache([artifactPath], cacheKey)
@@ -154,14 +166,10 @@ export class GradleUserHomeCache extends AbstractCache {
 
     protected createCacheKey(bundle: string, files: string[]): string {
         const cacheKeyPrefix = getCacheKeyPrefix()
-        const relativeFiles = files.map(x =>
-            path.relative(this.gradleUserHome, x)
-        )
+        const relativeFiles = files.map(x => path.relative(this.gradleUserHome, x))
         const key = hashFileNames(relativeFiles)
 
-        this.debug(
-            `Generating cache key for ${bundle} from files: ${relativeFiles}`
-        )
+        this.debug(`Generating cache key for ${bundle} from files: ${relativeFiles}`)
 
         return `${cacheKeyPrefix}${bundle}-${key}`
     }
@@ -193,9 +201,7 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     protected getCachePath(): string[] {
-        const rawPaths: string[] = JSON.parse(
-            core.getInput(INCLUDE_PATHS_PARAMETER)
-        )
+        const rawPaths: string[] = core.getMultilineInput(INCLUDE_PATHS_PARAMETER)
         rawPaths.push(META_FILE_DIR)
         const resolvedPaths = rawPaths.map(x => this.resolveCachePath(x))
         this.debug(`Using cache paths: ${resolvedPaths}`)
@@ -211,19 +217,10 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     private getArtifactBundles(): Map<string, string> {
-        const artifactBundleDefinition = core.getInput(
-            ARTIFACT_BUNDLES_PARAMETER
-        )
-        this.debug(
-            `Using artifact bundle definition: ${artifactBundleDefinition}`
-        )
+        const artifactBundleDefinition = core.getInput(ARTIFACT_BUNDLES_PARAMETER)
+        this.debug(`Using artifact bundle definition: ${artifactBundleDefinition}`)
         const artifactBundles = JSON.parse(artifactBundleDefinition)
-        return new Map(
-            Array.from(artifactBundles, ([key, value]) => [
-                key,
-                path.resolve(this.gradleUserHome, value)
-            ])
-        )
+        return new Map(Array.from(artifactBundles, ([key, value]) => [key, path.resolve(this.gradleUserHome, value)]))
     }
 
     private async reportGradleUserHomeSize(label: string): Promise<void> {
@@ -233,15 +230,11 @@ export class GradleUserHomeCache extends AbstractCache {
         if (!fs.existsSync(this.gradleUserHome)) {
             return
         }
-        const result = await exec.getExecOutput(
-            'du',
-            ['-h', '-c', '-t', '5M'],
-            {
-                cwd: this.gradleUserHome,
-                silent: true,
-                ignoreReturnCode: true
-            }
-        )
+        const result = await exec.getExecOutput('du', ['-h', '-c', '-t', '5M'], {
+            cwd: this.gradleUserHome,
+            silent: true,
+            ignoreReturnCode: true
+        })
 
         core.info(`Gradle User Home (directories >5M): ${label}`)
 
