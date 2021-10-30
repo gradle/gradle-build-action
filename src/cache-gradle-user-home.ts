@@ -67,10 +67,10 @@ export class GradleUserHomeCache extends AbstractCache {
         const cacheKey = fs.readFileSync(bundleMetaFile, 'utf-8').trim()
         listener.markRequested(cacheKey)
 
-        const restoredKey = await this.restoreCache([bundlePattern], cacheKey)
-        if (restoredKey) {
+        const restoredEntry = await this.restoreCache([bundlePattern], cacheKey)
+        if (restoredEntry) {
             core.info(`Restored ${bundle} with key ${cacheKey} to ${bundlePattern}`)
-            listener.markRestored(restoredKey)
+            listener.markRestored(restoredEntry.key, restoredEntry.size)
         } else {
             core.info(`Did not restore ${bundle} with key ${cacheKey} to ${bundlePattern}`)
             tryDelete(bundleMetaFile)
@@ -154,9 +154,11 @@ export class GradleUserHomeCache extends AbstractCache {
             this.debug(`No change to previously restored ${bundle}. Not caching.`)
         } else {
             core.info(`Caching ${bundle} with cache key: ${cacheKey}`)
-            await this.saveCache([artifactPath], cacheKey)
-            this.writeBundleMetaFile(bundleMetaFile, cacheKey)
-            listener.markSaved(cacheKey)
+            const savedEntry = await this.saveCache([artifactPath], cacheKey)
+            if (savedEntry !== undefined) {
+                this.writeBundleMetaFile(bundleMetaFile, cacheKey)
+                listener.markSaved(savedEntry.key, savedEntry.size)
+            }
         }
 
         for (const file of bundleFiles) {

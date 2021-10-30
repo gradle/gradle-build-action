@@ -98,13 +98,15 @@ export class CacheEntryListener {
         return this
     }
 
-    markRestored(key: string): CacheEntryListener {
+    markRestored(key: string, size: number | undefined): CacheEntryListener {
         this.restoredKey = key
+        this.restoredSize = size
         return this
     }
 
-    markSaved(key: string): CacheEntryListener {
+    markSaved(key: string, size: number | undefined): CacheEntryListener {
         this.savedKey = key
+        this.savedSize = size
         return this
     }
 }
@@ -149,7 +151,7 @@ export abstract class AbstractCache {
         }
 
         core.saveState(this.cacheResultStateKey, cacheResult)
-        entryReport.markRestored(cacheResult)
+        entryReport.markRestored(cacheResult.key, cacheResult.size)
         core.info(`Restored ${this.cacheDescription} from cache key: ${cacheResult}`)
 
         try {
@@ -170,7 +172,7 @@ export abstract class AbstractCache {
         cachePath: string[],
         cacheKey: string,
         cacheRestoreKeys: string[] = []
-    ): Promise<string | undefined> {
+    ): Promise<cache.CacheEntry | undefined> {
         try {
             return await cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys)
         } catch (error) {
@@ -214,18 +216,20 @@ export abstract class AbstractCache {
 
         core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKey}`)
         const cachePath = this.getCachePath()
-        await this.saveCache(cachePath, cacheKey)
+        const savedEntry = await this.saveCache(cachePath, cacheKey)
 
-        listener.entry(this.cacheDescription).markSaved(cacheKey)
+        if (savedEntry) {
+            listener.entry(this.cacheDescription).markSaved(savedEntry.key, savedEntry.size)
+        }
 
         return
     }
 
     protected async beforeSave(_listener: CacheListener): Promise<void> {}
 
-    protected async saveCache(cachePath: string[], cacheKey: string): Promise<void> {
+    protected async saveCache(cachePath: string[], cacheKey: string): Promise<cache.CacheEntry | undefined> {
         try {
-            await cache.saveCache(cachePath, cacheKey)
+            return await cache.saveCache(cachePath, cacheKey)
         } catch (error) {
             if (error instanceof cache.ValidationError) {
                 // Validation errors should fail the build action
@@ -238,6 +242,7 @@ export abstract class AbstractCache {
                 core.warning(String(error))
             }
         }
+        return undefined
     }
 
     protected debug(message: string): void {

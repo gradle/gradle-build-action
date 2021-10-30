@@ -5,7 +5,7 @@ describe('caching report', () => {
         it('with one requested entry report', async () => {
             const report = new CacheListener()
             report.entry('foo').markRequested('1', ['2'])
-            report.entry('bar').markRequested('3').markRestored('4')
+            report.entry('bar').markRequested('3').markRestored('4', 500)
             expect(report.fullyRestored).toBe(false)
         })
     })
@@ -22,13 +22,13 @@ describe('caching report', () => {
         })
         it('with restored entry report', async () => {
             const report = new CacheListener()
-            report.entry('bar').markRequested('3').markRestored('4')
+            report.entry('bar').markRequested('3').markRestored('4', 300)
             expect(report.fullyRestored).toBe(true)
         })
         it('with multiple restored entry reportss', async () => {
             const report = new CacheListener()
-            report.entry('foo').markRestored('4')
-            report.entry('bar').markRequested('3').markRestored('4')
+            report.entry('foo').markRestored('4', 3300)
+            report.entry('bar').markRequested('3').markRestored('4', 333)
             expect(report.fullyRestored).toBe(true)
         })
     })
@@ -64,7 +64,7 @@ describe('caching report', () => {
             const report = new CacheListener()
             const entryReport = report.entry('foo')
             entryReport.markRequested('1', ['2', '3'])
-            entryReport.markSaved('4')
+            entryReport.markSaved('4', 100)
 
             const stringRep = report.stringify()
             const reportClone: CacheListener = CacheListener.rehydrate(stringRep)
@@ -85,7 +85,7 @@ describe('caching report', () => {
 
             // Check type and call method on rehydrated entry report
             expect(entryClone).toBeInstanceOf(CacheEntryListener)
-            entryClone.markSaved('4')
+            entryClone.markSaved('4', 100)
 
             expect(entryClone.requestedKey).toBe('1')
             expect(entryClone.requestedRestoreKeys).toEqual(['2', '3'])
