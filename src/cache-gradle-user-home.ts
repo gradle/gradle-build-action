@@ -51,7 +51,6 @@ export class GradleUserHomeCache extends AbstractCache {
                 core.info(`Found bundle metafile for ${bundle} but no such bundle defined`)
                 bundleEntryReport.markRequested('BUNDLE_NOT_CONFIGURED')
                 tryDelete(bundleMetaFile)
-                return
             } else {
                 const p = this.restoreArtifactBundle(bundle, bundlePattern, bundleMetaFile, bundleEntryReport)
                 // Run sequentially when debugging enabled
