@@ -216,7 +216,7 @@ export abstract class AbstractCache {
         const cachePath = this.getCachePath()
         await this.saveCache(cachePath, cacheKey)
 
-        listener.entry(this.cacheName).markSaved(cacheKey)
+        listener.entry(this.cacheDescription).markSaved(cacheKey)
 
         return
     }
