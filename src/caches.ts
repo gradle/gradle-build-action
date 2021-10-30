@@ -5,7 +5,7 @@ import {isCacheDisabled, isCacheReadOnly} from './cache-utils'
 import {CacheListener} from './cache-base'
 
 const BUILD_ROOT_DIR = 'BUILD_ROOT_DIR'
-const CACHING_REPORT = 'CACHING_REPORT'
+const CACHE_LISTENER = 'CACHE_LISTENER'
 
 export async function restore(buildRootDirectory: string): Promise<void> {
     if (isCacheDisabled()) {
@@ -29,29 +29,36 @@ export async function restore(buildRootDirectory: string): Promise<void> {
             projectDotGradleCache.prepareCacheKey()
         }
 
-        core.saveState(CACHING_REPORT, cacheListener.stringify())
+        core.saveState(CACHE_LISTENER, cacheListener.stringify())
     })
 }
 
 export async function save(): Promise<void> {
+    const cacheListener: CacheListener = CacheListener.rehydrate(core.getState(CACHE_LISTENER))
+
     if (isCacheReadOnly()) {
         core.info('Cache is read-only: will not save state for use in subsequent builds.')
+        logCachingReport(cacheListener)
         return
     }
-
-    const cachingReport: CacheListener = CacheListener.rehydrate(core.getState(CACHING_REPORT))
 
     await core.group('Caching Gradle state', async () => {
         const buildRootDirectory = core.getState(BUILD_ROOT_DIR)
         return Promise.all([
-            new GradleUserHomeCache(buildRootDirectory).save(cachingReport),
-            new ProjectDotGradleCache(buildRootDirectory).save(cachingReport)
+            new GradleUserHomeCache(buildRootDirectory).save(cacheListener),
+            new ProjectDotGradleCache(buildRootDirectory).save(cacheListener)
         ])
     })
 
-    logCachingReport(cachingReport)
+    logCachingReport(cacheListener)
 }
 
-function logCachingReport(report: CacheListener): void {
-    core.info(JSON.stringify(report, null, 2))
+function logCachingReport(listener: CacheListener): void {
+    core.info('---------- CACHING REPORT -------------')
+    for (const entry of listener.cacheEntries) {
+        core.info(`${entry.entryName}
+    Requested Key: ${entry.requestedKey ?? ''}
+    Restored Key : ${entry.restoredKey ?? ''}
+    Saved Key    : ${entry.savedKey ?? ''}`)
+    }
 }

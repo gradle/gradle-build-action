@@ -132,7 +132,7 @@ export abstract class AbstractCache {
         }
 
         const cacheKey = this.prepareCacheKey()
-        const entryReport = listener.entry(this.cacheName)
+        const entryReport = listener.entry(this.cacheDescription)
         entryReport.markRequested(cacheKey.key, cacheKey.restoreKeys)
 
         this.debug(

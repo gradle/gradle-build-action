@@ -10,7 +10,7 @@ const PATHS_TO_CACHE = [
 export class ProjectDotGradleCache extends AbstractCache {
     private rootDir: string
     constructor(rootDir: string) {
-        super('project', 'Project .gradle directory')
+        super('project', 'Project configuration cache')
         this.rootDir = rootDir
     }
 
