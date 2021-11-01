@@ -158,7 +158,7 @@ cache-disabled: true
 
 ### Cache keys
 
-For cached distributions outside of Gradle User Home, the cache key is unique to the downloaded distribution. This will not change over time.
+For distributions downloaded to satisfy a `gradle-version` parametere are stored outside of Gradle User Home and cached separately. The cache key is unique to the downloaded distribution and will not change over time.
 
 The state of the Gradle User Home and configuration-cache are highly dependent on the Gradle execution, so the cache key is composed of the current commit hash and the GitHub actions job id.
 As such, the cache key is likely to change on each subsequent run of GitHub actions. 
@@ -170,7 +170,6 @@ For example, this means that all jobs executing a particular version of the Grad
 
 ### Using the caches read-only
 
-Cache storage space is limited for GitHub actions, and writing new cache entries can trigger the deletion of exising entries.
 In some circumstances, it makes sense for a Gradle invocation to read any existing cache entries but not to write changes back.
 For example, you may want to write cache entries for builds on your `main` branch, but not for any PR build invocations.
 
@@ -202,7 +201,12 @@ gradle-home-cache-excludes: |
 You can specify any number of fixed paths or patterns to include or exclude. 
 File pattern support is documented at https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#patterns-to-match-file-paths.
 
-### Cache debugging
+### Cache debugging and analysis
+
+Gradle User Home state will be restored from the cache during the first `gradle-build-action` step for any workflow job. 
+This state will be saved back to the cache at the end of the job, after all Gradle executions have completed.
+A report of all cache entries restored and saved is printed to the action log when saving the cache entries. 
+This report can provide valuable insignt into how much cache space is being used.
 
 It is possible to enable additional debug logging for cache operations. You do via the `GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED` environment variable:
 
@@ -212,6 +216,29 @@ env:
 ```
 
 Note that this setting will also prevent certain cache operations from running in parallel, further assisting with debugging.
+
+### Optimizing cache effectiveness
+
+Cache storage space for GitHub actions is limited, and writing new cache entries can trigger the deletion of exising entries.
+Eviction of shared cache entries can reduce cache effectiveness, slowing down your `gradle-build-action` steps.
+
+There are a number of actions you can take if your cache use is less effective due to entry eviction.
+
+#### Only write to the cache from the default branch
+
+GitHub cache entries are not shared between builds on different branches. This means that identical cache entries will be stored separately for different branches.
+The exception to the is cache entries for the default (`master`/`main`) branch can be read by actions invoked for other branches.
+
+An easy way to reduce cache usage when you run builds on many different branches is to only permit your default branch to write to the cache,
+with all other branch builds using `cache-read-only`. See [Using the caches read-only](#using-the-caches-read-only) for more details.
+
+Similarly, you could use `cache-read-only` for certain jobs in the workflow, and instead have these jobs reuse the cache content from upstream jobs.
+
+#### Exclude content from Gradle User Home cache
+
+Each build is different, and some builds produce more Gradle User Home content than others.
+[Cache debugging ](#cache-debugging-and-analysis) can provide insight into which cache entries are the largest,
+and you can selectively [exclude content using `gradle-home-cache-exclude`](#gradle-user-home-cache-tuning).
 
 ## Build scans
 
