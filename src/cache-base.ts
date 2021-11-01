@@ -150,9 +150,9 @@ export abstract class AbstractCache {
             return
         }
 
-        core.saveState(this.cacheResultStateKey, cacheResult)
+        core.saveState(this.cacheResultStateKey, cacheResult.key)
         entryReport.markRestored(cacheResult.key, cacheResult.size)
-        core.info(`Restored ${this.cacheDescription} from cache key: ${cacheResult}`)
+        core.info(`Restored ${this.cacheDescription} from cache key: ${cacheResult.key}`)
 
         try {
             await this.afterRestore(listener)
