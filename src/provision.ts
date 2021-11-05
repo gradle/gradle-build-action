@@ -7,7 +7,7 @@ import * as cache from '@actions/cache'
 import * as toolCache from '@actions/tool-cache'
 
 import * as gradlew from './gradlew'
-import {isCacheDisabled, isCacheReadOnly} from './cache-utils'
+import {handleCacheFailure, isCacheDisabled, isCacheReadOnly} from './cache-utils'
 
 const gradleVersionsBaseUrl = 'https://services.gradle.org/versions'
 
@@ -109,11 +109,16 @@ async function downloadAndCacheGradleDistribution(versionInfo: GradleVersionInfo
     }
 
     const cacheKey = `gradle-${versionInfo.version}`
-    const restoreKey = await cache.restoreCache([downloadPath], cacheKey)
-    if (restoreKey) {
-        core.info(`Restored Gradle distribution ${cacheKey} from cache to ${downloadPath}`)
-        return downloadPath
+    try {
+        const restoreKey = await cache.restoreCache([downloadPath], cacheKey)
+        if (restoreKey) {
+            core.info(`Restored Gradle distribution ${cacheKey} from cache to ${downloadPath}`)
+            return downloadPath
+        }
+    } catch (error) {
+        handleCacheFailure(error, `Restore Gradle distribution ${versionInfo.version} failed`)
     }
+
     core.info(`Gradle distribution ${versionInfo.version} not found in cache. Will download.`)
     await downloadGradleDistribution(versionInfo, downloadPath)
 
@@ -121,11 +126,7 @@ async function downloadAndCacheGradleDistribution(versionInfo: GradleVersionInfo
         try {
             await cache.saveCache([downloadPath], cacheKey)
         } catch (error) {
-            // Fail on validation errors or non-errors (the latter to keep Typescript happy)
-            if (error instanceof cache.ValidationError || !(error instanceof Error)) {
-                throw error
-            }
-            core.warning(error.message)
+            handleCacheFailure(error, `Save Gradle distribution ${versionInfo.version} failed`)
         }
     }
     return downloadPath

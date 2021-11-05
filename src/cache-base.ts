@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 import * as github from '@actions/github'
-import {isCacheDebuggingEnabled, getCacheKeyPrefix, hashStrings} from './cache-utils'
+import {isCacheDebuggingEnabled, getCacheKeyPrefix, hashStrings, handleCacheFailure} from './cache-utils'
 
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
 
@@ -176,12 +176,7 @@ export abstract class AbstractCache {
         try {
             return await cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys)
         } catch (error) {
-            if (error instanceof cache.ValidationError) {
-                // Validation errors should fail the build action
-                throw error
-            }
-            // Warn about any other error and continue
-            core.warning(`Failed to restore ${cacheKey}: ${error}`)
+            handleCacheFailure(error, `Failed to restore ${cacheKey}`)
             return undefined
         }
     }
@@ -231,16 +226,7 @@ export abstract class AbstractCache {
         try {
             return await cache.saveCache(cachePath, cacheKey)
         } catch (error) {
-            if (error instanceof cache.ValidationError) {
-                // Validation errors should fail the build action
-                throw error
-            } else if (error instanceof cache.ReserveCacheError) {
-                // Reserve cache errors are expected if the artifact has been previously cached
-                this.debug(error.message)
-            } else {
-                // Warn about any other error and continue
-                core.warning(String(error))
-            }
+            handleCacheFailure(error, `Failed to save cache entry ${cacheKey}`)
         }
         return undefined
     }

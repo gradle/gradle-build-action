@@ -1,4 +1,5 @@
 import * as core from '@actions/core'
+import * as cache from '@actions/cache'
 import * as crypto from 'crypto'
 import * as path from 'path'
 import * as fs from 'fs'
@@ -37,6 +38,24 @@ export function hashStrings(values: string[]): string {
 
 export function hashFileNames(fileNames: string[]): string {
     return hashStrings(fileNames.map(x => x.replace(new RegExp(`\\${path.sep}`, 'g'), '/')))
+}
+
+export function handleCacheFailure(error: unknown, message: string): void {
+    if (error instanceof cache.ValidationError) {
+        // Fail on cache validation errors
+        throw error
+    }
+    if (error instanceof cache.ReserveCacheError) {
+        // Reserve cache errors are expected if the artifact has been previously cached
+        if (isCacheDebuggingEnabled()) {
+            core.info(message)
+        } else {
+            core.debug(message)
+        }
+    } else {
+        // Warn on all other errors
+        core.warning(`${message}: ${error}`)
+    }
 }
 
 /**
