@@ -185,7 +185,7 @@ export abstract class AbstractCache {
 
     async save(listener: CacheListener): Promise<void> {
         if (!this.cacheOutputExists()) {
-            this.debug(`No ${this.cacheDescription} to cache.`)
+            core.info(`No ${this.cacheDescription} to cache.`)
             return
         }
 
@@ -193,7 +193,7 @@ export abstract class AbstractCache {
         const cacheResult = core.getState(this.cacheResultStateKey)
 
         if (!cacheKey) {
-            this.debug(`${this.cacheDescription} existed prior to cache restore. Not saving.`)
+            core.info(`${this.cacheDescription} existed prior to cache restore. Not saving.`)
             return
         }
 

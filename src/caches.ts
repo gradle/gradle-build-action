@@ -54,6 +54,10 @@ export async function save(): Promise<void> {
 }
 
 function logCachingReport(listener: CacheListener): void {
+    if (listener.cacheEntries.length === 0) {
+        return
+    }
+
     core.info(`---------- Caching Summary -------------
 Restored Entries Count: ${getCount(listener.cacheEntries, e => e.restoredSize)}
                   Size: ${getSum(listener.cacheEntries, e => e.restoredSize)}
