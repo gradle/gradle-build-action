@@ -3,14 +3,15 @@ import * as cache from '@actions/cache'
 import * as github from '@actions/github'
 import {isCacheDebuggingEnabled, getCacheKeyPrefix, hashStrings, handleCacheFailure} from './cache-utils'
 
+const CACHE_PROTOCOL_VERSION = 'v4-'
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
 
 function generateCacheKey(cacheName: string): CacheKey {
-    const cacheKeyPrefix = getCacheKeyPrefix()
+    const cacheKeyBase = `${getCacheKeyPrefix()}${CACHE_PROTOCOL_VERSION}${cacheName}`
 
     // At the most general level, share caches for all executions on the same OS
     const runnerOs = process.env['RUNNER_OS'] || ''
-    const cacheKeyForOs = `${cacheKeyPrefix}${cacheName}|${runnerOs}`
+    const cacheKeyForOs = `${cacheKeyBase}|${runnerOs}`
 
     // Prefer caches that run this job
     const cacheKeyForJob = `${cacheKeyForOs}|${github.context.job}`
