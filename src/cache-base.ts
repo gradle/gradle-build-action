@@ -3,7 +3,7 @@ import * as cache from '@actions/cache'
 import * as github from '@actions/github'
 import {isCacheDebuggingEnabled, getCacheKeyPrefix, hashStrings, handleCacheFailure} from './cache-utils'
 
-const CACHE_PROTOCOL_VERSION = 'v4-'
+const CACHE_PROTOCOL_VERSION = 'v5-'
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
 
 function generateCacheKey(cacheName: string): CacheKey {

@@ -9,6 +9,7 @@ import {AbstractCache, CacheEntryListener, CacheListener} from './cache-base'
 import {getCacheKeyPrefix, hashFileNames, tryDelete} from './cache-utils'
 
 const META_FILE_DIR = '.gradle-build-action'
+const META_FILE = 'cache-metadata.json'
 
 const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes'
 const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes'
@@ -178,7 +179,7 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     private loadBundleMetadata(): Map<string, string> {
-        const bundleMetaFile = path.resolve(this.gradleUserHome, META_FILE_DIR, 'bundles.json')
+        const bundleMetaFile = path.resolve(this.gradleUserHome, META_FILE_DIR, META_FILE)
         if (!fs.existsSync(bundleMetaFile)) {
             return new Map<string, string>()
         }
@@ -198,7 +199,7 @@ export class GradleUserHomeCache extends AbstractCache {
         core.debug(`Saving bundle metadata: ${filedata}`)
 
         const bundleMetaDir = path.resolve(this.gradleUserHome, META_FILE_DIR)
-        const bundleMetaFile = path.resolve(bundleMetaDir, 'bundles.json')
+        const bundleMetaFile = path.resolve(bundleMetaDir, META_FILE)
 
         if (!fs.existsSync(bundleMetaDir)) {
             fs.mkdirSync(bundleMetaDir, {recursive: true})
