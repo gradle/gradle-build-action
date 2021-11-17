@@ -6,6 +6,38 @@ import {isCacheDebuggingEnabled, getCacheKeyPrefix, hashStrings, handleCacheFail
 const CACHE_PROTOCOL_VERSION = 'v5-'
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
 
+/**
+ * Represents a key used to restore a cache entry.
+ * The Github Actions cache will first try for an exact match on the key.
+ * If that fails, it will try for a prefix match on any of the restoreKeys.
+ */
+class CacheKey {
+    key: string
+    restoreKeys: string[]
+
+    constructor(key: string, restoreKeys: string[]) {
+        this.key = key
+        this.restoreKeys = restoreKeys
+    }
+}
+
+/**
+ * Generates a cache key specific to the current job execution.
+ * The key is constructed from the following inputs:
+ * - A user-defined prefix (optional)
+ * - The cache protocol version
+ * - The name of the cache
+ * - The runner operating system
+ * - The name of the Job being executed
+ * - The matrix values for the Job being executed (job context)
+ * - The SHA of the commit being executed
+ *
+ * Caches are restored by trying to match the these key prefixes in order:
+ * - The full key with SHA
+ * - A previous key for this Job + matrix
+ * - Any previous key for this Job (any matrix)
+ * - Any previous key for this cache on the current OS
+ */
 function generateCacheKey(cacheName: string): CacheKey {
     const cacheKeyBase = `${getCacheKeyPrefix()}${CACHE_PROTOCOL_VERSION}${cacheName}`
 
@@ -27,20 +59,15 @@ function generateCacheKey(cacheName: string): CacheKey {
 
 function determineJobContext(): string {
     // By default, we hash the full `matrix` data for the run, to uniquely identify this job invocation
+    // The only way we can obtain the `matrix` data is via the `workflow-job-context` parameter in action.yml.
     const workflowJobContext = core.getInput(JOB_CONTEXT_PARAMETER)
     return hashStrings([workflowJobContext])
 }
 
-class CacheKey {
-    key: string
-    restoreKeys: string[]
-
-    constructor(key: string, restoreKeys: string[]) {
-        this.key = key
-        this.restoreKeys = restoreKeys
-    }
-}
-
+/**
+ * Collects information on what entries were saved and restored during the action.
+ * This information is used to generate a summary of the cache usage.
+ */
 export class CacheListener {
     cacheEntries: CacheEntryListener[] = []
 
@@ -75,6 +102,9 @@ export class CacheListener {
     }
 }
 
+/**
+ * Collects information on the state of a single cache entry.
+ */
 export class CacheEntryListener {
     entryName: string
     requestedKey: string | undefined
@@ -128,15 +158,18 @@ export abstract class AbstractCache {
         this.cacheDebuggingEnabled = isCacheDebuggingEnabled()
     }
 
+    /**
+     * Restores the cache entry, finding the closest match to the currently running job.
+     * If the target output already exists, caching will be skipped.
+     */
     async restore(listener: CacheListener): Promise<void> {
         if (this.cacheOutputExists()) {
             core.info(`${this.cacheDescription} already exists. Not restoring from cache.`)
             return
         }
+        const entryListener = listener.entry(this.cacheDescription)
 
         const cacheKey = this.prepareCacheKey()
-        const entryReport = listener.entry(this.cacheDescription)
-        entryReport.markRequested(cacheKey.key, cacheKey.restoreKeys)
 
         this.debug(
             `Requesting ${this.cacheDescription} with
@@ -145,6 +178,7 @@ export abstract class AbstractCache {
         )
 
         const cacheResult = await this.restoreCache(this.getCachePath(), cacheKey.key, cacheKey.restoreKeys)
+        entryListener.markRequested(cacheKey.key, cacheKey.restoreKeys)
 
         if (!cacheResult) {
             core.info(`${this.cacheDescription} cache not found. Will initialize empty.`)
@@ -152,7 +186,8 @@ export abstract class AbstractCache {
         }
 
         core.saveState(this.cacheResultStateKey, cacheResult.key)
-        entryReport.markRestored(cacheResult.key, cacheResult.size)
+        entryListener.markRestored(cacheResult.key, cacheResult.size)
+
         core.info(`Restored ${this.cacheDescription} from cache key: ${cacheResult.key}`)
 
         try {
@@ -164,7 +199,6 @@ export abstract class AbstractCache {
 
     prepareCacheKey(): CacheKey {
         const cacheKey = generateCacheKey(this.cacheName)
-
         core.saveState(this.cacheKeyStateKey, cacheKey.key)
         return cacheKey
     }
@@ -184,22 +218,31 @@ export abstract class AbstractCache {
 
     protected async afterRestore(_listener: CacheListener): Promise<void> {}
 
+    /**
+     * Saves the cache entry based on the current cache key, unless:
+     * - If the cache output existed before restore, then it is not saved.
+     * - If the cache was restored with the exact key, we cannot overwrite it.
+     *
+     * If the cache entry was restored with a partial match on a restore key, then
+     * it is saved with the exact key.
+     */
     async save(listener: CacheListener): Promise<void> {
         if (!this.cacheOutputExists()) {
             core.info(`No ${this.cacheDescription} to cache.`)
             return
         }
 
-        const cacheKey = core.getState(this.cacheKeyStateKey)
-        const cacheResult = core.getState(this.cacheResultStateKey)
+        // Retrieve the state set in the previous 'restore' step.
+        const cacheKeyFromRestore = core.getState(this.cacheKeyStateKey)
+        const cacheResultFromRestore = core.getState(this.cacheResultStateKey)
 
-        if (!cacheKey) {
+        if (!cacheKeyFromRestore) {
             core.info(`${this.cacheDescription} existed prior to cache restore. Not saving.`)
             return
         }
 
-        if (cacheResult && cacheKey === cacheResult) {
-            core.info(`Cache hit occurred on the cache key ${cacheKey}, not saving cache.`)
+        if (cacheResultFromRestore && cacheKeyFromRestore === cacheResultFromRestore) {
+            core.info(`Cache hit occurred on the cache key ${cacheKeyFromRestore}, not saving cache.`)
             return
         }
 
@@ -210,9 +253,9 @@ export abstract class AbstractCache {
             return
         }
 
-        core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKey}`)
+        core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKeyFromRestore}`)
         const cachePath = this.getCachePath()
-        const savedEntry = await this.saveCache(cachePath, cacheKey)
+        const savedEntry = await this.saveCache(cachePath, cacheKeyFromRestore)
 
         if (savedEntry) {
             listener.entry(this.cacheDescription).markSaved(savedEntry.key, savedEntry.size)
