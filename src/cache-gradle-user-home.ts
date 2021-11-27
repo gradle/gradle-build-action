@@ -22,6 +22,18 @@ export class GradleUserHomeCache extends AbstractCache {
         this.gradleUserHome = this.determineGradleUserHome(rootDir)
     }
 
+    async initializeState(): Promise<void> {
+        this.initializeGradleUserHome(this.gradleUserHome)
+    }
+
+    private initializeGradleUserHome(gradleUserHome: string): void {
+        fs.mkdirSync(gradleUserHome, {recursive: true})
+
+        const propertiesFile = path.resolve(gradleUserHome, 'gradle.properties')
+        this.debug(`Initializing gradle.properties to disable daemon: ${propertiesFile}`)
+        fs.writeFileSync(propertiesFile, 'org.gradle.daemon=false')
+    }
+
     async afterRestore(listener: CacheListener): Promise<void> {
         await this.reportGradleUserHomeSize('as restored from cache')
         await this.restoreArtifactBundles(listener)
