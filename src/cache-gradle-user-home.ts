@@ -7,6 +7,7 @@ import * as exec from '@actions/exec'
 
 import {AbstractCache, CacheEntryListener, CacheListener} from './cache-base'
 import {getCacheKeyPrefix, hashFileNames, tryDelete} from './cache-utils'
+import {writeBuildScanCaptureInitScript} from './build-scan-capture'
 
 const META_FILE_DIR = '.gradle-build-action'
 
@@ -32,6 +33,10 @@ export class GradleUserHomeCache extends AbstractCache {
         const propertiesFile = path.resolve(gradleUserHome, 'gradle.properties')
         this.debug(`Initializing gradle.properties to disable daemon: ${propertiesFile}`)
         fs.writeFileSync(propertiesFile, 'org.gradle.daemon=false')
+
+        const initScript = path.resolve(gradleUserHome, 'init.gradle')
+        this.debug(`Adding init script to capture build scans: ${initScript}`)
+        writeBuildScanCaptureInitScript(initScript)
     }
 
     async afterRestore(listener: CacheListener): Promise<void> {

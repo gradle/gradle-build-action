@@ -1,14 +1,6 @@
 import fs from 'fs'
-import path from 'path'
-import * as core from '@actions/core'
 
-export function writeInitScript(): string {
-    const tmpDir = process.env['RUNNER_TEMP'] || ''
-    const initScript = path.resolve(tmpDir, 'build-scan-capture.init.gradle')
-    core.info(`Writing init script: ${initScript}`)
-    if (fs.existsSync(initScript)) {
-        return initScript
-    }
+export function writeBuildScanCaptureInitScript(initScript: string): void {
     fs.writeFileSync(
         initScript,
         `
@@ -46,5 +38,4 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
 }
 `
     )
-    return initScript
 }
