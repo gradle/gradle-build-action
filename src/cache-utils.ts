@@ -4,8 +4,6 @@ import * as crypto from 'crypto'
 import * as path from 'path'
 import * as fs from 'fs'
 
-const CACHE_PROTOCOL_VERSION = 'v4-'
-
 const CACHE_DISABLED_PARAMETER = 'cache-disabled'
 const CACHE_READONLY_PARAMETER = 'cache-read-only'
 const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED'
@@ -25,7 +23,7 @@ export function isCacheDebuggingEnabled(): boolean {
 
 export function getCacheKeyPrefix(): string {
     // Prefix can be used to force change all cache keys (defaults to cache protocol version)
-    return process.env[CACHE_PREFIX_VAR] || CACHE_PROTOCOL_VERSION
+    return process.env[CACHE_PREFIX_VAR] || ''
 }
 
 export function hashStrings(values: string[]): string {

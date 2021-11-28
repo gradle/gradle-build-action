@@ -7,6 +7,9 @@ const PATHS_TO_CACHE = [
     'configuration-cache' // Only configuration-cache is stored at present
 ]
 
+/**
+ * A simple cache that saves and restores the '.gradle/configuration-cache' directory in the project root.
+ */
 export class ProjectDotGradleCache extends AbstractCache {
     private rootDir: string
     constructor(rootDir: string) {

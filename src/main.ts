@@ -7,7 +7,9 @@ import * as execution from './execution'
 import * as gradlew from './gradlew'
 import * as provision from './provision'
 
-// Invoked by GitHub Actions
+/**
+ * The main entry point for the action, called by Github Actions for the step.
+ */
 export async function run(): Promise<void> {
     try {
         const workspaceDirectory = process.env[`GITHUB_WORKSPACE`] || ''

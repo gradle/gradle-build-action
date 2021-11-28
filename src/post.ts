@@ -6,7 +6,9 @@ import * as caches from './caches'
 // throw an uncaught exception.  Instead of failing this action, just warn.
 process.on('uncaughtException', e => handleFailure(e))
 
-// Invoked by GitHub Actions
+/**
+ * The post-execution entry point for the action, called by Github Actions after completing all steps for the Job.
+ */
 export async function run(): Promise<void> {
     try {
         await caches.save()

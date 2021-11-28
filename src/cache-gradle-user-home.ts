@@ -9,11 +9,31 @@ import {AbstractCache, CacheEntryListener, CacheListener} from './cache-base'
 import {getCacheKeyPrefix, hashFileNames, tryDelete} from './cache-utils'
 
 const META_FILE_DIR = '.gradle-build-action'
+const META_FILE = 'cache-metadata.json'
 
 const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes'
 const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes'
 const ARTIFACT_BUNDLES_PARAMETER = 'gradle-home-cache-artifact-bundles'
 
+/**
+ * Represents the result of attempting to load or store a cache bundle entry.
+ * An undefined cacheKey indicates that the operation did not succeed.
+ * The collected results are then used to populate the `cache-metadata.json` file for later use.
+ */
+class CacheBundleResult {
+    readonly bundle: string
+    readonly cacheKey: string | undefined
+
+    constructor(bundle: string, cacheKey: string | undefined) {
+        this.bundle = bundle
+        this.cacheKey = cacheKey
+    }
+}
+
+/**
+ * Caches and restores the entire Gradle User Home directory, extracting bundles of common artifacts
+ * for more efficient storage.
+ */
 export class GradleUserHomeCache extends AbstractCache {
     private gradleUserHome: string
 
@@ -27,31 +47,35 @@ export class GradleUserHomeCache extends AbstractCache {
         initializeGradleUserHome(this.gradleUserHome)
     }
 
+    /**
+     * Restore any artifact bundles after the main Gradle User Home entry is restored.
+     */
     async afterRestore(listener: CacheListener): Promise<void> {
-        await this.reportGradleUserHomeSize('as restored from cache')
+        await this.debugReportGradleUserHomeSize('as restored from cache')
         await this.restoreArtifactBundles(listener)
-        await this.reportGradleUserHomeSize('after restoring common artifacts')
+        await this.debugReportGradleUserHomeSize('after restoring common artifacts')
     }
 
+    /**
+     * Restores any artifacts that were cached separately, based on the information in the `cache-metadata.json` file.
+     * Each artifact bundle is restored in parallel, except when debugging is enabled.
+     */
     private async restoreArtifactBundles(listener: CacheListener): Promise<void> {
-        const processes: Promise<void>[] = []
+        const bundleMetadata = this.loadBundleMetadata()
+        const bundlePatterns = this.getArtifactBundleDefinitions()
 
-        const bundleMetaFiles = await this.getBundleMetaFiles()
-        const bundlePatterns = this.getArtifactBundles()
+        const processes: Promise<CacheBundleResult>[] = []
 
-        // Iterate over all bundle meta files and try to restore
-        for (const bundleMetaFile of bundleMetaFiles) {
-            const bundle = path.basename(bundleMetaFile, '.cache')
+        for (const [bundle, cacheKey] of bundleMetadata) {
             const entryListener = listener.entry(bundle)
             const bundlePattern = bundlePatterns.get(bundle)
 
             // Handle case where the 'artifactBundlePatterns' have been changed
             if (bundlePattern === undefined) {
-                core.info(`Found bundle metafile for ${bundle} but no such bundle defined`)
+                core.info(`Found bundle metadata for ${bundle} but no such bundle defined`)
                 entryListener.markRequested('BUNDLE_NOT_CONFIGURED')
-                tryDelete(bundleMetaFile)
             } else {
-                const p = this.restoreArtifactBundle(bundle, bundlePattern, bundleMetaFile, entryListener)
+                const p = this.restoreArtifactBundle(bundle, cacheKey, bundlePattern, entryListener)
                 // Run sequentially when debugging enabled
                 if (this.cacheDebuggingEnabled) {
                     await p
@@ -60,48 +84,45 @@ export class GradleUserHomeCache extends AbstractCache {
             }
         }
 
-        await Promise.all(processes)
+        const results = await Promise.all(processes)
+
+        this.saveMetadataForCacheResults(results)
     }
 
     private async restoreArtifactBundle(
         bundle: string,
+        cacheKey: string,
         bundlePattern: string,
-        bundleMetaFile: string,
         listener: CacheEntryListener
-    ): Promise<void> {
-        const cacheKey = fs.readFileSync(bundleMetaFile, 'utf-8').trim()
+    ): Promise<CacheBundleResult> {
         listener.markRequested(cacheKey)
 
         const restoredEntry = await this.restoreCache([bundlePattern], cacheKey)
         if (restoredEntry) {
             core.info(`Restored ${bundle} with key ${cacheKey} to ${bundlePattern}`)
             listener.markRestored(restoredEntry.key, restoredEntry.size)
+            return new CacheBundleResult(bundle, cacheKey)
         } else {
             core.info(`Did not restore ${bundle} with key ${cacheKey} to ${bundlePattern}`)
-            tryDelete(bundleMetaFile)
+            return new CacheBundleResult(bundle, undefined)
         }
     }
 
-    private getBundleMetaFile(name: string): string {
-        return path.resolve(this.gradleUserHome, META_FILE_DIR, `${name}.cache`)
-    }
-
-    private async getBundleMetaFiles(): Promise<string[]> {
-        const metaFiles = path.resolve(this.gradleUserHome, META_FILE_DIR, '*.cache')
-        const globber = await glob.create(metaFiles)
-        const bundleFiles = await globber.glob()
-        return bundleFiles
-    }
-
+    /**
+     * Save and delete any artifact bundles prior to the main Gradle User Home entry being saved.
+     */
     async beforeSave(listener: CacheListener): Promise<void> {
-        await this.reportGradleUserHomeSize('before saving common artifacts')
+        await this.debugReportGradleUserHomeSize('before saving common artifacts')
         this.removeExcludedPaths()
         await this.saveArtifactBundles(listener)
-        await this.reportGradleUserHomeSize(
+        await this.debugReportGradleUserHomeSize(
             "after saving common artifacts (only 'caches' and 'notifications' will be stored)"
         )
     }
 
+    /**
+     * Delete any file paths that are excluded by the `gradle-home-cache-excludes` parameter.
+     */
     private removeExcludedPaths(): void {
         const rawPaths: string[] = core.getMultilineInput(EXCLUDE_PATHS_PARAMETER)
         const resolvedPaths = rawPaths.map(x => path.resolve(this.gradleUserHome, x))
@@ -112,12 +133,19 @@ export class GradleUserHomeCache extends AbstractCache {
         }
     }
 
+    /**
+     * Saves any artifacts that are configured to be cached separately, based on the artifact bundle definitions.
+     * These definitions are normally fixed, but can be overridden by the `gradle-home-cache-artifact-bundles` parameter.
+     * Each artifact bundle is saved in parallel, except when debugging is enabled.
+     */
     private async saveArtifactBundles(listener: CacheListener): Promise<void> {
-        const processes: Promise<void>[] = []
-        for (const [bundle, pattern] of this.getArtifactBundles()) {
-            const entryListener = listener.entry(bundle)
+        const bundleMetadata = this.loadBundleMetadata()
 
-            const p = this.saveArtifactBundle(bundle, pattern, entryListener)
+        const processes: Promise<CacheBundleResult>[] = []
+        for (const [bundle, pattern] of this.getArtifactBundleDefinitions()) {
+            const entryListener = listener.entry(bundle)
+            const previouslyRestoredKey = bundleMetadata.get(bundle)
+            const p = this.saveArtifactBundle(bundle, pattern, previouslyRestoredKey, entryListener)
             // Run sequentially when debugging enabled
             if (this.cacheDebuggingEnabled) {
                 await p
@@ -125,16 +153,17 @@ export class GradleUserHomeCache extends AbstractCache {
             processes.push(p)
         }
 
-        await Promise.all(processes)
+        const results = await Promise.all(processes)
+
+        this.saveMetadataForCacheResults(results)
     }
 
     private async saveArtifactBundle(
         bundle: string,
         artifactPath: string,
+        previouslyRestoredKey: string | undefined,
         listener: CacheEntryListener
-    ): Promise<void> {
-        const bundleMetaFile = this.getBundleMetaFile(bundle)
-
+    ): Promise<CacheBundleResult> {
         const globber = await glob.create(artifactPath, {
             implicitDescendants: false,
             followSymbolicLinks: false
@@ -144,16 +173,10 @@ export class GradleUserHomeCache extends AbstractCache {
         // Handle no matching files
         if (bundleFiles.length === 0) {
             this.debug(`No files found to cache for ${bundle}`)
-            if (fs.existsSync(bundleMetaFile)) {
-                tryDelete(bundleMetaFile)
-            }
-            return
+            return new CacheBundleResult(bundle, undefined)
         }
 
-        const previouslyRestoredKey = fs.existsSync(bundleMetaFile)
-            ? fs.readFileSync(bundleMetaFile, 'utf-8').trim()
-            : ''
-        const cacheKey = this.createCacheKey(bundle, bundleFiles)
+        const cacheKey = this.createCacheKeyForArtifacts(bundle, bundleFiles)
 
         if (previouslyRestoredKey === cacheKey) {
             this.debug(`No change to previously restored ${bundle}. Not caching.`)
@@ -161,7 +184,6 @@ export class GradleUserHomeCache extends AbstractCache {
             core.info(`Caching ${bundle} with cache key: ${cacheKey}`)
             const savedEntry = await this.saveCache([artifactPath], cacheKey)
             if (savedEntry !== undefined) {
-                this.writeBundleMetaFile(bundleMetaFile, cacheKey)
                 listener.markSaved(savedEntry.key, savedEntry.size)
             }
         }
@@ -169,9 +191,11 @@ export class GradleUserHomeCache extends AbstractCache {
         for (const file of bundleFiles) {
             tryDelete(file)
         }
+
+        return new CacheBundleResult(bundle, cacheKey)
     }
 
-    protected createCacheKey(bundle: string, files: string[]): string {
+    protected createCacheKeyForArtifacts(bundle: string, files: string[]): string {
         const cacheKeyPrefix = getCacheKeyPrefix()
         const relativeFiles = files.map(x => path.relative(this.gradleUserHome, x))
         const key = hashFileNames(relativeFiles)
@@ -181,15 +205,39 @@ export class GradleUserHomeCache extends AbstractCache {
         return `${cacheKeyPrefix}${bundle}-${key}`
     }
 
-    private writeBundleMetaFile(metaFile: string, cacheKey: string): void {
-        this.debug(`Writing bundle metafile: ${metaFile}`)
-
-        const dirName = path.dirname(metaFile)
-        if (!fs.existsSync(dirName)) {
-            fs.mkdirSync(dirName)
+    /**
+     * Load information about the previously restored/saved artifact bundles from the 'cache-metadata.json' file.
+     */
+    private loadBundleMetadata(): Map<string, string> {
+        const bundleMetaFile = path.resolve(this.gradleUserHome, META_FILE_DIR, META_FILE)
+        if (!fs.existsSync(bundleMetaFile)) {
+            return new Map<string, string>()
         }
+        const filedata = fs.readFileSync(bundleMetaFile, 'utf-8')
+        core.debug(`Loaded bundle metadata: ${filedata}`)
+        return new Map(JSON.parse(filedata))
+    }
 
-        fs.writeFileSync(metaFile, cacheKey)
+    /**
+     * Saves information about the artifact bundle restore/save into the 'cache-metadata.json' file.
+     */
+    private saveMetadataForCacheResults(results: CacheBundleResult[]): void {
+        const metadata = new Map<string, string>()
+        for (const result of results) {
+            if (result.cacheKey !== undefined) {
+                metadata.set(result.bundle, result.cacheKey)
+            }
+        }
+        const filedata = JSON.stringify(Array.from(metadata))
+        core.debug(`Saving bundle metadata: ${filedata}`)
+
+        const bundleMetaDir = path.resolve(this.gradleUserHome, META_FILE_DIR)
+        const bundleMetaFile = path.resolve(bundleMetaDir, META_FILE)
+
+        if (!fs.existsSync(bundleMetaDir)) {
+            fs.mkdirSync(bundleMetaDir, {recursive: true})
+        }
+        fs.writeFileSync(bundleMetaFile, filedata, 'utf-8')
     }
 
     protected determineGradleUserHome(rootDir: string): string {
@@ -207,6 +255,11 @@ export class GradleUserHomeCache extends AbstractCache {
         return fs.existsSync(dir)
     }
 
+    /**
+     * Determines the paths within Gradle User Home to cache.
+     * By default, this is the 'caches' and 'notifications' directories,
+     * but this can be overridden by the `gradle-home-cache-includes` parameter.
+     */
     protected getCachePath(): string[] {
         const rawPaths: string[] = core.getMultilineInput(INCLUDE_PATHS_PARAMETER)
         rawPaths.push(META_FILE_DIR)
@@ -223,14 +276,23 @@ export class GradleUserHomeCache extends AbstractCache {
         return path.resolve(this.gradleUserHome, rawPath)
     }
 
-    private getArtifactBundles(): Map<string, string> {
+    /**
+     * Return the artifact bundle definitions, which determine which artifacts will be cached
+     * separately from the rest of the Gradle User Home cache entry.
+     * This is normally a fixed set, but can be overridden by the `gradle-home-cache-artifact-bundles` parameter.
+     */
+    private getArtifactBundleDefinitions(): Map<string, string> {
         const artifactBundleDefinition = core.getInput(ARTIFACT_BUNDLES_PARAMETER)
         this.debug(`Using artifact bundle definition: ${artifactBundleDefinition}`)
         const artifactBundles = JSON.parse(artifactBundleDefinition)
         return new Map(Array.from(artifactBundles, ([key, value]) => [key, path.resolve(this.gradleUserHome, value)]))
     }
 
-    private async reportGradleUserHomeSize(label: string): Promise<void> {
+    /**
+     * When cache debugging is enabled, this method will give a detailed report
+     * of the Gradle User Home contents.
+     */
+    private async debugReportGradleUserHomeSize(label: string): Promise<void> {
         if (!this.cacheDebuggingEnabled) {
             return
         }
