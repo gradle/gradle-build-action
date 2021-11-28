@@ -299,6 +299,9 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
         def scanFile = new File("gradle-build-scan.txt")
         buildScanPublished { buildScan ->
             scanFile.text = buildScan.buildScanUri
+
+            println('::notice title=build-scan-url::' + buildScan.buildScanUri)
+            println('::set-output name=build-scan-url::' + buildScan.buildScanUri)
         }
     }
 }
