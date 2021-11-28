@@ -296,12 +296,19 @@ if (isTopLevelBuild) {
 
 def registerCallbacks(buildScanExtension, rootProjectName) {
     buildScanExtension.with {
+        def buildOutcome = ""
         def scanFile = new File("gradle-build-scan.txt")
+
+        buildFinished { result ->
+            buildOutcome = result.failure == null ? " succeeded" : " failed"
+        }
+
         buildScanPublished { buildScan ->
             scanFile.text = buildScan.buildScanUri
 
-            println('::notice title=build-scan-url::' + buildScan.buildScanUri)
-            println('::set-output name=build-scan-url::' + buildScan.buildScanUri)
+            // Send commands directly to GitHub Actions via STDOUT.
+            println("::notice title=Build '\${rootProjectName}'\${buildOutcome}::\${buildScan.buildScanUri}")
+            println("::set-output name=build-scan-url::\${buildScan.buildScanUri}")
         }
     }
 }
