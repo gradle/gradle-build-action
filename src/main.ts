@@ -23,19 +23,11 @@ export async function run(): Promise<void> {
             args
         )
 
-        if (result.buildScanUrl) {
-            core.setOutput('build-scan-url', result.buildScanUrl)
-        }
-
         if (result.status !== 0) {
             if (result.buildScanUrl) {
                 core.setFailed(`Gradle build failed: ${result.buildScanUrl}`)
             } else {
                 core.setFailed(`Gradle build failed: process exited with status ${result.status}`)
-            }
-        } else {
-            if (result.buildScanUrl) {
-                core.notice(`Gradle build succeeded: ${result.buildScanUrl}`)
             }
         }
     } catch (error) {

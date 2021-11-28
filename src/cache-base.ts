@@ -146,7 +146,7 @@ export abstract class AbstractCache {
         const cacheResult = await this.restoreCache(this.getCachePath(), cacheKey.key, cacheKey.restoreKeys)
 
         if (!cacheResult) {
-            core.info(`${this.cacheDescription} cache not found. Will start with empty.`)
+            core.info(`${this.cacheDescription} cache not found. Will initialize empty.`)
             return
         }
 
