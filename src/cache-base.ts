@@ -147,7 +147,6 @@ export abstract class AbstractCache {
 
         if (!cacheResult) {
             core.info(`${this.cacheDescription} cache not found. Will initialize empty.`)
-            await this.initializeState()
             return
         }
 
@@ -181,8 +180,6 @@ export abstract class AbstractCache {
             return undefined
         }
     }
-
-    protected async initializeState(): Promise<void> {}
 
     protected async afterRestore(_listener: CacheListener): Promise<void> {}
 

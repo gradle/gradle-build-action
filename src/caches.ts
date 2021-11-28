@@ -8,6 +8,11 @@ const BUILD_ROOT_DIR = 'BUILD_ROOT_DIR'
 const CACHE_LISTENER = 'CACHE_LISTENER'
 
 export async function restore(buildRootDirectory: string): Promise<void> {
+    const gradleUserHomeCache = new GradleUserHomeCache(buildRootDirectory)
+    const projectDotGradleCache = new ProjectDotGradleCache(buildRootDirectory)
+
+    gradleUserHomeCache.init()
+
     if (isCacheDisabled()) {
         core.info('Cache is disabled: will not restore state from previous builds.')
         return
@@ -17,9 +22,8 @@ export async function restore(buildRootDirectory: string): Promise<void> {
         core.saveState(BUILD_ROOT_DIR, buildRootDirectory)
 
         const cacheListener = new CacheListener()
-        await new GradleUserHomeCache(buildRootDirectory).restore(cacheListener)
+        await gradleUserHomeCache.restore(cacheListener)
 
-        const projectDotGradleCache = new ProjectDotGradleCache(buildRootDirectory)
         if (cacheListener.fullyRestored) {
             // Only restore the configuration-cache if the Gradle Home is fully restored
             await projectDotGradleCache.restore(cacheListener)
