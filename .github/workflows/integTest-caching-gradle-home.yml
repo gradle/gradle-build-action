@@ -59,8 +59,8 @@ jobs:
         arguments: test -DverifyCachedBuild=true
         cache-read-only: true
 
-  # Check that the build can run when no bundles are restored
-  no-bundles-restored:
+  # Check that the build can run when Gradle User Home is not fully restored
+  no-extracted-cache-entries-restored:
     needs: seed-build
     strategy:
       matrix:
@@ -69,11 +69,11 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Execute Gradle build with no cache artifact bundles restored
+    - name: Execute Gradle build with no extracted cache entries restored
       uses: ./
       with:
         build-root-directory: __tests__/samples/groovy-dsl
         arguments: test
         cache-read-only: true
-        gradle-home-cache-artifact-bundles: '[]'
+        gradle-home-extracted-cache-entries: '[]'
 

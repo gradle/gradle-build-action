@@ -55,8 +55,8 @@ inputs:
     description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users (INTERNAL).
     required: false
     default: ${{ toJSON(matrix) }}
-  gradle-home-cache-artifact-bundles:
-    description: Names and patterns of artifact bundles to cache separately. (EXPERIMENTAL - may be changed/removed without notice)
+  gradle-home-extracted-cache-entries:
+    description: Names and patterns of artifacts in Gradle User Home to cache separately. (EXPERIMENTAL - may be changed/removed without notice)
     required: false
     default: |
         [
