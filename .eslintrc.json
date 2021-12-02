@@ -10,7 +10,9 @@
     "rules": {
       "eslint-comments/no-use": "off",
       "import/no-namespace": "off",
+      "i18n-text/no-en": "off",
       "no-unused-vars": "off",
+      "sort-imports": "off",
       "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
       "@typescript-eslint/explicit-member-accessibility": ["error", {"accessibility": "no-public"}],
       "@typescript-eslint/no-require-imports": "error",
