@@ -25,7 +25,7 @@ jobs:
       with:
         build-root-directory: __tests__/samples/groovy-dsl
         arguments: test
-        # Add "wrapper" to main cache entry and remove 'wrapper-zips' bundle
+        # Add "wrapper" to main cache entry and remove 'wrapper-zips' cache entry
         # Exclude build-cache from main cache entry
         gradle-home-cache-includes: |
             caches
@@ -33,7 +33,7 @@ jobs:
             wrapper
         gradle-home-cache-excludes: |
             caches/build-cache-1
-        gradle-home-cache-artifact-bundles: |
+        gradle-home-extracted-cache-entries: |
             [
               ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
               ["dependencies", "caches/modules-*/files-*/*/*/*/*/"],
@@ -64,7 +64,7 @@ jobs:
             wrapper
         gradle-home-cache-excludes: |
             caches/build-cache-1
-        gradle-home-cache-artifact-bundles: |
+        gradle-home-extracted-cache-entries: |
             [
               ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
               ["dependencies", "caches/modules-*/files-*/*/*/*/*/"],

@@ -13,25 +13,36 @@ const META_FILE = 'cache-metadata.json'
 
 const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes'
 const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes'
-const ARTIFACT_BUNDLES_PARAMETER = 'gradle-home-cache-artifact-bundles'
+const EXTRACTED_CACHE_ENTRIES_PARAMETER = 'gradle-home-extracted-cache-entries'
 
 /**
- * Represents the result of attempting to load or store a cache bundle entry.
+ * Represents the result of attempting to load or store an extracted cache entry.
  * An undefined cacheKey indicates that the operation did not succeed.
  * The collected results are then used to populate the `cache-metadata.json` file for later use.
  */
-class CacheBundleResult {
-    readonly bundle: string
-    readonly cacheKey: string | undefined
+class ExtractedCacheEntry {
+    artifactType: string
+    pattern: string
+    cacheKey: string | undefined
 
-    constructor(bundle: string, cacheKey: string | undefined) {
-        this.bundle = bundle
+    constructor(artifactType: string, pattern: string, cacheKey: string | undefined) {
+        this.artifactType = artifactType
+        this.pattern = pattern
         this.cacheKey = cacheKey
     }
 }
 
 /**
- * Caches and restores the entire Gradle User Home directory, extracting bundles of common artifacts
+ * Representation of all of the extracted cache entries for this Gradle User Home.
+ * This object is persisted to JSON file in the Gradle User Home directory for storing,
+ * and subsequently used to restore the Gradle User Home.
+ */
+class ExtractedCacheEntryMetadata {
+    entries: ExtractedCacheEntry[] = []
+}
+
+/**
+ * Caches and restores the entire Gradle User Home directory, extracting entries containing common artifacts
  * for more efficient storage.
  */
 export class GradleUserHomeCache extends AbstractCache {
@@ -48,73 +59,73 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     /**
-     * Restore any artifact bundles after the main Gradle User Home entry is restored.
+     * Restore any extracted cache entries after the main Gradle User Home entry is restored.
      */
     async afterRestore(listener: CacheListener): Promise<void> {
         await this.debugReportGradleUserHomeSize('as restored from cache')
-        await this.restoreArtifactBundles(listener)
+        await this.restoreExtractedCacheEntries(listener)
         await this.debugReportGradleUserHomeSize('after restoring common artifacts')
     }
 
     /**
      * Restores any artifacts that were cached separately, based on the information in the `cache-metadata.json` file.
-     * Each artifact bundle is restored in parallel, except when debugging is enabled.
+     * Each extracted cache entry is restored in parallel, except when debugging is enabled.
      */
-    private async restoreArtifactBundles(listener: CacheListener): Promise<void> {
-        const bundleMetadata = this.loadBundleMetadata()
-        const bundlePatterns = this.getArtifactBundleDefinitions()
+    private async restoreExtractedCacheEntries(listener: CacheListener): Promise<void> {
+        const extractedCacheEntryDefinitions = this.getExtractedCacheEntryDefinitions()
+        const previouslyExtractedCacheEntries = this.loadExtractedCacheEntries()
 
-        const processes: Promise<CacheBundleResult>[] = []
+        const processes: Promise<ExtractedCacheEntry>[] = []
 
-        for (const [bundle, cacheKey] of bundleMetadata) {
-            const entryListener = listener.entry(bundle)
-            const bundlePattern = bundlePatterns.get(bundle)
+        for (const cacheEntry of previouslyExtractedCacheEntries) {
+            const artifactType = cacheEntry.artifactType
+            const entryListener = listener.entry(cacheEntry.pattern)
 
-            // Handle case where the 'artifactBundlePatterns' have been changed
-            if (bundlePattern === undefined) {
-                core.info(`Found bundle metadata for ${bundle} but no such bundle defined`)
-                entryListener.markRequested('BUNDLE_NOT_CONFIGURED')
+            // Handle case where the extracted-cache-entry definitions have been changed
+            if (extractedCacheEntryDefinitions.get(artifactType) === undefined) {
+                core.info(`Found extracted cache entry for ${artifactType} but no such entry defined`)
+                entryListener.markRequested('EXTRACTED_ENTRY_NOT_DEFINED')
             } else {
-                const p = this.restoreArtifactBundle(bundle, cacheKey, bundlePattern, entryListener)
-                // Run sequentially when debugging enabled
-                if (this.cacheDebuggingEnabled) {
-                    await p
-                }
-                processes.push(p)
+                processes.push(
+                    this.restoreExtractedCacheEntry(
+                        artifactType,
+                        cacheEntry.cacheKey!,
+                        cacheEntry.pattern,
+                        entryListener
+                    )
+                )
             }
         }
 
-        const results = await Promise.all(processes)
-
-        this.saveMetadataForCacheResults(results)
+        this.saveMetadataForCacheResults(await this.collectCacheResults(processes))
     }
 
-    private async restoreArtifactBundle(
-        bundle: string,
+    private async restoreExtractedCacheEntry(
+        artifactType: string,
         cacheKey: string,
-        bundlePattern: string,
+        pattern: string,
         listener: CacheEntryListener
-    ): Promise<CacheBundleResult> {
+    ): Promise<ExtractedCacheEntry> {
         listener.markRequested(cacheKey)
 
-        const restoredEntry = await this.restoreCache([bundlePattern], cacheKey)
+        const restoredEntry = await this.restoreCache([pattern], cacheKey)
         if (restoredEntry) {
-            core.info(`Restored ${bundle} with key ${cacheKey} to ${bundlePattern}`)
+            core.info(`Restored ${artifactType} with key ${cacheKey} to ${pattern}`)
             listener.markRestored(restoredEntry.key, restoredEntry.size)
-            return new CacheBundleResult(bundle, cacheKey)
+            return new ExtractedCacheEntry(artifactType, pattern, cacheKey)
         } else {
-            core.info(`Did not restore ${bundle} with key ${cacheKey} to ${bundlePattern}`)
-            return new CacheBundleResult(bundle, undefined)
+            core.info(`Did not restore ${artifactType} with key ${cacheKey} to ${pattern}`)
+            return new ExtractedCacheEntry(artifactType, pattern, undefined)
         }
     }
 
     /**
-     * Save and delete any artifact bundles prior to the main Gradle User Home entry being saved.
+     * Extract and save any defined extracted cache entries prior to the main Gradle User Home entry being saved.
      */
     async beforeSave(listener: CacheListener): Promise<void> {
         await this.debugReportGradleUserHomeSize('before saving common artifacts')
         this.removeExcludedPaths()
-        await this.saveArtifactBundles(listener)
+        await this.saveExtractedCacheEntries(listener)
         await this.debugReportGradleUserHomeSize(
             "after saving common artifacts (only 'caches' and 'notifications' will be stored)"
         )
@@ -134,110 +145,143 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     /**
-     * Saves any artifacts that are configured to be cached separately, based on the artifact bundle definitions.
-     * These definitions are normally fixed, but can be overridden by the `gradle-home-cache-artifact-bundles` parameter.
-     * Each artifact bundle is saved in parallel, except when debugging is enabled.
+     * Saves any artifacts that are configured to be cached separately, based on the extracted cache entry definitions.
+     * These definitions are normally fixed, but can be overridden by the `gradle-home-extracted-cache-entries` parameter.
+     * Each entry is extracted and saved in parallel, except when debugging is enabled.
      */
-    private async saveArtifactBundles(listener: CacheListener): Promise<void> {
-        const bundleMetadata = this.loadBundleMetadata()
+    private async saveExtractedCacheEntries(listener: CacheListener): Promise<void> {
+        // Load the cache entry definitions (from config) and the previously restored entries (from filesystem)
+        const cacheEntryDefinitions = this.getExtractedCacheEntryDefinitions()
+        const previouslyRestoredEntries = this.loadExtractedCacheEntries()
+        const cacheActions: Promise<ExtractedCacheEntry>[] = []
 
-        const processes: Promise<CacheBundleResult>[] = []
-        for (const [bundle, pattern] of this.getArtifactBundleDefinitions()) {
-            const entryListener = listener.entry(bundle)
-            const previouslyRestoredKey = bundleMetadata.get(bundle)
-            const p = this.saveArtifactBundle(bundle, pattern, previouslyRestoredKey, entryListener)
-            // Run sequentially when debugging enabled
-            if (this.cacheDebuggingEnabled) {
-                await p
+        for (const [artifactType, pattern] of cacheEntryDefinitions) {
+            // Find all matching files for this cache entry definition
+            const globber = await glob.create(pattern, {
+                implicitDescendants: false,
+                followSymbolicLinks: false
+            })
+            const matchingFiles = await globber.glob()
+
+            if (matchingFiles.length === 0) {
+                this.debug(`No files found to cache for ${artifactType}`)
+                continue
             }
-            processes.push(p)
+
+            if (this.isBundlePattern(pattern)) {
+                // For an extracted "bundle", use the defined pattern and cache all matching files in a single entry.
+                cacheActions.push(
+                    this.saveExtractedCacheEntry(
+                        matchingFiles,
+                        artifactType,
+                        pattern,
+                        previouslyRestoredEntries,
+                        listener.entry(pattern)
+                    )
+                )
+            } else {
+                // Otherwise cache each matching file in a separate entry, using the complete file path as the cache pattern.
+                for (const cacheFile of matchingFiles) {
+                    cacheActions.push(
+                        this.saveExtractedCacheEntry(
+                            [cacheFile],
+                            artifactType,
+                            cacheFile,
+                            previouslyRestoredEntries,
+                            listener.entry(cacheFile)
+                        )
+                    )
+                }
+            }
         }
 
-        const results = await Promise.all(processes)
-
-        this.saveMetadataForCacheResults(results)
+        this.saveMetadataForCacheResults(await this.collectCacheResults(cacheActions))
     }
 
-    private async saveArtifactBundle(
-        bundle: string,
-        artifactPath: string,
-        previouslyRestoredKey: string | undefined,
-        listener: CacheEntryListener
-    ): Promise<CacheBundleResult> {
-        const globber = await glob.create(artifactPath, {
-            implicitDescendants: false,
-            followSymbolicLinks: false
-        })
-        const bundleFiles = await globber.glob()
-
-        // Handle no matching files
-        if (bundleFiles.length === 0) {
-            this.debug(`No files found to cache for ${bundle}`)
-            return new CacheBundleResult(bundle, undefined)
-        }
-
-        const cacheKey = this.createCacheKeyForArtifacts(bundle, bundleFiles)
+    private async saveExtractedCacheEntry(
+        matchingFiles: string[],
+        artifactType: string,
+        pattern: string,
+        previouslyRestoredEntries: ExtractedCacheEntry[],
+        entryListener: CacheEntryListener
+    ): Promise<ExtractedCacheEntry> {
+        const cacheKey = this.createCacheKeyForArtifacts(artifactType, matchingFiles)
+        const previouslyRestoredKey = previouslyRestoredEntries.find(
+            x => x.artifactType === artifactType && x.pattern === pattern
+        )?.cacheKey
 
         if (previouslyRestoredKey === cacheKey) {
-            this.debug(`No change to previously restored ${bundle}. Not caching.`)
+            this.debug(`No change to previously restored ${artifactType}. Not saving.`)
         } else {
-            core.info(`Caching ${bundle} with cache key: ${cacheKey}`)
-            const savedEntry = await this.saveCache([artifactPath], cacheKey)
+            core.info(`Caching ${artifactType} with path '${pattern}' and cache key: ${cacheKey}`)
+            const savedEntry = await this.saveCache([pattern], cacheKey)
             if (savedEntry !== undefined) {
-                listener.markSaved(savedEntry.key, savedEntry.size)
+                entryListener.markSaved(savedEntry.key, savedEntry.size)
             }
         }
 
-        for (const file of bundleFiles) {
+        for (const file of matchingFiles) {
             tryDelete(file)
         }
 
-        return new CacheBundleResult(bundle, cacheKey)
+        return new ExtractedCacheEntry(artifactType, pattern, cacheKey)
     }
 
-    protected createCacheKeyForArtifacts(bundle: string, files: string[]): string {
+    protected createCacheKeyForArtifacts(artifactType: string, files: string[]): string {
         const cacheKeyPrefix = getCacheKeyPrefix()
         const relativeFiles = files.map(x => path.relative(this.gradleUserHome, x))
         const key = hashFileNames(relativeFiles)
 
-        this.debug(`Generating cache key for ${bundle} from files: ${relativeFiles}`)
+        this.debug(`Generating cache key for ${artifactType} from files: ${relativeFiles}`)
 
-        return `${cacheKeyPrefix}${bundle}-${key}`
+        return `${cacheKeyPrefix}${artifactType}-${key}`
     }
 
-    /**
-     * Load information about the previously restored/saved artifact bundles from the 'cache-metadata.json' file.
-     */
-    private loadBundleMetadata(): Map<string, string> {
-        const bundleMetaFile = path.resolve(this.gradleUserHome, META_FILE_DIR, META_FILE)
-        if (!fs.existsSync(bundleMetaFile)) {
-            return new Map<string, string>()
-        }
-        const filedata = fs.readFileSync(bundleMetaFile, 'utf-8')
-        core.debug(`Loaded bundle metadata: ${filedata}`)
-        return new Map(JSON.parse(filedata))
+    private isBundlePattern(pattern: string): boolean {
+        return pattern.endsWith('*')
     }
 
-    /**
-     * Saves information about the artifact bundle restore/save into the 'cache-metadata.json' file.
-     */
-    private saveMetadataForCacheResults(results: CacheBundleResult[]): void {
-        const metadata = new Map<string, string>()
-        for (const result of results) {
-            if (result.cacheKey !== undefined) {
-                metadata.set(result.bundle, result.cacheKey)
+    private async collectCacheResults(processes: Promise<ExtractedCacheEntry>[]): Promise<ExtractedCacheEntry[]> {
+        // Run cache actions sequentially when debugging enabled
+        if (this.cacheDebuggingEnabled) {
+            for (const p of processes) {
+                await p
             }
         }
-        const filedata = JSON.stringify(Array.from(metadata))
-        core.debug(`Saving bundle metadata: ${filedata}`)
 
-        const bundleMetaDir = path.resolve(this.gradleUserHome, META_FILE_DIR)
-        const bundleMetaFile = path.resolve(bundleMetaDir, META_FILE)
+        return await Promise.all(processes)
+    }
 
-        if (!fs.existsSync(bundleMetaDir)) {
-            fs.mkdirSync(bundleMetaDir, {recursive: true})
+    /**
+     * Load information about the extracted cache entries previously restored/saved. This is loaded from the 'cache-metadata.json' file.
+     */
+    private loadExtractedCacheEntries(): ExtractedCacheEntry[] {
+        const cacheMetadataFile = path.resolve(this.gradleUserHome, META_FILE_DIR, META_FILE)
+        if (!fs.existsSync(cacheMetadataFile)) {
+            return []
         }
-        fs.writeFileSync(bundleMetaFile, filedata, 'utf-8')
+
+        const filedata = fs.readFileSync(cacheMetadataFile, 'utf-8')
+        core.debug(`Loaded cache metadata: ${filedata}`)
+        const extractedCacheEntryMetadata = JSON.parse(filedata) as ExtractedCacheEntryMetadata
+        return extractedCacheEntryMetadata.entries
+    }
+
+    /**
+     * Saves information about the extracted cache entries into the 'cache-metadata.json' file.
+     */
+    private saveMetadataForCacheResults(results: ExtractedCacheEntry[]): void {
+        const extractedCacheEntryMetadata = new ExtractedCacheEntryMetadata()
+        extractedCacheEntryMetadata.entries = results.filter(x => x.cacheKey !== undefined)
+
+        const filedata = JSON.stringify(extractedCacheEntryMetadata)
+        core.debug(`Saving cache metadata: ${filedata}`)
+
+        const actionMetadataDirectory = path.resolve(this.gradleUserHome, META_FILE_DIR)
+        const cacheMetadataFile = path.resolve(actionMetadataDirectory, META_FILE)
+
+        fs.mkdirSync(actionMetadataDirectory, {recursive: true})
+        fs.writeFileSync(cacheMetadataFile, filedata, 'utf-8')
     }
 
     protected determineGradleUserHome(rootDir: string): string {
@@ -277,15 +321,14 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     /**
-     * Return the artifact bundle definitions, which determine which artifacts will be cached
+     * Return the extracted cache entry definitions, which determine which artifacts will be cached
      * separately from the rest of the Gradle User Home cache entry.
-     * This is normally a fixed set, but can be overridden by the `gradle-home-cache-artifact-bundles` parameter.
+     * This is normally a fixed set, but can be overridden by the `gradle-home-extracted-cache-entries` parameter.
      */
-    private getArtifactBundleDefinitions(): Map<string, string> {
-        const artifactBundleDefinition = core.getInput(ARTIFACT_BUNDLES_PARAMETER)
-        this.debug(`Using artifact bundle definition: ${artifactBundleDefinition}`)
-        const artifactBundles = JSON.parse(artifactBundleDefinition)
-        return new Map(Array.from(artifactBundles, ([key, value]) => [key, path.resolve(this.gradleUserHome, value)]))
+    private getExtractedCacheEntryDefinitions(): Map<string, string> {
+        const rawDefinitions = core.getInput(EXTRACTED_CACHE_ENTRIES_PARAMETER)
+        const parsedDefinitions = JSON.parse(rawDefinitions)
+        return new Map(Array.from(parsedDefinitions, ([key, value]) => [key, path.resolve(this.gradleUserHome, value)]))
     }
 
     /**
