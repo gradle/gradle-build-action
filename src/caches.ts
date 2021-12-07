@@ -4,19 +4,19 @@ import {ProjectDotGradleCache} from './cache-project-dot-gradle'
 import {isCacheDisabled, isCacheReadOnly} from './cache-utils'
 import {logCachingReport, CacheListener} from './cache-reporting'
 
+const CACHE_RESTORED_VAR = 'GRADLE_BUILD_ACTION_CACHE_RESTORED'
 const BUILD_ROOT_DIR = 'BUILD_ROOT_DIR'
 const CACHE_LISTENER = 'CACHE_LISTENER'
 
 export async function restore(buildRootDirectory: string): Promise<void> {
+    if (!shouldRestoreCaches()) {
+        return
+    }
+
     const gradleUserHomeCache = new GradleUserHomeCache(buildRootDirectory)
     const projectDotGradleCache = new ProjectDotGradleCache(buildRootDirectory)
 
     gradleUserHomeCache.init()
-
-    if (isCacheDisabled()) {
-        core.info('Cache is disabled: will not restore state from previous builds.')
-        return
-    }
 
     await core.group('Restore Gradle state from cache', async () => {
         core.saveState(BUILD_ROOT_DIR, buildRootDirectory)
@@ -38,6 +38,10 @@ export async function restore(buildRootDirectory: string): Promise<void> {
 }
 
 export async function save(): Promise<void> {
+    if (!shouldSaveCaches()) {
+        return
+    }
+
     const cacheListener: CacheListener = CacheListener.rehydrate(core.getState(CACHE_LISTENER))
 
     if (isCacheReadOnly()) {
@@ -55,4 +59,36 @@ export async function save(): Promise<void> {
     })
 
     logCachingReport(cacheListener)
+}
+
+function shouldRestoreCaches(): boolean {
+    if (isCacheDisabled()) {
+        core.info('Cache is disabled: will not restore state from previous builds.')
+        return false
+    }
+
+    if (process.env[CACHE_RESTORED_VAR]) {
+        core.info('Cache only restored on first action step.')
+        return false
+    }
+
+    // Export var that is detected in all later restore steps
+    core.exportVariable(CACHE_RESTORED_VAR, true)
+    // Export state that is detected in corresponding post-action step
+    core.saveState(CACHE_RESTORED_VAR, true)
+    return true
+}
+
+function shouldSaveCaches(): boolean {
+    if (isCacheDisabled()) {
+        core.info('Cache is disabled: will not save state for later builds.')
+        return false
+    }
+
+    if (!core.getState(CACHE_RESTORED_VAR)) {
+        core.info('Cache will only be saved in final post-action step.')
+        return false
+    }
+
+    return true
 }

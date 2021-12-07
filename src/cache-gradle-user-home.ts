@@ -294,12 +294,6 @@ export class GradleUserHomeCache extends AbstractCache {
         return path.resolve(os.homedir(), '.gradle')
     }
 
-    protected cacheOutputExists(): boolean {
-        // Need to check for 'caches' directory to avoid incorrect detection on MacOS agents
-        const dir = path.resolve(this.gradleUserHome, 'caches')
-        return fs.existsSync(dir)
-    }
-
     /**
      * Determines the paths within Gradle User Home to cache.
      * By default, this is the 'caches' and 'notifications' directories,

@@ -1,5 +1,4 @@
 import path from 'path'
-import fs from 'fs'
 import {AbstractCache} from './cache-base'
 
 // TODO: Maybe allow the user to override / tweak this set
@@ -15,11 +14,6 @@ export class ProjectDotGradleCache extends AbstractCache {
     constructor(rootDir: string) {
         super('project', 'Project configuration cache')
         this.rootDir = rootDir
-    }
-
-    protected cacheOutputExists(): boolean {
-        const dir = this.getProjectDotGradleDir()
-        return fs.existsSync(dir)
     }
 
     protected getCachePath(): string[] {
