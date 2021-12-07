@@ -26,8 +26,13 @@ jobs:
       with:
         build-root-directory: __tests__/samples/groovy-dsl
         arguments: test --configuration-cache
+    - name: Second build with configuration-cache enabled
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/kotlin-dsl
+        arguments: test --configuration-cache
 
-  # Test that the project-dot-gradle cache will cache and restore configuration-cache
+  # Test restore configuration-cache
   configuration-cache:
     needs: seed-build
     strategy:
@@ -43,6 +48,25 @@ jobs:
         VERIFY_CACHED_CONFIGURATION: true
       with:
         build-root-directory: __tests__/samples/groovy-dsl
+        arguments: test --configuration-cache
+        cache-read-only: true
+
+  # Test restore configuration-cache from second build invocation
+  configuration-cache-2:
+    needs: seed-build
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Execute Gradle build and verify cached configuration
+      uses: ./
+      env: 
+        VERIFY_CACHED_CONFIGURATION: true
+      with:
+        build-root-directory: __tests__/samples/kotlin-dsl
         arguments: test --configuration-cache
         cache-read-only: true
 
