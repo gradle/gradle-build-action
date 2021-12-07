@@ -1,4 +1,4 @@
-import {CacheEntryListener, CacheListener} from '../src/cache-base'
+import {CacheEntryListener, CacheListener} from '../src/cache-reporting'
 
 describe('caching report', () => {
     describe('reports not fully restored', () => {

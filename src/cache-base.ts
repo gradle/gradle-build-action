@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 import * as github from '@actions/github'
+import {CacheListener} from './cache-reporting'
 import {isCacheDebuggingEnabled, getCacheKeyPrefix, hashStrings, handleCacheFailure} from './cache-utils'
 
 const CACHE_PROTOCOL_VERSION = 'v5-'
@@ -62,84 +63,6 @@ function determineJobContext(): string {
     // The only way we can obtain the `matrix` data is via the `workflow-job-context` parameter in action.yml.
     const workflowJobContext = core.getInput(JOB_CONTEXT_PARAMETER)
     return hashStrings([workflowJobContext])
-}
-
-/**
- * Collects information on what entries were saved and restored during the action.
- * This information is used to generate a summary of the cache usage.
- */
-export class CacheListener {
-    cacheEntries: CacheEntryListener[] = []
-
-    get fullyRestored(): boolean {
-        return this.cacheEntries.every(x => !x.wasRequestedButNotRestored())
-    }
-
-    entry(name: string): CacheEntryListener {
-        for (const entry of this.cacheEntries) {
-            if (entry.entryName === name) {
-                return entry
-            }
-        }
-
-        const newEntry = new CacheEntryListener(name)
-        this.cacheEntries.push(newEntry)
-        return newEntry
-    }
-
-    stringify(): string {
-        return JSON.stringify(this)
-    }
-
-    static rehydrate(stringRep: string): CacheListener {
-        const rehydrated: CacheListener = Object.assign(new CacheListener(), JSON.parse(stringRep))
-        const entries = rehydrated.cacheEntries
-        for (let index = 0; index < entries.length; index++) {
-            const rawEntry = entries[index]
-            entries[index] = Object.assign(new CacheEntryListener(rawEntry.entryName), rawEntry)
-        }
-        return rehydrated
-    }
-}
-
-/**
- * Collects information on the state of a single cache entry.
- */
-export class CacheEntryListener {
-    entryName: string
-    requestedKey: string | undefined
-    requestedRestoreKeys: string[] | undefined
-    restoredKey: string | undefined
-    restoredSize: number | undefined
-
-    savedKey: string | undefined
-    savedSize: number | undefined
-
-    constructor(entryName: string) {
-        this.entryName = entryName
-    }
-
-    wasRequestedButNotRestored(): boolean {
-        return this.requestedKey !== undefined && this.restoredKey === undefined
-    }
-
-    markRequested(key: string, restoreKeys: string[] = []): CacheEntryListener {
-        this.requestedKey = key
-        this.requestedRestoreKeys = restoreKeys
-        return this
-    }
-
-    markRestored(key: string, size: number | undefined): CacheEntryListener {
-        this.restoredKey = key
-        this.restoredSize = size
-        return this
-    }
-
-    markSaved(key: string, size: number | undefined): CacheEntryListener {
-        this.savedKey = key
-        this.savedSize = size
-        return this
-    }
 }
 
 export abstract class AbstractCache {

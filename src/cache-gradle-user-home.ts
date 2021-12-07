@@ -5,7 +5,8 @@ import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 import * as exec from '@actions/exec'
 
-import {AbstractCache, CacheEntryListener, CacheListener} from './cache-base'
+import {AbstractCache} from './cache-base'
+import {CacheEntryListener, CacheListener} from './cache-reporting'
 import {getCacheKeyPrefix, hashFileNames, tryDelete} from './cache-utils'
 
 const META_FILE_DIR = '.gradle-build-action'
