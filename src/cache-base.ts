@@ -1,11 +1,15 @@
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 import * as github from '@actions/github'
+import path from 'path'
+import fs from 'fs'
 import {CacheListener} from './cache-reporting'
-import {isCacheDebuggingEnabled, getCacheKeyPrefix, hashStrings, handleCacheFailure} from './cache-utils'
+import {isCacheDebuggingEnabled, getCacheKeyPrefix, determineJobContext, handleCacheFailure} from './cache-utils'
 
 const CACHE_PROTOCOL_VERSION = 'v5-'
-const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
+
+export const META_FILE_DIR = '.gradle-build-action'
+export const PROJECT_ROOTS_FILE = 'project-roots.txt'
 
 /**
  * Represents a key used to restore a cache entry.
@@ -58,27 +62,32 @@ function generateCacheKey(cacheName: string): CacheKey {
     return new CacheKey(cacheKey, [cacheKeyForJobContext, cacheKeyForJob, cacheKeyForOs])
 }
 
-function determineJobContext(): string {
-    // By default, we hash the full `matrix` data for the run, to uniquely identify this job invocation
-    // The only way we can obtain the `matrix` data is via the `workflow-job-context` parameter in action.yml.
-    const workflowJobContext = core.getInput(JOB_CONTEXT_PARAMETER)
-    return hashStrings([workflowJobContext])
-}
-
 export abstract class AbstractCache {
     private cacheName: string
     private cacheDescription: string
     private cacheKeyStateKey: string
     private cacheResultStateKey: string
 
+    protected readonly gradleUserHome: string
     protected readonly cacheDebuggingEnabled: boolean
 
-    constructor(cacheName: string, cacheDescription: string) {
+    constructor(gradleUserHome: string, cacheName: string, cacheDescription: string) {
+        this.gradleUserHome = gradleUserHome
         this.cacheName = cacheName
         this.cacheDescription = cacheDescription
         this.cacheKeyStateKey = `CACHE_KEY_${cacheName}`
         this.cacheResultStateKey = `CACHE_RESULT_${cacheName}`
         this.cacheDebuggingEnabled = isCacheDebuggingEnabled()
+    }
+
+    init(): void {
+        const actionCacheDir = path.resolve(this.gradleUserHome, '.gradle-build-action')
+        fs.mkdirSync(actionCacheDir, {recursive: true})
+
+        const initScriptsDir = path.resolve(this.gradleUserHome, 'init.d')
+        fs.mkdirSync(initScriptsDir, {recursive: true})
+
+        this.initializeGradleUserHome(this.gradleUserHome, initScriptsDir)
     }
 
     /**
@@ -191,4 +200,5 @@ export abstract class AbstractCache {
     }
 
     protected abstract getCachePath(): string[]
+    protected abstract initializeGradleUserHome(gradleUserHome: string, initScriptsDir: string): void
 }
