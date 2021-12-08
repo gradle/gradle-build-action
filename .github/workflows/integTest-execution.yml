@@ -44,64 +44,29 @@ jobs:
   gradle-versions:
     strategy:
       matrix:
+        gradle: [7.3, 6.9, 5.6.4, 4.10.3]
         os: [ubuntu-latest, windows-latest]
         include:
-          - os: windows-latest
-            script-suffix: '.bat'
+          - gradle: 5.6.4
+            build-root-suffix: -gradle-5
+          - gradle: 4.10.3
+            build-root-suffix: -gradle-4
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Test Gradle 7
+    - name: Run Gradle build
       uses: ./
-      id: gradle7
+      id: gradle
       with:
-        gradle-version: 7.2
-        build-root-directory: __tests__/samples/no-wrapper
-        arguments: help -DgradleVersionCheck=7.2
-    - name: Check Gradle 7 scan
-      if: ${{ !steps.gradle7.outputs.build-scan-url }}
+        gradle-version: ${{matrix.gradle}}
+        build-root-directory: __tests__/samples/no-wrapper${{ matrix.build-root-suffix }}
+        arguments: help -DgradleVersionCheck=${{matrix.gradle}}
+    - name: Check build scan url
+      if: ${{ !steps.gradle.outputs.build-scan-url }}
       uses: actions/github-script@v3
       with:
         script: |
           core.setFailed('No build scan detected')    
-    - name: Test Gradle 6
-      uses: ./
-      id: gradle6
-      with:
-        gradle-version: 6.9
-        build-root-directory: __tests__/samples/no-wrapper
-        arguments: help -DgradleVersionCheck=6.9
-    - name: Check Gradle 6 scan
-      if: ${{ !steps.gradle6.outputs.build-scan-url }}
-      uses: actions/github-script@v3
-      with:
-        script: |
-          core.setFailed('No build scan detected')    
-    - name: Test Gradle 5
-      uses: ./
-      id: gradle5
-      with:
-        gradle-version: 5.6.4
-        build-root-directory: __tests__/samples/no-wrapper-gradle-5
-        arguments: help -DgradleVersionCheck=5.6.4
-    - name: Check Gradle 5 scan
-      if: ${{ !steps.gradle5.outputs.build-scan-url }}
-      uses: actions/github-script@v3
-      with:
-        script: |
-          core.setFailed('No build scan detected')    
-    - name: Test Gradle 4
-      uses: ./
-      id: gradle4
-      with:
-        gradle-version: 4.10.3
-        build-root-directory: __tests__/samples/no-wrapper-gradle-4
-        arguments: help -DgradleVersionCheck=4.10.3
-    - name: Check Gradle 4 scan
-      if: ${{ !steps.gradle4.outputs.build-scan-url }}
-      uses: actions/github-script@v3
-      with:
-        script: |
-          core.setFailed('No build scan detected')    
+  
    
