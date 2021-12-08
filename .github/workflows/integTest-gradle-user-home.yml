@@ -8,7 +8,7 @@ on:
 
 env:
   GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
-  GRADLE_USER_HOME: custom/gradle/home
+  GRADLE_USER_HOME: ${{github.workspace}}/custom/gradle/home
 
 jobs:
   # Run initial Gradle builds to push initial cache entries
@@ -21,11 +21,11 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Build using Gradle wrapper
+    - name: Setup Gradle
       uses: ./
-      with:
-        build-root-directory: __tests__/samples/groovy-dsl
-        arguments: test
+    - name: Build using Gradle wrapper
+      working-directory: __tests__/samples/groovy-dsl
+      run: ./gradlew test --info
 
   # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
   dependencies-cache:
@@ -37,12 +37,13 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Execute Gradle build with --offline
+    - name: Setup Gradle
       uses: ./
       with:
-        build-root-directory: __tests__/samples/groovy-dsl
-        arguments: test --offline
         cache-read-only: true
+    - name: Execute Gradle build with --offline
+      working-directory: __tests__/samples/groovy-dsl
+      run: ./gradlew test --offline --info
 
   # Test that the gradle-user-home cache will cache and restore local build-cache
   build-cache:
@@ -54,9 +55,10 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Execute Gradle build and verify tasks from cache
+    - name: Setup Gradle
       uses: ./
       with:
-        build-root-directory: __tests__/samples/groovy-dsl
-        arguments: test -DverifyCachedBuild=true
         cache-read-only: true
+    - name: Execute Gradle build and verify tasks from cache
+      working-directory: __tests__/samples/groovy-dsl
+      run: ./gradlew test -DverifyCachedBuild=true --info

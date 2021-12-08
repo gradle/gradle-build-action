@@ -1,0 +1,77 @@
+name: Test provision different Gradle versions
+
+on:
+  pull_request:
+    types: [assigned, review_requested]
+  push:
+  workflow_dispatch:
+
+env:
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+
+jobs:   
+  # Tests for executing with different Gradle versions. 
+  # Each build verifies that it is executed with the expected Gradle version.
+  provision-gradle:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: windows-latest
+            script-suffix: '.bat'
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle with v6.9
+      uses: ./
+      with:
+        gradle-version: 6.9
+    - name: Test uses Gradle v6.9
+      working-directory: __tests__/samples/no-wrapper
+      run: gradle help "-DgradleVersionCheck=6.9"
+    - name: Setup Gradle with v7.1.1
+      uses: ./
+      with:
+        gradle-version: 7.1.1
+    - name: Test uses Gradle v7.1.1
+      working-directory: __tests__/samples/no-wrapper
+      run: gradle help "-DgradleVersionCheck=7.1.1"
+    - name: Setup Gradle with release-candidate
+      uses: ./
+      with:
+        gradle-version: release-candidate
+    - name: Test use release-candidate
+      working-directory: __tests__/samples/no-wrapper
+      run: gradle help
+  
+  gradle-versions:
+    strategy:
+      matrix:
+        gradle: [7.3, 6.9, 5.6.4, 4.10.3]
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - gradle: 5.6.4
+            build-root-suffix: -gradle-5
+          - gradle: 4.10.3
+            build-root-suffix: -gradle-4
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle
+      uses: ./
+      with:
+        gradle-version: ${{ matrix.gradle }}
+    - name: Run Gradle build
+      id: gradle
+      working-directory: __tests__/samples/no-wrapper${{ matrix.build-root-suffix }}
+      run: gradle help "-DgradleVersionCheck=${{matrix.gradle}}"
+    - name: Check build scan url
+      if: ${{ !steps.gradle.outputs.build-scan-url }}
+      uses: actions/github-script@v3
+      with:
+        script: |
+          core.setFailed('No build scan detected')    
+  
+   

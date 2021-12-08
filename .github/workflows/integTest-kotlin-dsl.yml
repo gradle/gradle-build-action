@@ -20,11 +20,11 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Build kotlin-dsl project
+    - name: Setup Gradle
       uses: ./
-      with:
-        build-root-directory: __tests__/samples/kotlin-dsl
-        arguments: test
+    - name: Build kotlin-dsl project
+      working-directory: __tests__/samples/kotlin-dsl
+      run: ./gradlew test
 
   # Check that the build can run --offline
   verify-build:
@@ -36,8 +36,8 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Build kotlin-dsl project
+    - name: Setup Gradle
       uses: ./
-      with:
-        build-root-directory: __tests__/samples/kotlin-dsl
-        arguments: test --offline
+    - name: Build kotlin-dsl project
+      working-directory: __tests__/samples/kotlin-dsl
+      run: ./gradlew test --offline
