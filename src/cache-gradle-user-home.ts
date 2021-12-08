@@ -369,7 +369,8 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
             scanFile.text = buildScan.buildScanUri
 
             // Send commands directly to GitHub Actions via STDOUT.
-            println("::notice title=Build '\${rootProjectName}'\${buildOutcome}::\${buildScan.buildScanUri}")
+            def message = "Build '\${rootProjectName}'\${buildOutcome} - \${buildScan.buildScanUri}"
+            println("::notice ::\${message}")
             println("::set-output name=build-scan-url::\${buildScan.buildScanUri}")
         }
     }
