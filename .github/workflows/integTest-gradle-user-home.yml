@@ -2,6 +2,7 @@ name: Test caching with a custom GRADLE_USER_HOME
 
 on:
   pull_request:
+    types: [assigned, review_requested]
   push:
   workflow_dispatch:
 

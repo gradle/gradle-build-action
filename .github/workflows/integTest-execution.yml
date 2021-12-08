@@ -2,6 +2,7 @@ name: Test Gradle execution
 
 on:
   pull_request:
+    types: [assigned, review_requested]
   push:
   workflow_dispatch:
 

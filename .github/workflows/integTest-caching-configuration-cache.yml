@@ -2,6 +2,7 @@ name: Test save/restore configuration-cache state
 
 on:
   pull_request:
+    types: [assigned, review_requested]
   push:
   workflow_dispatch:
 
