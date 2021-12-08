@@ -1,0 +1,26 @@
+name: Add a build scan comment to PR
+on: pull_request
+jobs:
+  gradle:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-java@v1
+      with:
+        java-version: 11
+    - uses: gradle/gradle-build-action@v2
+      id: gradle
+      with:
+        build-root-directory: __tests__/samples/kotlin-dsl
+        arguments: help
+    - name: "Comment build scan url"
+      uses: actions/github-script@v3
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          github.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: 'Dummy comment for PR: ${{ steps.gradle.outputs.build-scan-url }}'
+          })
