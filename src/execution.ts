@@ -1,8 +1,10 @@
+import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import fs from 'fs'
 import path from 'path'
+import * as gradlew from './gradlew'
 
-export async function execute(executable: string, root: string, args: string[]): Promise<BuildResult> {
+export async function executeGradleBuild(executable: string | undefined, root: string, args: string[]): Promise<void> {
     let buildScanUrl: string | undefined
 
     const buildScanFile = path.resolve(root, 'gradle-build-scan.txt')
@@ -10,7 +12,9 @@ export async function execute(executable: string, root: string, args: string[]):
         fs.unlinkSync(buildScanFile)
     }
 
-    const status: number = await exec.exec(executable, args, {
+    // Use the provided executable, or look for a Gradle wrapper script to run
+    const toExecute = executable ?? gradlew.locateGradleWrapperScript(root)
+    const status: number = await exec.exec(toExecute, args, {
         cwd: root,
         ignoreReturnCode: true
     })
@@ -19,14 +23,11 @@ export async function execute(executable: string, root: string, args: string[]):
         buildScanUrl = fs.readFileSync(buildScanFile, 'utf-8')
     }
 
-    return new BuildResultImpl(status, buildScanUrl)
-}
-
-export interface BuildResult {
-    readonly status: number
-    readonly buildScanUrl?: string
-}
-
-class BuildResultImpl implements BuildResult {
-    constructor(readonly status: number, readonly buildScanUrl?: string) {}
+    if (status !== 0) {
+        if (buildScanUrl) {
+            core.setFailed(`Gradle build failed: ${buildScanUrl}`)
+        } else {
+            core.setFailed(`Gradle build failed: process exited with status ${status}`)
+        }
+    }
 }

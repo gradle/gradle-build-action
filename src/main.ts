@@ -5,7 +5,6 @@ import {parseArgsStringToArgv} from 'string-argv'
 
 import * as caches from './caches'
 import * as execution from './execution'
-import * as gradlew from './gradlew'
 import * as provision from './provision'
 
 /**
@@ -19,20 +18,16 @@ export async function run(): Promise<void> {
 
         await caches.restore(gradleUserHome)
 
+        const executable = await provisionGradle(workspaceDirectory)
+        // executable will be undefined if using Gradle wrapper
+        if (executable !== undefined) {
+            core.addPath(path.dirname(executable))
+        }
+
+        // Only execute if arguments have been provided
         const args: string[] = parseCommandLineArguments()
-
-        const result = await execution.execute(
-            await resolveGradleExecutable(workspaceDirectory, buildRootDirectory),
-            buildRootDirectory,
-            args
-        )
-
-        if (result.status !== 0) {
-            if (result.buildScanUrl) {
-                core.setFailed(`Gradle build failed: ${result.buildScanUrl}`)
-            } else {
-                core.setFailed(`Gradle build failed: process exited with status ${result.status}`)
-            }
+        if (args.length > 0) {
+            await execution.executeGradleBuild(executable, buildRootDirectory, args)
         }
     } catch (error) {
         core.setFailed(String(error))
@@ -44,7 +39,7 @@ export async function run(): Promise<void> {
 
 run()
 
-async function resolveGradleExecutable(workspaceDirectory: string, buildRootDirectory: string): Promise<string> {
+async function provisionGradle(workspaceDirectory: string): Promise<string | undefined> {
     const gradleVersion = core.getInput('gradle-version')
     if (gradleVersion !== '' && gradleVersion !== 'wrapper') {
         return path.resolve(await provision.gradleVersion(gradleVersion))
@@ -55,7 +50,7 @@ async function resolveGradleExecutable(workspaceDirectory: string, buildRootDire
         return path.resolve(workspaceDirectory, gradleExecutable)
     }
 
-    return gradlew.locateGradleWrapperScript(buildRootDirectory)
+    return undefined
 }
 
 function resolveBuildRootDirectory(baseDirectory: string): string {
