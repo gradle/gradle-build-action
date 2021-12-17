@@ -16,3 +16,15 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+
+tasks.named("test").configure {
+    // Use an environment variable to bypass config-cache checks
+    if (System.getenv("VERIFY_CACHED_CONFIGURATION") != null) {
+        throw RuntimeException("Configuration was not cached: unexpected configuration of test task")
+    }
+    doLast {
+        if (System.getProperties().containsKey("verifyCachedBuild")) {
+            throw RuntimeException("Build was not cached: unexpected execution of test task")
+        }
+    }
+}

@@ -1,25 +1,26 @@
+import * as core from '@actions/core'
 import {GradleUserHomeCache} from './cache-gradle-user-home'
 import {ProjectDotGradleCache} from './cache-project-dot-gradle'
-import * as core from '@actions/core'
 import {isCacheDisabled, isCacheReadOnly} from './cache-utils'
-import {CacheEntryListener, CacheListener} from './cache-base'
+import {logCachingReport, CacheListener} from './cache-reporting'
 
-const BUILD_ROOT_DIR = 'BUILD_ROOT_DIR'
+const CACHE_RESTORED_VAR = 'GRADLE_BUILD_ACTION_CACHE_RESTORED'
+const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
 const CACHE_LISTENER = 'CACHE_LISTENER'
 
-export async function restore(buildRootDirectory: string): Promise<void> {
-    const gradleUserHomeCache = new GradleUserHomeCache(buildRootDirectory)
-    const projectDotGradleCache = new ProjectDotGradleCache(buildRootDirectory)
-
-    gradleUserHomeCache.init()
-
-    if (isCacheDisabled()) {
-        core.info('Cache is disabled: will not restore state from previous builds.')
+export async function restore(gradleUserHome: string): Promise<void> {
+    if (!shouldRestoreCaches()) {
         return
     }
 
+    const gradleUserHomeCache = new GradleUserHomeCache(gradleUserHome)
+    gradleUserHomeCache.init()
+
+    const projectDotGradleCache = new ProjectDotGradleCache(gradleUserHome)
+    projectDotGradleCache.init()
+
     await core.group('Restore Gradle state from cache', async () => {
-        core.saveState(BUILD_ROOT_DIR, buildRootDirectory)
+        core.saveState(GRADLE_USER_HOME, gradleUserHome)
 
         const cacheListener = new CacheListener()
         await gradleUserHomeCache.restore(cacheListener)
@@ -38,6 +39,10 @@ export async function restore(buildRootDirectory: string): Promise<void> {
 }
 
 export async function save(): Promise<void> {
+    if (!shouldSaveCaches()) {
+        return
+    }
+
     const cacheListener: CacheListener = CacheListener.rehydrate(core.getState(CACHE_LISTENER))
 
     if (isCacheReadOnly()) {
@@ -47,56 +52,44 @@ export async function save(): Promise<void> {
     }
 
     await core.group('Caching Gradle state', async () => {
-        const buildRootDirectory = core.getState(BUILD_ROOT_DIR)
+        const gradleUserHome = core.getState(GRADLE_USER_HOME)
         return Promise.all([
-            new GradleUserHomeCache(buildRootDirectory).save(cacheListener),
-            new ProjectDotGradleCache(buildRootDirectory).save(cacheListener)
+            new GradleUserHomeCache(gradleUserHome).save(cacheListener),
+            new ProjectDotGradleCache(gradleUserHome).save(cacheListener)
         ])
     })
 
     logCachingReport(cacheListener)
 }
 
-function logCachingReport(listener: CacheListener): void {
-    if (listener.cacheEntries.length === 0) {
-        return
+function shouldRestoreCaches(): boolean {
+    if (isCacheDisabled()) {
+        core.info('Cache is disabled: will not restore state from previous builds.')
+        return false
     }
 
-    core.info(`---------- Caching Summary -------------
-Restored Entries Count: ${getCount(listener.cacheEntries, e => e.restoredSize)}
-                  Size: ${getSum(listener.cacheEntries, e => e.restoredSize)}
-Saved Entries    Count: ${getCount(listener.cacheEntries, e => e.savedSize)}
-                  Size: ${getSum(listener.cacheEntries, e => e.savedSize)}`)
-
-    core.startGroup('Cache Entry details')
-    for (const entry of listener.cacheEntries) {
-        core.info(`Entry: ${entry.entryName}
-    Requested Key : ${entry.requestedKey ?? ''}
-    Restored  Key : ${entry.restoredKey ?? ''}
-              Size: ${formatSize(entry.restoredSize)}
-    Saved     Key : ${entry.savedKey ?? ''}
-              Size: ${formatSize(entry.savedSize)}`)
+    if (process.env[CACHE_RESTORED_VAR]) {
+        core.info('Cache only restored on first action step.')
+        return false
     }
-    core.endGroup()
+
+    // Export var that is detected in all later restore steps
+    core.exportVariable(CACHE_RESTORED_VAR, true)
+    // Export state that is detected in corresponding post-action step
+    core.saveState(CACHE_RESTORED_VAR, true)
+    return true
 }
 
-function getCount(
-    cacheEntries: CacheEntryListener[],
-    predicate: (value: CacheEntryListener) => number | undefined
-): number {
-    return cacheEntries.filter(e => predicate(e) !== undefined).length
-}
-
-function getSum(
-    cacheEntries: CacheEntryListener[],
-    predicate: (value: CacheEntryListener) => number | undefined
-): string {
-    return formatSize(cacheEntries.map(e => predicate(e) ?? 0).reduce((p, v) => p + v, 0))
-}
-
-function formatSize(bytes: number | undefined): string {
-    if (bytes === undefined || bytes === 0) {
-        return ''
+function shouldSaveCaches(): boolean {
+    if (isCacheDisabled()) {
+        core.info('Cache is disabled: will not save state for later builds.')
+        return false
     }
-    return `${Math.round(bytes / (1024 * 1024))} MB (${bytes} B)`
+
+    if (!core.getState(CACHE_RESTORED_VAR)) {
+        core.info('Cache will only be saved in final post-action step.')
+        return false
+    }
+
+    return true
 }

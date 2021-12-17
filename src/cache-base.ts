@@ -1,10 +1,15 @@
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 import * as github from '@actions/github'
-import {isCacheDebuggingEnabled, getCacheKeyPrefix, hashStrings, handleCacheFailure} from './cache-utils'
+import path from 'path'
+import fs from 'fs'
+import {CacheListener} from './cache-reporting'
+import {isCacheDebuggingEnabled, getCacheKeyPrefix, determineJobContext, handleCacheFailure} from './cache-utils'
 
 const CACHE_PROTOCOL_VERSION = 'v5-'
-const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
+
+export const META_FILE_DIR = '.gradle-build-action'
+export const PROJECT_ROOTS_FILE = 'project-roots.txt'
 
 /**
  * Represents a key used to restore a cache entry.
@@ -57,100 +62,17 @@ function generateCacheKey(cacheName: string): CacheKey {
     return new CacheKey(cacheKey, [cacheKeyForJobContext, cacheKeyForJob, cacheKeyForOs])
 }
 
-function determineJobContext(): string {
-    // By default, we hash the full `matrix` data for the run, to uniquely identify this job invocation
-    // The only way we can obtain the `matrix` data is via the `workflow-job-context` parameter in action.yml.
-    const workflowJobContext = core.getInput(JOB_CONTEXT_PARAMETER)
-    return hashStrings([workflowJobContext])
-}
-
-/**
- * Collects information on what entries were saved and restored during the action.
- * This information is used to generate a summary of the cache usage.
- */
-export class CacheListener {
-    cacheEntries: CacheEntryListener[] = []
-
-    get fullyRestored(): boolean {
-        return this.cacheEntries.every(x => !x.wasRequestedButNotRestored())
-    }
-
-    entry(name: string): CacheEntryListener {
-        for (const entry of this.cacheEntries) {
-            if (entry.entryName === name) {
-                return entry
-            }
-        }
-
-        const newEntry = new CacheEntryListener(name)
-        this.cacheEntries.push(newEntry)
-        return newEntry
-    }
-
-    stringify(): string {
-        return JSON.stringify(this)
-    }
-
-    static rehydrate(stringRep: string): CacheListener {
-        const rehydrated: CacheListener = Object.assign(new CacheListener(), JSON.parse(stringRep))
-        const entries = rehydrated.cacheEntries
-        for (let index = 0; index < entries.length; index++) {
-            const rawEntry = entries[index]
-            entries[index] = Object.assign(new CacheEntryListener(rawEntry.entryName), rawEntry)
-        }
-        return rehydrated
-    }
-}
-
-/**
- * Collects information on the state of a single cache entry.
- */
-export class CacheEntryListener {
-    entryName: string
-    requestedKey: string | undefined
-    requestedRestoreKeys: string[] | undefined
-    restoredKey: string | undefined
-    restoredSize: number | undefined
-
-    savedKey: string | undefined
-    savedSize: number | undefined
-
-    constructor(entryName: string) {
-        this.entryName = entryName
-    }
-
-    wasRequestedButNotRestored(): boolean {
-        return this.requestedKey !== undefined && this.restoredKey === undefined
-    }
-
-    markRequested(key: string, restoreKeys: string[] = []): CacheEntryListener {
-        this.requestedKey = key
-        this.requestedRestoreKeys = restoreKeys
-        return this
-    }
-
-    markRestored(key: string, size: number | undefined): CacheEntryListener {
-        this.restoredKey = key
-        this.restoredSize = size
-        return this
-    }
-
-    markSaved(key: string, size: number | undefined): CacheEntryListener {
-        this.savedKey = key
-        this.savedSize = size
-        return this
-    }
-}
-
 export abstract class AbstractCache {
     private cacheName: string
     private cacheDescription: string
     private cacheKeyStateKey: string
     private cacheResultStateKey: string
 
+    protected readonly gradleUserHome: string
     protected readonly cacheDebuggingEnabled: boolean
 
-    constructor(cacheName: string, cacheDescription: string) {
+    constructor(gradleUserHome: string, cacheName: string, cacheDescription: string) {
+        this.gradleUserHome = gradleUserHome
         this.cacheName = cacheName
         this.cacheDescription = cacheDescription
         this.cacheKeyStateKey = `CACHE_KEY_${cacheName}`
@@ -158,23 +80,28 @@ export abstract class AbstractCache {
         this.cacheDebuggingEnabled = isCacheDebuggingEnabled()
     }
 
+    init(): void {
+        const actionCacheDir = path.resolve(this.gradleUserHome, '.gradle-build-action')
+        fs.mkdirSync(actionCacheDir, {recursive: true})
+
+        const initScriptsDir = path.resolve(this.gradleUserHome, 'init.d')
+        fs.mkdirSync(initScriptsDir, {recursive: true})
+
+        this.initializeGradleUserHome(this.gradleUserHome, initScriptsDir)
+    }
+
     /**
      * Restores the cache entry, finding the closest match to the currently running job.
-     * If the target output already exists, caching will be skipped.
      */
     async restore(listener: CacheListener): Promise<void> {
-        if (this.cacheOutputExists()) {
-            core.info(`${this.cacheDescription} already exists. Not restoring from cache.`)
-            return
-        }
         const entryListener = listener.entry(this.cacheDescription)
 
         const cacheKey = this.prepareCacheKey()
 
         this.debug(
             `Requesting ${this.cacheDescription} with
-                key:${cacheKey.key}
-                restoreKeys:[${cacheKey.restoreKeys}]`
+    key:${cacheKey.key}
+    restoreKeys:[${cacheKey.restoreKeys}]`
         )
 
         const cacheResult = await this.restoreCache(this.getCachePath(), cacheKey.key, cacheKey.restoreKeys)
@@ -219,27 +146,16 @@ export abstract class AbstractCache {
     protected async afterRestore(_listener: CacheListener): Promise<void> {}
 
     /**
-     * Saves the cache entry based on the current cache key, unless:
-     * - If the cache output existed before restore, then it is not saved.
-     * - If the cache was restored with the exact key, we cannot overwrite it.
+     * Saves the cache entry based on the current cache key unless the cache was restored with the exact key,
+     * in which case we cannot overwrite it.
      *
      * If the cache entry was restored with a partial match on a restore key, then
      * it is saved with the exact key.
      */
     async save(listener: CacheListener): Promise<void> {
-        if (!this.cacheOutputExists()) {
-            core.info(`No ${this.cacheDescription} to cache.`)
-            return
-        }
-
         // Retrieve the state set in the previous 'restore' step.
         const cacheKeyFromRestore = core.getState(this.cacheKeyStateKey)
         const cacheResultFromRestore = core.getState(this.cacheResultStateKey)
-
-        if (!cacheKeyFromRestore) {
-            core.info(`${this.cacheDescription} existed prior to cache restore. Not saving.`)
-            return
-        }
 
         if (cacheResultFromRestore && cacheKeyFromRestore === cacheResultFromRestore) {
             core.info(`Cache hit occurred on the cache key ${cacheKeyFromRestore}, not saving cache.`)
@@ -283,6 +199,6 @@ export abstract class AbstractCache {
         }
     }
 
-    protected abstract cacheOutputExists(): boolean
     protected abstract getCachePath(): string[]
+    protected abstract initializeGradleUserHome(gradleUserHome: string, initScriptsDir: string): void
 }

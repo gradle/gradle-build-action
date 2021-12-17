@@ -1,14 +1,13 @@
 import path from 'path'
 import fs from 'fs'
-import os from 'os'
 import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 import * as exec from '@actions/exec'
 
-import {AbstractCache, CacheEntryListener, CacheListener} from './cache-base'
+import {AbstractCache, META_FILE_DIR} from './cache-base'
+import {CacheEntryListener, CacheListener} from './cache-reporting'
 import {getCacheKeyPrefix, hashFileNames, tryDelete} from './cache-utils'
 
-const META_FILE_DIR = '.gradle-build-action'
 const META_FILE = 'cache-metadata.json'
 
 const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes'
@@ -46,16 +45,8 @@ class ExtractedCacheEntryMetadata {
  * for more efficient storage.
  */
 export class GradleUserHomeCache extends AbstractCache {
-    private gradleUserHome: string
-
-    constructor(rootDir: string) {
-        super('gradle', 'Gradle User Home')
-        this.gradleUserHome = this.determineGradleUserHome(rootDir)
-    }
-
-    init(): void {
-        this.debug(`Initializing Gradle User Home with properties and init script: ${this.gradleUserHome}`)
-        initializeGradleUserHome(this.gradleUserHome)
+    constructor(gradleUserHome: string) {
+        super(gradleUserHome, 'gradle', 'Gradle User Home')
     }
 
     /**
@@ -284,21 +275,6 @@ export class GradleUserHomeCache extends AbstractCache {
         fs.writeFileSync(cacheMetadataFile, filedata, 'utf-8')
     }
 
-    protected determineGradleUserHome(rootDir: string): string {
-        const customGradleUserHome = process.env['GRADLE_USER_HOME']
-        if (customGradleUserHome) {
-            return path.resolve(rootDir, customGradleUserHome)
-        }
-
-        return path.resolve(os.homedir(), '.gradle')
-    }
-
-    protected cacheOutputExists(): boolean {
-        // Need to check for 'caches' directory to avoid incorrect detection on MacOS agents
-        const dir = path.resolve(this.gradleUserHome, 'caches')
-        return fs.existsSync(dir)
-    }
-
     /**
      * Determines the paths within Gradle User Home to cache.
      * By default, this is the 'caches' and 'notifications' directories,
@@ -363,21 +339,17 @@ export class GradleUserHomeCache extends AbstractCache {
 
         core.info('-----------------------')
     }
-}
 
-function initializeGradleUserHome(gradleUserHome: string): void {
-    fs.mkdirSync(gradleUserHome, {recursive: true})
+    protected initializeGradleUserHome(gradleUserHome: string, initScriptsDir: string): void {
+        const propertiesFile = path.resolve(gradleUserHome, 'gradle.properties')
+        fs.writeFileSync(propertiesFile, 'org.gradle.daemon=false')
 
-    const propertiesFile = path.resolve(gradleUserHome, 'gradle.properties')
-    fs.writeFileSync(propertiesFile, 'org.gradle.daemon=false')
+        const buildScanCapture = path.resolve(initScriptsDir, 'build-scan-capture.init.gradle')
+        fs.writeFileSync(
+            buildScanCapture,
+            `import org.gradle.util.GradleVersion
 
-    const initScript = path.resolve(gradleUserHome, 'init.gradle')
-    fs.writeFileSync(
-        initScript,
-        `
-import org.gradle.util.GradleVersion
-
-// Don't run against the included builds (if the main build has any).
+// Only run again root build. Do not run against included builds.
 def isTopLevelBuild = gradle.getParent() == null
 if (isTopLevelBuild) {
     def version = GradleVersion.current().baseVersion
@@ -417,7 +389,7 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
             println("::set-output name=build-scan-url::\${buildScan.buildScanUri}")
         }
     }
-}
-`
-    )
+}`
+        )
+    }
 }

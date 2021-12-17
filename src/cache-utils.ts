@@ -4,6 +4,7 @@ import * as crypto from 'crypto'
 import * as path from 'path'
 import * as fs from 'fs'
 
+const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
 const CACHE_DISABLED_PARAMETER = 'cache-disabled'
 const CACHE_READONLY_PARAMETER = 'cache-read-only'
 const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED'
@@ -26,16 +27,23 @@ export function getCacheKeyPrefix(): string {
     return process.env[CACHE_PREFIX_VAR] || ''
 }
 
+export function determineJobContext(): string {
+    // By default, we hash the full `matrix` data for the run, to uniquely identify this job invocation
+    // The only way we can obtain the `matrix` data is via the `workflow-job-context` parameter in action.yml.
+    const workflowJobContext = core.getInput(JOB_CONTEXT_PARAMETER)
+    return hashStrings([workflowJobContext])
+}
+
+export function hashFileNames(fileNames: string[]): string {
+    return hashStrings(fileNames.map(x => x.replace(new RegExp(`\\${path.sep}`, 'g'), '/')))
+}
+
 export function hashStrings(values: string[]): string {
     const hash = crypto.createHash('md5')
     for (const value of values) {
         hash.update(value)
     }
     return hash.digest('hex')
-}
-
-export function hashFileNames(fileNames: string[]): string {
-    return hashStrings(fileNames.map(x => x.replace(new RegExp(`\\${path.sep}`, 'g'), '/')))
 }
 
 export function handleCacheFailure(error: unknown, message: string): void {
