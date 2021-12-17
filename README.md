@@ -4,11 +4,15 @@ This GitHub Action can be used to configure Gradle and optionally execute a Grad
 
 ## Usage
 
-The following workflow will run `./gradlew build` on ubuntu, macos and windows. 
+The following workflows will execute a Gradle build on ubuntu, macos and windows. 
 The only prerequisite is to have Java installed: you define the version of Java you need to run the build using the `actions/setup-java` action.
 
+### Use the action to setup Gradle for later steps
+
+If you have an existing workflow invoking Gradle, you can simply add an initial "Setup Gradle" Step to benefit from caching, 
+build-scan capture and other features of the gradle-build-action.
+
 ```yaml
-# .github/workflows/gradle-build-pr.yml
 name: Run Gradle on PRs
 on: pull_request
 jobs:
@@ -22,35 +26,44 @@ jobs:
     - uses: actions/setup-java@v1
       with:
         java-version: 11
-    - uses: gradle/gradle-build-action@v2
+        
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+    
+    - name: Execute Gradle build
+      run: ./gradlew build
+```
+
+### Use the action to setup and execute Gradle
+
+The `gradle-build-action` can also be used for the actual Gradle execution, by providing an `arguments` parameter.
+The following workflow is effectively the same as the one above, without using a separate `run` step.
+
+```yaml
+name: Run Gradle on PRs
+on: pull_request
+jobs:
+  gradle:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-java@v1
+      with:
+        java-version: 11
+    
+    - name: Setup and execute Gradle build
+      uses: gradle/gradle-build-action@v2
       with:
         arguments: build
 ```
 
-The `gradle-build-action` can also be used for caching Gradle state without owning the actual Gradle execution.
-The following workflow is effectively the same as the one above, but supports full scripting of the Gradle invocation.
-
-```yaml
-# .github/workflows/gradle-build-pr.yml
-name: Run Gradle on PRs
-on: pull_request
-jobs:
-  gradle:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-java@v1
-      with:
-        java-version: 11
-    - uses: gradle/gradle-build-action@v2
-    - run: ./gradlew build
-```
+### Multiple Gradle executions in the same Job
 
 It is possible to configure multiple Gradle executions to run sequentially in the same job. 
-Each invocation will start its run with the filesystem state remaining from the previous execution.
+The initial Action step will perform the Gradle setup.
 
 ```yaml
 - uses: gradle/gradle-build-action@v2
@@ -69,7 +82,7 @@ The same can be achieved with a single `gradle-build-action` step and multiple `
 - run: ./gradlew check
 ```
 
-### Why is this better than running Gradle directly?
+## Why use the `gradle-build-action`?
 
 It is possible to directly invoke Gradle in your workflow, and the `setup-java` action provides a simple way to cache Gradle dependencies. 
 
@@ -83,9 +96,9 @@ However, the `gradle-build-action` offers a number of advantages over this appro
 The `gradle-build-action` is designed to provide these benefits with minimal configuration. 
 These features work both when Gradle is executed via the `gradle-build-action` and for any Gradle execution in subsequent steps.
 
-## Gradle Installation
+## Use specific Gradle version
 
-The `gradle-build-action` will download and install a specified Gradle version, adding this installed version to the PATH.
+The `gradle-build-action` will download, install and run a specified Gradle version, adding this installed version to the PATH.
 Downloaded Gradle versions are stored in the GitHub Actions cache, to avoid requiring downloading again later.
 
 ```yaml
@@ -109,7 +122,6 @@ Moreover, you can use the following aliases:
 This can be handy to automatically verify your build works with the latest release candidate of Gradle:
 
 ```yaml
-# .github/workflows/test-gradle-rc.yml
 name: Test latest Gradle RC
 on:
   schedule:
