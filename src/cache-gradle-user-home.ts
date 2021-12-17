@@ -229,7 +229,8 @@ export class GradleUserHomeCache extends AbstractCache {
     }
 
     private isBundlePattern(pattern: string): boolean {
-        return pattern.endsWith('*')
+        // If pattern ends with `/*`, then we cache as a "bundle": all of the matching files in a single cache entry
+        return pattern.endsWith(`${path.sep}*`)
     }
 
     private async collectCacheResults(processes: Promise<ExtractedCacheEntry>[]): Promise<ExtractedCacheEntry[]> {
