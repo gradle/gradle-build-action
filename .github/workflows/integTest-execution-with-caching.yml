@@ -1,4 +1,4 @@
-name: Test caching with Kotlin DSL
+name: Test save/restore Gradle state with direct execution
 
 on:
   pull_request:
@@ -8,10 +8,8 @@ on:
 
 env:
   GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
-  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
-  # Use kotlin-dsl project to verify caching of generated jars and compiled scripts
   seed-build:
     strategy:
       matrix:
@@ -20,13 +18,13 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Setup Gradle
+    - name: Exucute Gradle build
       uses: ./
-    - name: Build kotlin-dsl project
-      working-directory: __tests__/samples/kotlin-dsl
-      run: ./gradlew test
+      with:
+        build-root-directory: __tests__/samples/groovy-dsl
+        arguments: test
 
-  # Check that the build can run --offline
+  # Test that the gradle-user-home is restored
   verify-build:
     needs: seed-build
     strategy:
@@ -36,8 +34,10 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Setup Gradle
+    - name: Execute Gradle build
       uses: ./
-    - name: Build kotlin-dsl project
-      working-directory: __tests__/samples/kotlin-dsl
-      run: ./gradlew test --offline
+      with:
+        cache-read-only: true
+        build-root-directory: __tests__/samples/groovy-dsl
+        arguments: test --offline -DverifyCachedBuild=true
+

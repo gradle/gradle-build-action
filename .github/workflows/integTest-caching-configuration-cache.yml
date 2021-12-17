@@ -21,19 +21,16 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Build with configuration-cache enabled
+    - name: Setup Gradle
       uses: ./
-      with:
-        build-root-directory: __tests__/samples/groovy-dsl
-        arguments: test --configuration-cache
-    - name: Second build with configuration-cache enabled
-      uses: ./
-      with:
-        build-root-directory: __tests__/samples/kotlin-dsl
-        arguments: test --configuration-cache
+    - name: Groovy build with configuration-cache enabled
+      working-directory: __tests__/samples/groovy-dsl
+      run: ./gradlew test --configuration-cache
+    - name: Kotlin build with configuration-cache enabled
+      working-directory: __tests__/samples/kotlin-dsl
+      run: ./gradlew test --configuration-cache
 
-  # Test restore configuration-cache
-  configuration-cache:
+  configuration-cache-groovy:
     needs: seed-build
     strategy:
       matrix:
@@ -42,17 +39,18 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Execute Gradle build and verify cached configuration
+    - name: Setup Gradle
       uses: ./
+      with:
+        cache-read-only: true
+    - name: Execute Gradle build and verify cached configuration
       env: 
         VERIFY_CACHED_CONFIGURATION: true
-      with:
-        build-root-directory: __tests__/samples/groovy-dsl
-        arguments: test --configuration-cache
-        cache-read-only: true
+      working-directory: __tests__/samples/groovy-dsl
+      run: ./gradlew test --configuration-cache
 
-  # Test restore configuration-cache from second build invocation
-  configuration-cache-2:
+  # Test restore configuration-cache from the second build invocation
+  configuration-cache-kotlin:
     needs: seed-build
     strategy:
       matrix:
@@ -61,14 +59,15 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Execute Gradle build and verify cached configuration
+    - name: Setup Gradle
       uses: ./
+      with:
+        cache-read-only: true
+    - name: Execute Gradle build and verify cached configuration
       env: 
         VERIFY_CACHED_CONFIGURATION: true
-      with:
-        build-root-directory: __tests__/samples/kotlin-dsl
-        arguments: test --configuration-cache
-        cache-read-only: true
+      working-directory: __tests__/samples/kotlin-dsl
+      run: ./gradlew test --configuration-cache
 
   # Check that the build can run when no extracted cache entries are restored
   no-extracted-cache-entries-restored:
@@ -80,11 +79,11 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Execute Gradle build with no cache extracted cache entries restored
+    - name: Setup Gradle with no cache extracted cache entries restored
       uses: ./
       with:
-        build-root-directory: __tests__/samples/groovy-dsl
-        arguments: test --configuration-cache
         cache-read-only: true
         gradle-home-extracted-cache-entries: '[]'
-
+    - name: Check execute Gradle build with configuration cache enabled (but not restored)
+      working-directory: __tests__/samples/groovy-dsl
+      run: ./gradlew test --configuration-cache

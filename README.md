@@ -1,6 +1,6 @@
 # Execute Gradle builds in GitHub Actions workflows
 
-This GitHub Action can be used to execute a Gradle build on any platform supported by GitHub Actions.
+This GitHub Action can be used to configure Gradle and optionally execute a Gradle build on any platform supported by GitHub Actions.
 
 ## Usage
 
@@ -27,6 +27,28 @@ jobs:
         arguments: build
 ```
 
+The `gradle-build-action` can also be used for caching Gradle state without owning the actual Gradle execution.
+The following workflow is effectively the same as the one above, but supports full scripting of the Gradle invocation.
+
+```yaml
+# .github/workflows/gradle-build-pr.yml
+name: Run Gradle on PRs
+on: pull_request
+jobs:
+  gradle:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-java@v1
+      with:
+        java-version: 11
+    - uses: gradle/gradle-build-action@v2
+    - run: ./gradlew build
+```
+
 It is possible to configure multiple Gradle executions to run sequentially in the same job. 
 Each invocation will start its run with the filesystem state remaining from the previous execution.
 
@@ -37,6 +59,14 @@ Each invocation will start its run with the filesystem state remaining from the 
 - uses: gradle/gradle-build-action@v2
   with:
     arguments: check
+```
+
+The same can be achieved with a single `gradle-build-action` step and multiple `run` steps.
+
+```yaml
+- uses: gradle/gradle-build-action@v2
+- run: ./gradlew assemble
+- run: ./gradlew check
 ```
 
 ### Why is this better than running Gradle directly?
@@ -51,67 +81,12 @@ However, the `gradle-build-action` offers a number of advantages over this appro
 - [Automatic capture of build scan links](#build-scans) from the build, making these easier to locate for workflow run.
 
 The `gradle-build-action` is designed to provide these benefits with minimal configuration. 
+These features work both when Gradle is executed via the `gradle-build-action` and for any Gradle execution in subsequent steps.
 
-## Gradle Execution
+## Gradle Installation
 
-### Command-line arguments
-
-The `arguments` input can used to pass arbitrary arguments to the `gradle` command line.
-Arguments can be supplied in a single line, or as a multi-line input.
-
-Here are some valid examples:
-```yaml
-arguments: build
-arguments: check --scan
-arguments: some arbitrary tasks
-arguments: build -PgradleProperty=foo
-arguments: |
-    build
-    --scan
-    -PgradleProperty=foo
-    -DsystemProperty=bar
-```
-
-See `gradle --help` for more information.
-
-If you need to pass environment variables, use the GitHub Actions workflow syntax:
-
-```yaml
-- uses: gradle/gradle-build-action@v2
-  env:
-    CI: true
-  with:
-    arguments: build
-```
-
-### Gradle build located in a subdirectory
-
-By default, the action will execute Gradle in the root directory of your project. 
-Use the `build-root-directory` input to target a Gradle build in a subdirectory.
-
-```yaml
-- uses: gradle/gradle-build-action@v2
-  with:
-    build-root-directory: some/subdirectory
-```
-
-### Using a specific Gradle executable
-
-The action will first look for a Gradle wrapper script in the root directory of your project. 
-If not found, `gradle` will be executed from the PATH.
-Use the `gradle-executable` input to execute using a specific Gradle installation.
-
-```yaml
- - uses: gradle/gradle-build-action@v2
-   with:
-     gradle-executable: /path/to/installed/gradle
-```
-
-This mechanism can also be used to target a Gradle wrapper script that is located in a non-default location.
-
-### Download, install and use a specific Gradle version
-
-The `gradle-build-action` is able to download and install a specific Gradle version to execute.
+The `gradle-build-action` will download and install a specified Gradle version, adding this installed version to the PATH.
+Downloaded Gradle versions are stored in the GitHub Actions cache, to avoid requiring downloading again later.
 
 ```yaml
  - uses: gradle/gradle-build-action@v2
@@ -119,7 +94,7 @@ The `gradle-build-action` is able to download and install a specific Gradle vers
      gradle-version: 6.5
 ```
 
-`gradle-version` can be set to any valid Gradle version.
+The `gradle-version` parameter can be set to any valid Gradle version.
 
 Moreover, you can use the following aliases:
 
@@ -150,8 +125,69 @@ jobs:
     - uses: gradle/gradle-build-action@v2
       with:
         gradle-version: release-candidate
-        arguments: build --dry-run # just test build configuration
+    - run: gradle build --dry-run # just test build configuration
 ```
+
+## Gradle Execution
+
+If the action is configured with an `arguments` input, then Gradle will execute a Gradle build with the arguments provided.
+
+If no `arguments` are provided, the action will not execute Gradle, but will still cache Gradle state and configure build-scan capture for all subsequent Gradle executions.
+
+### Gradle command-line arguments
+
+The `arguments` input can used to pass arbitrary arguments to the `gradle` command line.
+Arguments can be supplied in a single line, or as a multi-line input.
+
+Here are some valid examples:
+```yaml
+arguments: build
+arguments: check --scan
+arguments: some arbitrary tasks
+arguments: build -PgradleProperty=foo
+arguments: |
+    build
+    --scan
+    -PgradleProperty=foo
+    -DsystemProperty=bar
+```
+
+If you need to pass environment variables, use the GitHub Actions workflow syntax:
+
+```yaml
+- uses: gradle/gradle-build-action@v2
+  env:
+    CI: true
+  with:
+    arguments: build
+```
+
+### Gradle build located in a subdirectory
+
+By default, the action will execute Gradle in the root directory of your project. 
+Use the `build-root-directory` input to target a Gradle build in a subdirectory.
+
+```yaml
+- uses: gradle/gradle-build-action@v2
+  with:
+    arguments: build
+    build-root-directory: some/subdirectory
+```
+
+### Using a specific Gradle executable
+
+The action will first look for a Gradle wrapper script in the root directory of your project. 
+If not found, `gradle` will be executed from the PATH.
+Use the `gradle-executable` input to execute using a specific Gradle installation.
+
+```yaml
+ - uses: gradle/gradle-build-action@v2
+   with:
+     arguments: build
+     gradle-executable: /path/to/installed/gradle
+```
+
+This mechanism can also be used to target a Gradle wrapper script that is located in a non-default location.
 
 ## Caching
 
@@ -257,7 +293,7 @@ and you can selectively [exclude content using `gradle-home-cache-exclude`](#gra
 
 If your build publishes a [build scan](https://gradle.com/build-scans/) the `gradle-build-action` action will:
 - Add a notice with the link to the GitHub Actions user interface
-- Emit the link to the published build scan as an output named `build-scan-url`.
+- For each step that executes Gradle, adds the link to the published build scan as a Step output named `build-scan-url`.
 
 You can then use that link in subsequent actions of your workflow. For example:
 
@@ -274,9 +310,8 @@ jobs:
       with:
         java-version: 11
     - uses: gradle/gradle-build-action@v2
-      id: gradle
-      with:
-        arguments: build
+    - id: gradle
+      run: ./gradlew build
     - name: "Comment build scan url"
       uses: actions/github-script@v3
       if: github.event_name == 'pull_request' && failure()
