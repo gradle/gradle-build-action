@@ -1,0 +1,43 @@
+name: Test save/restore Gradle state with direct execution
+
+on:
+  pull_request:
+    types: [assigned, review_requested]
+  push:
+  workflow_dispatch:
+
+env:
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+
+jobs:
+  seed-build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Exucute Gradle build
+      uses: ./
+      with:
+        build-root-directory: __tests__/samples/groovy-dsl
+        arguments: test
+
+  # Test that the gradle-user-home is restored
+  verify-build:
+    needs: seed-build
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Execute Gradle build
+      uses: ./
+      with:
+        cache-read-only: true
+        build-root-directory: __tests__/samples/groovy-dsl
+        arguments: test --offline -DverifyCachedBuild=true
+
