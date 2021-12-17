@@ -1,5 +1,7 @@
 name: Add a build scan comment to PR
-on: pull_request
+on:
+  pull_request:
+    types: [assigned, review_requested]
 jobs:
   gradle:
     runs-on: ubuntu-latest
@@ -21,5 +23,5 @@ jobs:
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: 'Dummy comment for PR: ${{ steps.gradle.outputs.build-scan-url }}'
+            body: 'PR ready for review: ${{ steps.gradle.outputs.build-scan-url }}'
           })
