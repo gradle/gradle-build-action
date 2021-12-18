@@ -1,4 +1,4 @@
-name: Test caching with Kotlin DSL
+name: Test caching with Gradle Plugin project using TestKit
 
 on:
   pull_request:
@@ -11,7 +11,6 @@ env:
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
-  # Use kotlin-dsl project to verify caching of generated jars and compiled scripts
   seed-build:
     strategy:
       matrix:
@@ -22,11 +21,10 @@ jobs:
       uses: actions/checkout@v2
     - name: Setup Gradle
       uses: ./
-    - name: Build kotlin-dsl project
-      working-directory: __tests__/samples/kotlin-dsl
-      run: ./gradlew test
+    - name: Build gradle-plugin project
+      working-directory: __tests__/samples/gradle-plugin
+      run: ./gradlew build
 
-  # Check that the build can run --offline
   verify-build:
     needs: seed-build
     strategy:
@@ -38,6 +36,6 @@ jobs:
       uses: actions/checkout@v2
     - name: Setup Gradle
       uses: ./
-    - name: Build kotlin-dsl project
-      working-directory: __tests__/samples/kotlin-dsl
-      run: ./gradlew test --offline
+    - name: Build gradle-plugin project
+      working-directory: __tests__/samples/gradle-plugin
+      run: ./gradlew build --offline

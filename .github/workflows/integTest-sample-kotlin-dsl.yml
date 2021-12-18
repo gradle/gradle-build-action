@@ -1,0 +1,41 @@
+name: Test caching with Kotlin DSL
+
+on:
+  pull_request:
+    types: [assigned, review_requested]
+  push:
+  workflow_dispatch:
+
+env:
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+
+jobs:
+  seed-build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle
+      uses: ./
+    - name: Build kotlin-dsl project
+      working-directory: __tests__/samples/kotlin-dsl
+      run: ./gradlew build
+
+  verify-build:
+    needs: seed-build
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle
+      uses: ./
+    - name: Build kotlin-dsl project
+      working-directory: __tests__/samples/kotlin-dsl
+      run: ./gradlew build --offline
