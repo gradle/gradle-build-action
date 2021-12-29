@@ -46,6 +46,36 @@ export function hashStrings(values: string[]): string {
     return hash.digest('hex')
 }
 
+export async function restoreCache(
+    cachePath: string[],
+    cacheKey: string,
+    cacheRestoreKeys: string[] = []
+): Promise<cache.CacheEntry | undefined> {
+    try {
+        return await cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys)
+    } catch (error) {
+        handleCacheFailure(error, `Failed to restore ${cacheKey}`)
+        return undefined
+    }
+}
+
+export async function saveCache(cachePath: string[], cacheKey: string): Promise<cache.CacheEntry | undefined> {
+    try {
+        return await cache.saveCache(cachePath, cacheKey)
+    } catch (error) {
+        handleCacheFailure(error, `Failed to save cache entry ${cacheKey}`)
+    }
+    return undefined
+}
+
+export function cacheDebug(message: string): void {
+    if (isCacheDebuggingEnabled()) {
+        core.info(message)
+    } else {
+        core.debug(message)
+    }
+}
+
 export function handleCacheFailure(error: unknown, message: string): void {
     if (error instanceof cache.ValidationError) {
         // Fail on cache validation errors

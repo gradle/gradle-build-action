@@ -73,7 +73,7 @@ jobs:
     - name: Setup Gradle with no extracted cache entries restored
       uses: ./
       env: 
-        GRADLE_BUILD_ACTION_NO_EXTRACTED_ENTRIES: true
+        GRADLE_BUILD_ACTION_SKIP_RESTORE: "generated-gradle-jars|wrapper-zips|java-toolchains|instrumented-jars|dependencies|kotlin-dsl"
       with:
         cache-read-only: true
     - name: Check executee Gradle build
