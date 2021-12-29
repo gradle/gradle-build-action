@@ -12,7 +12,7 @@ const META_FILE = 'cache-metadata.json'
 
 const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes'
 const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes'
-const EXTRACTED_CACHE_ENTRIES_PARAMETER = 'gradle-home-extracted-cache-entries'
+const NO_EXTRACTED_ENTRIES_VAR = 'GRADLE_BUILD_ACTION_NO_EXTRACTED_ENTRIES'
 
 /**
  * Represents the result of attempting to load or store an extracted cache entry.
@@ -41,6 +41,21 @@ class ExtractedCacheEntryMetadata {
 }
 
 /**
+ * The specification for a type of extracted cache entry.
+ */
+class ExtractedCacheEntryDefinition {
+    artifactType: string
+    pattern: string
+    bundle: boolean
+
+    constructor(artifactType: string, pattern: string, bundle: boolean) {
+        this.artifactType = artifactType
+        this.pattern = pattern
+        this.bundle = bundle
+    }
+}
+
+/**
  * Caches and restores the entire Gradle User Home directory, extracting entries containing common artifacts
  * for more efficient storage.
  */
@@ -63,7 +78,6 @@ export class GradleUserHomeCache extends AbstractCache {
      * Each extracted cache entry is restored in parallel, except when debugging is enabled.
      */
     private async restoreExtractedCacheEntries(listener: CacheListener): Promise<void> {
-        const extractedCacheEntryDefinitions = this.getExtractedCacheEntryDefinitions()
         const previouslyExtractedCacheEntries = this.loadExtractedCacheEntries()
 
         const processes: Promise<ExtractedCacheEntry>[] = []
@@ -73,8 +87,8 @@ export class GradleUserHomeCache extends AbstractCache {
             const entryListener = listener.entry(cacheEntry.pattern)
 
             // Handle case where the extracted-cache-entry definitions have been changed
-            if (extractedCacheEntryDefinitions.get(artifactType) === undefined) {
-                core.info(`Found extracted cache entry for ${artifactType} but no such entry defined`)
+            if (process.env[NO_EXTRACTED_ENTRIES_VAR] === 'true') {
+                core.info(`Not restoring any extracted cache entries for ${artifactType}`)
                 entryListener.markRequested('EXTRACTED_ENTRY_NOT_DEFINED')
             } else {
                 processes.push(
@@ -137,7 +151,6 @@ export class GradleUserHomeCache extends AbstractCache {
 
     /**
      * Saves any artifacts that are configured to be cached separately, based on the extracted cache entry definitions.
-     * These definitions are normally fixed, but can be overridden by the `gradle-home-extracted-cache-entries` parameter.
      * Each entry is extracted and saved in parallel, except when debugging is enabled.
      */
     private async saveExtractedCacheEntries(listener: CacheListener): Promise<void> {
@@ -146,7 +159,11 @@ export class GradleUserHomeCache extends AbstractCache {
         const previouslyRestoredEntries = this.loadExtractedCacheEntries()
         const cacheActions: Promise<ExtractedCacheEntry>[] = []
 
-        for (const [artifactType, pattern] of cacheEntryDefinitions) {
+        // For each cache entry definition, determine if it has already been restored, and if not, extract it
+        for (const cacheEntryDefinition of cacheEntryDefinitions) {
+            const artifactType = cacheEntryDefinition.artifactType
+            const pattern = cacheEntryDefinition.pattern
+
             // Find all matching files for this cache entry definition
             const globber = await glob.create(pattern, {
                 implicitDescendants: false,
@@ -159,7 +176,7 @@ export class GradleUserHomeCache extends AbstractCache {
                 continue
             }
 
-            if (this.isBundlePattern(pattern)) {
+            if (cacheEntryDefinition.bundle) {
                 // For an extracted "bundle", use the defined pattern and cache all matching files in a single entry.
                 cacheActions.push(
                     this.saveExtractedCacheEntry(
@@ -300,12 +317,27 @@ export class GradleUserHomeCache extends AbstractCache {
     /**
      * Return the extracted cache entry definitions, which determine which artifacts will be cached
      * separately from the rest of the Gradle User Home cache entry.
-     * This is normally a fixed set, but can be overridden by the `gradle-home-extracted-cache-entries` parameter.
      */
-    private getExtractedCacheEntryDefinitions(): Map<string, string> {
-        const rawDefinitions = core.getInput(EXTRACTED_CACHE_ENTRIES_PARAMETER)
-        const parsedDefinitions = JSON.parse(rawDefinitions)
-        return new Map(Array.from(parsedDefinitions, ([key, value]) => [key, path.resolve(this.gradleUserHome, value)]))
+    private getExtractedCacheEntryDefinitions(): ExtractedCacheEntryDefinition[] {
+        const entryDefinition = (
+            artifactType: string,
+            patterns: string[],
+            bundle: boolean
+        ): ExtractedCacheEntryDefinition => {
+            const resolvedPattern = patterns.map(x => this.resolveCachePath(x)).join('\n')
+            return new ExtractedCacheEntryDefinition(artifactType, resolvedPattern, bundle)
+        }
+
+        const definitions = [
+            entryDefinition('generated-gradle-jars', ['caches/*/generated-gradle-jars/*.jar'], false),
+            entryDefinition('wrapper-zips', ['wrapper/dists/*/*/*.zip'], false),
+            entryDefinition('java-toolchains', ['jdks/*.zip', 'jdks/*.tar.gz'], false),
+            entryDefinition('dependencies', ['caches/modules-*/files-*/*/*/*/*'], true),
+            entryDefinition('instrumented-jars', ['caches/jars-*/*'], true),
+            entryDefinition('kotlin-dsl', ['caches/*/kotlin-dsl/*/*'], true)
+        ]
+        this.debug(`Using extracted cache entry definitions: ${JSON.stringify(definitions, null, 2)}`)
+        return definitions
     }
 
     /**
