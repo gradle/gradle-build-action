@@ -1,0 +1,43 @@
+name: Test save/restore java toolchains
+
+on:
+  pull_request:
+    types: [assigned, review_requested]
+  push:
+  workflow_dispatch:
+
+env:
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+
+jobs:
+  seed-build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle
+      uses: ./
+    - name: Build using Gradle wrapper
+      working-directory: __tests__/samples/java-toolchain
+      run: ./gradlew test --info
+
+  # Test that the gradle-user-home cache will cache the toolchain, by running build with --offline
+  toolchain-cache:
+    needs: seed-build
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle
+      uses: ./
+      with:
+        cache-read-only: true
+    - name: Execute Gradle build with --offline
+      working-directory: __tests__/samples/java-toolchain
+      run: ./gradlew test --info --offline

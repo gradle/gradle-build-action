@@ -1,8 +1,7 @@
 import * as core from '@actions/core'
-import {GradleUserHomeCache} from './cache-gradle-user-home'
-import {ProjectDotGradleCache} from './cache-project-dot-gradle'
 import {isCacheDisabled, isCacheReadOnly} from './cache-utils'
 import {logCachingReport, CacheListener} from './cache-reporting'
+import {GradleStateCache} from './cache-base'
 
 const CACHE_RESTORED_VAR = 'GRADLE_BUILD_ACTION_CACHE_RESTORED'
 const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
@@ -13,29 +12,22 @@ export async function restore(gradleUserHome: string): Promise<void> {
         return
     }
 
-    const gradleUserHomeCache = new GradleUserHomeCache(gradleUserHome)
-    gradleUserHomeCache.init()
-
-    const projectDotGradleCache = new ProjectDotGradleCache(gradleUserHome)
-    projectDotGradleCache.init()
+    const gradleStateCache = new GradleStateCache(gradleUserHome)
+    gradleStateCache.init()
 
     await core.group('Restore Gradle state from cache', async () => {
         core.saveState(GRADLE_USER_HOME, gradleUserHome)
 
         const cacheListener = new CacheListener()
-        await gradleUserHomeCache.restore(cacheListener)
-
-        if (cacheListener.fullyRestored) {
-            // Only restore the configuration-cache if the Gradle Home is fully restored
-            await projectDotGradleCache.restore(cacheListener)
-        } else {
-            // Otherwise, prepare the cache key for later save()
-            core.info('Gradle Home cache not fully restored: not restoring configuration-cache state')
-            projectDotGradleCache.prepareCacheKey()
-        }
+        await gradleStateCache.restore(cacheListener)
 
         core.saveState(CACHE_LISTENER, cacheListener.stringify())
     })
+
+    // Export var that is detected in all later restore steps
+    core.exportVariable(CACHE_RESTORED_VAR, true)
+    // Export state that is detected in corresponding post-action step
+    core.saveState(CACHE_RESTORED_VAR, true)
 }
 
 export async function save(): Promise<void> {
@@ -53,10 +45,7 @@ export async function save(): Promise<void> {
 
     await core.group('Caching Gradle state', async () => {
         const gradleUserHome = core.getState(GRADLE_USER_HOME)
-        return Promise.all([
-            new GradleUserHomeCache(gradleUserHome).save(cacheListener),
-            new ProjectDotGradleCache(gradleUserHome).save(cacheListener)
-        ])
+        return new GradleStateCache(gradleUserHome).save(cacheListener)
     })
 
     logCachingReport(cacheListener)
@@ -72,11 +61,6 @@ function shouldRestoreCaches(): boolean {
         core.info('Cache only restored on first action step.')
         return false
     }
-
-    // Export var that is detected in all later restore steps
-    core.exportVariable(CACHE_RESTORED_VAR, true)
-    // Export state that is detected in corresponding post-action step
-    core.saveState(CACHE_RESTORED_VAR, true)
     return true
 }
 

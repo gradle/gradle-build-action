@@ -1,15 +1,26 @@
 import * as core from '@actions/core'
-import * as cache from '@actions/cache'
+import * as exec from '@actions/exec'
 import * as github from '@actions/github'
 import path from 'path'
 import fs from 'fs'
 import {CacheListener} from './cache-reporting'
-import {isCacheDebuggingEnabled, getCacheKeyPrefix, determineJobContext, handleCacheFailure} from './cache-utils'
+import {
+    getCacheKeyPrefix,
+    determineJobContext,
+    saveCache,
+    restoreCache,
+    cacheDebug,
+    isCacheDebuggingEnabled,
+    tryDelete
+} from './cache-utils'
+import {ConfigurationCacheEntryExtractor, GradleHomeEntryExtractor} from './cache-extract-entries'
 
 const CACHE_PROTOCOL_VERSION = 'v5-'
 
 export const META_FILE_DIR = '.gradle-build-action'
 export const PROJECT_ROOTS_FILE = 'project-roots.txt'
+const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes'
+const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes'
 
 /**
  * Represents a key used to restore a cache entry.
@@ -62,22 +73,20 @@ function generateCacheKey(cacheName: string): CacheKey {
     return new CacheKey(cacheKey, [cacheKeyForJobContext, cacheKeyForJob, cacheKeyForOs])
 }
 
-export abstract class AbstractCache {
+export class GradleStateCache {
     private cacheName: string
     private cacheDescription: string
     private cacheKeyStateKey: string
     private cacheResultStateKey: string
 
     protected readonly gradleUserHome: string
-    protected readonly cacheDebuggingEnabled: boolean
 
-    constructor(gradleUserHome: string, cacheName: string, cacheDescription: string) {
+    constructor(gradleUserHome: string) {
         this.gradleUserHome = gradleUserHome
-        this.cacheName = cacheName
-        this.cacheDescription = cacheDescription
-        this.cacheKeyStateKey = `CACHE_KEY_${cacheName}`
-        this.cacheResultStateKey = `CACHE_RESULT_${cacheName}`
-        this.cacheDebuggingEnabled = isCacheDebuggingEnabled()
+        this.cacheName = 'gradle'
+        this.cacheDescription = 'Gradle User Home'
+        this.cacheKeyStateKey = `CACHE_KEY_gradle`
+        this.cacheResultStateKey = `CACHE_RESULT_gradle`
     }
 
     init(): void {
@@ -96,15 +105,16 @@ export abstract class AbstractCache {
     async restore(listener: CacheListener): Promise<void> {
         const entryListener = listener.entry(this.cacheDescription)
 
-        const cacheKey = this.prepareCacheKey()
+        const cacheKey = generateCacheKey(this.cacheName)
+        core.saveState(this.cacheKeyStateKey, cacheKey.key)
 
-        this.debug(
+        cacheDebug(
             `Requesting ${this.cacheDescription} with
     key:${cacheKey.key}
     restoreKeys:[${cacheKey.restoreKeys}]`
         )
 
-        const cacheResult = await this.restoreCache(this.getCachePath(), cacheKey.key, cacheKey.restoreKeys)
+        const cacheResult = await restoreCache(this.getCachePath(), cacheKey.key, cacheKey.restoreKeys)
         entryListener.markRequested(cacheKey.key, cacheKey.restoreKeys)
 
         if (!cacheResult) {
@@ -124,26 +134,15 @@ export abstract class AbstractCache {
         }
     }
 
-    prepareCacheKey(): CacheKey {
-        const cacheKey = generateCacheKey(this.cacheName)
-        core.saveState(this.cacheKeyStateKey, cacheKey.key)
-        return cacheKey
+    /**
+     * Restore any extracted cache entries after the main Gradle User Home entry is restored.
+     */
+    async afterRestore(listener: CacheListener): Promise<void> {
+        await this.debugReportGradleUserHomeSize('as restored from cache')
+        await new GradleHomeEntryExtractor(this.gradleUserHome).restore(listener)
+        await new ConfigurationCacheEntryExtractor(this.gradleUserHome).restore(listener)
+        await this.debugReportGradleUserHomeSize('after restoring common artifacts')
     }
-
-    protected async restoreCache(
-        cachePath: string[],
-        cacheKey: string,
-        cacheRestoreKeys: string[] = []
-    ): Promise<cache.CacheEntry | undefined> {
-        try {
-            return await cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys)
-        } catch (error) {
-            handleCacheFailure(error, `Failed to restore ${cacheKey}`)
-            return undefined
-        }
-    }
-
-    protected async afterRestore(_listener: CacheListener): Promise<void> {}
 
     /**
      * Saves the cache entry based on the current cache key unless the cache was restored with the exact key,
@@ -171,7 +170,7 @@ export abstract class AbstractCache {
 
         core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKeyFromRestore}`)
         const cachePath = this.getCachePath()
-        const savedEntry = await this.saveCache(cachePath, cacheKeyFromRestore)
+        const savedEntry = await saveCache(cachePath, cacheKeyFromRestore)
 
         if (savedEntry) {
             listener.entry(this.cacheDescription).markSaved(savedEntry.key, savedEntry.size)
@@ -180,25 +179,155 @@ export abstract class AbstractCache {
         return
     }
 
-    protected async beforeSave(_listener: CacheListener): Promise<void> {}
-
-    protected async saveCache(cachePath: string[], cacheKey: string): Promise<cache.CacheEntry | undefined> {
-        try {
-            return await cache.saveCache(cachePath, cacheKey)
-        } catch (error) {
-            handleCacheFailure(error, `Failed to save cache entry ${cacheKey}`)
-        }
-        return undefined
+    /**
+     * Extract and save any defined extracted cache entries prior to the main Gradle User Home entry being saved.
+     */
+    async beforeSave(listener: CacheListener): Promise<void> {
+        await this.debugReportGradleUserHomeSize('before saving common artifacts')
+        this.deleteExcludedPaths()
+        await Promise.all([
+            new GradleHomeEntryExtractor(this.gradleUserHome).extract(listener),
+            new ConfigurationCacheEntryExtractor(this.gradleUserHome).extract(listener)
+        ])
+        await this.debugReportGradleUserHomeSize(
+            "after extracting common artifacts (only 'caches' and 'notifications' will be stored)"
+        )
     }
 
-    protected debug(message: string): void {
-        if (this.cacheDebuggingEnabled) {
-            core.info(message)
-        } else {
-            core.debug(message)
+    /**
+     * Delete any file paths that are excluded by the `gradle-home-cache-excludes` parameter.
+     */
+    private deleteExcludedPaths(): void {
+        const rawPaths: string[] = core.getMultilineInput(EXCLUDE_PATHS_PARAMETER)
+        const resolvedPaths = rawPaths.map(x => path.resolve(this.gradleUserHome, x))
+
+        for (const p of resolvedPaths) {
+            cacheDebug(`Deleting excluded path: ${p}`)
+            tryDelete(p)
         }
     }
 
-    protected abstract getCachePath(): string[]
-    protected abstract initializeGradleUserHome(gradleUserHome: string, initScriptsDir: string): void
+    /**
+     * Determines the paths within Gradle User Home to cache.
+     * By default, this is the 'caches' and 'notifications' directories,
+     * but this can be overridden by the `gradle-home-cache-includes` parameter.
+     */
+    protected getCachePath(): string[] {
+        const rawPaths: string[] = core.getMultilineInput(INCLUDE_PATHS_PARAMETER)
+        rawPaths.push(META_FILE_DIR)
+        const resolvedPaths = rawPaths.map(x => this.resolveCachePath(x))
+        cacheDebug(`Using cache paths: ${resolvedPaths}`)
+        return resolvedPaths
+    }
+
+    private resolveCachePath(rawPath: string): string {
+        if (rawPath.startsWith('!')) {
+            const resolved = this.resolveCachePath(rawPath.substring(1))
+            return `!${resolved}`
+        }
+        return path.resolve(this.gradleUserHome, rawPath)
+    }
+
+    private initializeGradleUserHome(gradleUserHome: string, initScriptsDir: string): void {
+        const propertiesFile = path.resolve(gradleUserHome, 'gradle.properties')
+        fs.writeFileSync(propertiesFile, 'org.gradle.daemon=false')
+
+        const buildScanCapture = path.resolve(initScriptsDir, 'build-scan-capture.init.gradle')
+        fs.writeFileSync(
+            buildScanCapture,
+            `import org.gradle.util.GradleVersion
+
+// Only run again root build. Do not run against included builds.
+def isTopLevelBuild = gradle.getParent() == null
+if (isTopLevelBuild) {
+    def version = GradleVersion.current().baseVersion
+    def atLeastGradle4 = version >= GradleVersion.version("4.0")
+    def atLeastGradle6 = version >= GradleVersion.version("6.0")
+
+    if (atLeastGradle6) {
+        settingsEvaluated { settings ->
+            if (settings.pluginManager.hasPlugin("com.gradle.enterprise")) {
+                registerCallbacks(settings.extensions["gradleEnterprise"].buildScan, settings.rootProject.name)
+            }
+        }
+    } else if (atLeastGradle4) {
+        projectsEvaluated { gradle ->
+            if (gradle.rootProject.pluginManager.hasPlugin("com.gradle.build-scan")) {
+                registerCallbacks(gradle.rootProject.extensions["buildScan"], gradle.rootProject.name)
+            }
+        }
+    }
+}
+
+def registerCallbacks(buildScanExtension, rootProjectName) {
+    buildScanExtension.with {
+        def buildOutcome = ""
+        def scanFile = new File("gradle-build-scan.txt")
+
+        buildFinished { result ->
+            buildOutcome = result.failure == null ? " succeeded" : " failed"
+        }
+
+        buildScanPublished { buildScan ->
+            scanFile.text = buildScan.buildScanUri
+
+            // Send commands directly to GitHub Actions via STDOUT.
+            def message = "Build '\${rootProjectName}'\${buildOutcome} - \${buildScan.buildScanUri}"
+            println("::notice ::\${message}")
+            println("::set-output name=build-scan-url::\${buildScan.buildScanUri}")
+        }
+    }
+}`
+        )
+
+        const projectRootCapture = path.resolve(initScriptsDir, 'project-root-capture.init.gradle')
+        fs.writeFileSync(
+            projectRootCapture,
+            `
+// Only run again root build. Do not run against included builds.
+def isTopLevelBuild = gradle.getParent() == null
+if (isTopLevelBuild) {
+    settingsEvaluated { settings ->
+        def projectRootEntry = settings.rootDir.absolutePath + "\\n"
+        def projectRootList = new File(settings.gradle.gradleUserHomeDir, "${PROJECT_ROOTS_FILE}")
+        if (!projectRootList.exists() || !projectRootList.text.contains(projectRootEntry)) {
+            projectRootList << projectRootEntry
+        }
+    }
+}`
+        )
+    }
+
+    /**
+     * When cache debugging is enabled, this method will give a detailed report
+     * of the Gradle User Home contents.
+     */
+    private async debugReportGradleUserHomeSize(label: string): Promise<void> {
+        if (!isCacheDebuggingEnabled()) {
+            return
+        }
+        if (!fs.existsSync(this.gradleUserHome)) {
+            return
+        }
+        const result = await exec.getExecOutput('du', ['-h', '-c', '-t', '5M'], {
+            cwd: this.gradleUserHome,
+            silent: true,
+            ignoreReturnCode: true
+        })
+
+        core.info(`Gradle User Home (directories >5M): ${label}`)
+
+        core.info(
+            result.stdout
+                .trimEnd()
+                .replace(/\t/g, '    ')
+                .split('\n')
+                .map(it => {
+                    return `  ${it}`
+                })
+                .join('\n')
+        )
+
+        core.info('-----------------------')
+    }
 }

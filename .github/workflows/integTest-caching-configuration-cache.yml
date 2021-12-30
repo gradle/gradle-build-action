@@ -7,13 +7,14 @@ on:
   workflow_dispatch:
 
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
   # Run initial Gradle builds to push initial cache entries
   # These builds should start fresh without cache hits, due to the seed injected into the cache key above.
-  seed-build:
+  seed-build-groovy:
+    env:
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-groovy-
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -26,12 +27,11 @@ jobs:
     - name: Groovy build with configuration-cache enabled
       working-directory: __tests__/samples/groovy-dsl
       run: ./gradlew test --configuration-cache
-    - name: Kotlin build with configuration-cache enabled
-      working-directory: __tests__/samples/kotlin-dsl
-      run: ./gradlew test --configuration-cache
 
   configuration-cache-groovy:
-    needs: seed-build
+    env:
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-groovy-
+    needs: seed-build-groovy
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -47,31 +47,13 @@ jobs:
       env: 
         VERIFY_CACHED_CONFIGURATION: true
       working-directory: __tests__/samples/groovy-dsl
-      run: ./gradlew test --configuration-cache
-
-  # Test restore configuration-cache from the second build invocation
-  configuration-cache-kotlin:
-    needs: seed-build
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-      with:
-        cache-read-only: true
-    - name: Execute Gradle build and verify cached configuration
-      env: 
-        VERIFY_CACHED_CONFIGURATION: true
-      working-directory: __tests__/samples/kotlin-dsl
       run: ./gradlew test --configuration-cache
 
   # Check that the build can run when no extracted cache entries are restored
   no-extracted-cache-entries-restored:
-    needs: seed-build
+    env:
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-groovy-
+    needs: seed-build-groovy
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -79,11 +61,67 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Setup Gradle with no cache extracted cache entries restored
+    - name: Setup Gradle with no extracted cache entries restored
+      uses: ./
+      env: 
+        GRADLE_BUILD_ACTION_SKIP_RESTORE: "generated-gradle-jars|wrapper-zips|java-toolchains|instrumented-jars|dependencies|kotlin-dsl"
+      with:
+        cache-read-only: true
+    - name: Check execute Gradle build with configuration cache enabled (but not restored)
+      working-directory: __tests__/samples/groovy-dsl
+      run: ./gradlew test --configuration-cache
+
+  seed-build-kotlin:
+    env:
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-kotlin-
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle
+      uses: ./
+    - name: Kotlin build with configuration-cache enabled
+      working-directory: __tests__/samples/kotlin-dsl
+      run: ./gradlew help --configuration-cache
+
+  modify-build-kotlin:
+    env:
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-kotlin-
+    needs: seed-build-kotlin
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle
+      uses: ./
+    - name: Kotlin build with configuration-cache enabled
+      working-directory: __tests__/samples/kotlin-dsl
+      run: ./gradlew test --configuration-cache
+
+ # Test restore configuration-cache from the third build invocation
+  configuration-cache-kotlin:
+    env:
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-kotlin-
+    needs: modify-build-kotlin
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle
       uses: ./
       with:
         cache-read-only: true
-        gradle-home-extracted-cache-entries: '[]'
-    - name: Check execute Gradle build with configuration cache enabled (but not restored)
-      working-directory: __tests__/samples/groovy-dsl
+    - name: Execute Gradle build and verify cached configuration
+      env: 
+        VERIFY_CACHED_CONFIGURATION: true
+      working-directory: __tests__/samples/kotlin-dsl
       run: ./gradlew test --configuration-cache

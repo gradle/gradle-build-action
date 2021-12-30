@@ -55,17 +55,6 @@ inputs:
     description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users (INTERNAL).
     required: false
     default: ${{ toJSON(matrix) }}
-  gradle-home-extracted-cache-entries:
-    description: Names and patterns of artifacts in Gradle User Home to cache separately. (EXPERIMENTAL - may be changed/removed without notice)
-    required: false
-    default: |
-        [
-          ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
-          ["wrapper-zips", "wrapper/dists/*/*/*.zip"],
-          ["dependencies", "caches/modules-*/files-*/*/*/*/*/"],
-          ["instrumented-jars", "caches/jars-*/*/"],
-          ["kotlin-dsl", "caches/*/kotlin-dsl/*/*/"]
-        ]
 
 outputs:
   build-scan-url:
@@ -75,7 +64,6 @@ runs:
   using: 'node12'
   main: 'dist/main/index.js'
   post: 'dist/post/index.js'
-  post-if: success()
 
 branding:
   icon: 'box'

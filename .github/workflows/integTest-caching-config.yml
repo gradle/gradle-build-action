@@ -22,21 +22,13 @@ jobs:
     - name: Setup Gradle
       uses: ./
       with:
-        # Add "wrapper" to main cache entry and remove 'wrapper-zips' cache entry
-        # Exclude build-cache from main cache entry
+        # Add "enterprise" to main cache entry but omit "notifications"
         gradle-home-cache-includes: |
             caches
-            notifications
-            wrapper
+            enterprise
+        # Exclude build-cache from main cache entry
         gradle-home-cache-excludes: |
             caches/build-cache-1
-        gradle-home-extracted-cache-entries: |
-            [
-              ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
-              ["dependencies", "caches/modules-*/files-*/*/*/*/*/"],
-              ["instrumented-jars", "caches/jars-*/*/"],
-              ["kotlin-dsl", "caches/*/kotlin-dsl/*/*/"]
-            ]
     - name: Build using Gradle wrapper
       working-directory: __tests__/samples/groovy-dsl
       run: ./gradlew test
@@ -57,17 +49,9 @@ jobs:
         # Use the same configuration when restoring state from cache
         gradle-home-cache-includes: |
             caches
-            notifications
-            wrapper
+            enterprise
         gradle-home-cache-excludes: |
             caches/build-cache-1
-        gradle-home-extracted-cache-entries: |
-            [
-              ["generated-gradle-jars", "caches/*/generated-gradle-jars/*.jar"],
-              ["dependencies", "caches/modules-*/files-*/*/*/*/*/"],
-              ["instrumented-jars", "caches/jars-*/*/"],
-              ["kotlin-dsl", "caches/*/kotlin-dsl/*/*/"]
-            ]
         cache-read-only: true
     - name: Execute Gradle build with --offline
       working-directory: __tests__/samples/groovy-dsl

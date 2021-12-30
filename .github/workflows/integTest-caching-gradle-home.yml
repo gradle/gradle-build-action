@@ -72,9 +72,10 @@ jobs:
       uses: actions/checkout@v2
     - name: Setup Gradle with no extracted cache entries restored
       uses: ./
+      env: 
+        GRADLE_BUILD_ACTION_SKIP_RESTORE: "generated-gradle-jars|wrapper-zips|java-toolchains|instrumented-jars|dependencies|kotlin-dsl"
       with:
         cache-read-only: true
-        gradle-home-extracted-cache-entries: '[]'
     - name: Check executee Gradle build
       working-directory: __tests__/samples/groovy-dsl
       run: ./gradlew test
