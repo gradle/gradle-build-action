@@ -2,15 +2,12 @@
 
 This GitHub Action can be used to configure Gradle and optionally execute a Gradle build on any platform supported by GitHub Actions.
 
-## Usage
+## Use the action to setup Gradle
 
-The following workflows will execute a Gradle build on ubuntu, macos and windows. 
-The only prerequisite is to have Java installed: you define the version of Java you need to run the build using the `actions/setup-java` action.
-
-### Use the action to setup Gradle for later steps
-
-If you have an existing workflow invoking Gradle, you can simply add an initial "Setup Gradle" Step to benefit from caching, 
+If you have an existing workflow invoking Gradle, you can add an initial "Setup Gradle" Step to benefit from caching, 
 build-scan capture and other features of the gradle-build-action.
+
+All subsequent Gradle invocations will benefit from this initial setup, via `init` scripts added to the Gradle User Home.
 
 ```yaml
 name: Run Gradle on PRs
@@ -34,54 +31,6 @@ jobs:
       run: ./gradlew build
 ```
 
-### Use the action to setup and execute Gradle
-
-The `gradle-build-action` can also be used for the actual Gradle execution, by providing an `arguments` parameter.
-The following workflow is effectively the same as the one above, without using a separate `run` step.
-
-```yaml
-name: Run Gradle on PRs
-on: pull_request
-jobs:
-  gradle:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-java@v1
-      with:
-        java-version: 11
-    
-    - name: Setup and execute Gradle build
-      uses: gradle/gradle-build-action@v2
-      with:
-        arguments: build
-```
-
-### Multiple Gradle executions in the same Job
-
-It is possible to configure multiple Gradle executions to run sequentially in the same job. 
-The initial Action step will perform the Gradle setup.
-
-```yaml
-- uses: gradle/gradle-build-action@v2
-  with:
-    arguments: assemble
-- uses: gradle/gradle-build-action@v2
-  with:
-    arguments: check
-```
-
-The same can be achieved with a single `gradle-build-action` step and multiple `run` steps.
-
-```yaml
-- uses: gradle/gradle-build-action@v2
-- run: ./gradlew assemble
-- run: ./gradlew check
-```
-
 ## Why use the `gradle-build-action`?
 
 It is possible to directly invoke Gradle in your workflow, and the `setup-java` action provides a simple way to cache Gradle dependencies. 
@@ -96,9 +45,9 @@ However, the `gradle-build-action` offers a number of advantages over this appro
 The `gradle-build-action` is designed to provide these benefits with minimal configuration. 
 These features work both when Gradle is executed via the `gradle-build-action` and for any Gradle execution in subsequent steps.
 
-## Use specific Gradle version
+## Use a specific Gradle version
 
-The `gradle-build-action` will download, install and run a specified Gradle version, adding this installed version to the PATH.
+The `gradle-build-action` can download and install a specified Gradle version, adding this installed version to the PATH.
 Downloaded Gradle versions are stored in the GitHub Actions cache, to avoid requiring downloading again later.
 
 ```yaml
@@ -145,6 +94,41 @@ jobs:
 If the action is configured with an `arguments` input, then Gradle will execute a Gradle build with the arguments provided.
 
 If no `arguments` are provided, the action will not execute Gradle, but will still cache Gradle state and configure build-scan capture for all subsequent Gradle executions.
+
+```yaml
+name: Run Gradle on PRs
+on: pull_request
+jobs:
+  gradle:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-java@v1
+      with:
+        java-version: 11
+    
+    - name: Setup and execute Gradle 'test' task
+      uses: gradle/gradle-build-action@v2
+      with:
+        arguments: test
+```
+
+### Multiple Gradle executions in the same Job
+
+It is possible to configure multiple Gradle executions to run sequentially in the same job. 
+The initial Action step will perform the Gradle setup.
+
+```yaml
+- uses: gradle/gradle-build-action@v2
+  with:
+    arguments: assemble
+- uses: gradle/gradle-build-action@v2
+  with:
+    arguments: check
+```
 
 ### Gradle command-line arguments
 
