@@ -237,7 +237,7 @@ export class GradleStateCache {
             buildScanCapture,
             `import org.gradle.util.GradleVersion
 
-// Only run again root build. Do not run against included builds.
+// Only run against root build. Do not run against included builds.
 def isTopLevelBuild = gradle.getParent() == null
 if (isTopLevelBuild) {
     def version = GradleVersion.current().baseVersion
@@ -272,7 +272,8 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
             scanFile.text = buildScan.buildScanUri
 
             // Send commands directly to GitHub Actions via STDOUT.
-            def message = "Build '\${rootProjectName}'\${buildOutcome} - \${buildScan.buildScanUri}"
+            def gradleCommand = rootProjectName + " " + gradle.startParameter.taskNames.join(" ")
+            def message = "Gradle build '\${gradleCommand}'\${buildOutcome} - \${buildScan.buildScanUri}"
             println("::notice ::\${message}")
             println("::set-output name=build-scan-url::\${buildScan.buildScanUri}")
         }
@@ -284,7 +285,7 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
         fs.writeFileSync(
             projectRootCapture,
             `
-// Only run again root build. Do not run against included builds.
+// Only run against root build. Do not run against included builds.
 def isTopLevelBuild = gradle.getParent() == null
 if (isTopLevelBuild) {
     settingsEvaluated { settings ->
