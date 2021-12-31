@@ -1,23 +1,11 @@
 name: "Gradle Build Action"
-description: 'Executes a Gradle build, caching useful state in the GitHub actions cache'
+description: 'Configures Gradle for use in GitHub actions, caching useful state in the GitHub actions cache'
 
 # https://help.github.com/en/articles/metadata-syntax-for-github-actions
 
 inputs:
-  gradle-executable:
-    description: Path to the Gradle executable
-    required: false
-
   gradle-version:
     description: Gradle version to use
-    required: false
-
-  build-root-directory:
-    description: Path to the root directory of the build
-    required: false
-
-  arguments:
-    description: Gradle command line arguments (supports multi-line input)
     required: false
 
   cache-disabled:
@@ -42,12 +30,23 @@ inputs:
   gradle-home-cache-excludes:
     description: Paths within Gradle User Home to exclude from cache.
     required: false
-  
   # e.g. Use the following setting to prevent the local build cache from being saved/restored
   #      gradle-home-cache-excludes: |
   #           ["caches/build-cache-1"]
 
-  # EXPERIMENTAL & INTERNAL CONFIGURATION PROPERTIES
+  arguments:
+    description: Gradle command line arguments (supports multi-line input)
+    required: false
+
+  build-root-directory:
+    description: Path to the root directory of the build
+    required: false
+
+  gradle-executable:
+    description: Path to the Gradle executable
+    required: false
+
+  # EXPERIMENTAL & INTERNAL ACTION INPUTS
   # The following action properties allow fine-grained tweaking of the action caching behaviour.
   # These properties are not designed for production use, and may change without notice in a subsequent release of `gradle-build-action`.
   # Use at your own risk!
