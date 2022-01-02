@@ -309,12 +309,12 @@ jobs:
     - id: gradle
       run: ./gradlew build
     - name: "Comment build scan url"
-      uses: actions/github-script@v3
+      uses: actions/github-script@v5
       if: github.event_name == 'pull_request' && failure()
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
         script: |
-          github.issues.createComment({
+          github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
