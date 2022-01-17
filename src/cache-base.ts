@@ -100,9 +100,14 @@ export class GradleStateCache {
     }
 
     cacheOutputExists(): boolean {
-        // Need to check for 'caches' directory to avoid incorrect detection on MacOS agents
         const paths = this.getCachePath()
-        return paths.some(x => fs.existsSync(x))
+        for (const p of paths) {
+            if (fs.existsSync(p)) {
+                cacheDebug(`Cache output exists at ${p}`)
+                return true
+            }
+        }
+        return false
     }
 
     /**

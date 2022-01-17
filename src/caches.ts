@@ -15,19 +15,23 @@ export async function restore(gradleUserHome: string): Promise<void> {
     }
     core.exportVariable(CACHE_RESTORED_VAR, true)
 
-    // Initialize the Gradle User Home even when caching is disabled.
     const gradleStateCache = new GradleStateCache(gradleUserHome)
-    gradleStateCache.init()
 
     if (isCacheDisabled()) {
         core.info('Cache is disabled: will not restore state from previous builds.')
+        // Initialize the Gradle User Home even when caching is disabled.
+        gradleStateCache.init()
         return
     }
 
     if (gradleStateCache.cacheOutputExists()) {
         core.info('Gradle User Home already exists: will not restore from cache.')
+        // Initialize pre-existing Gradle User Home.
+        gradleStateCache.init()
         return
     }
+
+    gradleStateCache.init()
 
     await core.group('Restore Gradle state from cache', async () => {
         core.saveState(GRADLE_USER_HOME, gradleUserHome)
