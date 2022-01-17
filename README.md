@@ -22,6 +22,7 @@ jobs:
     - uses: actions/checkout@v2
     - uses: actions/setup-java@v2
       with:
+        distribution: temurin
         java-version: 11
         
     - name: Setup Gradle
@@ -306,6 +307,7 @@ jobs:
     - uses: actions/checkout@v2
     - uses: actions/setup-java@v2
       with:
+        distribution: temurin
         java-version: 11
     - uses: gradle/gradle-build-action@v2
     - id: gradle
