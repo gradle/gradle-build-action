@@ -83,7 +83,7 @@ jobs:
       uses: actions/checkout@v2
     - name: Setup Gradle
       uses: ./
-    - name: Kotlin build with configuration-cache enabled
+    - name: Execute 'help' with configuration-cache enabled
       working-directory: __tests__/samples/kotlin-dsl
       run: ./gradlew help --configuration-cache
 
@@ -100,7 +100,7 @@ jobs:
       uses: actions/checkout@v2
     - name: Setup Gradle
       uses: ./
-    - name: Kotlin build with configuration-cache enabled
+    - name: Execute 'test' with configuration-cache enabled
       working-directory: __tests__/samples/kotlin-dsl
       run: ./gradlew test --configuration-cache
 
@@ -120,7 +120,7 @@ jobs:
       uses: ./
       with:
         cache-read-only: true
-    - name: Execute Gradle build and verify cached configuration
+    - name: Execute 'test' again and verify cached configuration
       env: 
         VERIFY_CACHED_CONFIGURATION: true
       working-directory: __tests__/samples/kotlin-dsl

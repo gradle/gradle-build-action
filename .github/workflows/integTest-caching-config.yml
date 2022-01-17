@@ -57,4 +57,25 @@ jobs:
       working-directory: __tests__/samples/groovy-dsl
       run: ./gradlew test --offline
 
-
+  cache-disabled:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle
+      uses: ./
+      with:
+        cache-disabled: true
+    - name: Run Gradle build
+      id: gradle
+      working-directory: __tests__/samples/no-wrapper${{ matrix.build-root-suffix }}
+      run: gradle help "-DgradleVersionCheck=${{matrix.gradle}}"
+    - name: Check build scan url is captured
+      if: ${{ !steps.gradle.outputs.build-scan-url }}
+      uses: actions/github-script@v3
+      with:
+        script: |
+          core.setFailed('No build scan detected')
