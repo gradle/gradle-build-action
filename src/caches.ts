@@ -17,6 +17,13 @@ export async function restore(gradleUserHome: string): Promise<void> {
 
     // Initialize the Gradle User Home even when caching is disabled.
     const gradleStateCache = new GradleStateCache(gradleUserHome)
+    if (gradleStateCache.cacheOutputExists()) {
+        core.info('Gradle User Home already exists: will not restore from cache.')
+        // We still add init-scripts for build-scan capture
+        gradleStateCache.init()
+        return
+    }
+
     gradleStateCache.init()
 
     if (isCacheDisabled()) {

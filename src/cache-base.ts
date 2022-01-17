@@ -99,6 +99,12 @@ export class GradleStateCache {
         this.initializeGradleUserHome(this.gradleUserHome, initScriptsDir)
     }
 
+    cacheOutputExists(): boolean {
+        // Need to check for 'caches' directory to avoid incorrect detection on MacOS agents
+        const paths = this.getCachePath()
+        return paths.some(x => fs.existsSync(x))
+    }
+
     /**
      * Restores the cache entry, finding the closest match to the currently running job.
      */
