@@ -8,12 +8,21 @@ const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
 const CACHE_LISTENER = 'CACHE_LISTENER'
 
 export async function restore(gradleUserHome: string): Promise<void> {
-    if (!shouldRestoreCaches()) {
+    // Only restore cache on first action step in workflow.
+    if (process.env[CACHE_RESTORED_VAR]) {
+        core.info('Cache only restored on first action step.')
         return
     }
+    core.exportVariable(CACHE_RESTORED_VAR, true)
 
+    // Initialize the Gradle User Home even when caching is disabled.
     const gradleStateCache = new GradleStateCache(gradleUserHome)
     gradleStateCache.init()
+
+    if (isCacheDisabled()) {
+        core.info('Cache is disabled: will not restore state from previous builds.')
+        return
+    }
 
     await core.group('Restore Gradle state from cache', async () => {
         core.saveState(GRADLE_USER_HOME, gradleUserHome)
@@ -24,8 +33,6 @@ export async function restore(gradleUserHome: string): Promise<void> {
         core.saveState(CACHE_LISTENER, cacheListener.stringify())
     })
 
-    // Export var that is detected in all later restore steps
-    core.exportVariable(CACHE_RESTORED_VAR, true)
     // Export state that is detected in corresponding post-action step
     core.saveState(CACHE_RESTORED_VAR, true)
 }
@@ -49,19 +56,6 @@ export async function save(): Promise<void> {
     })
 
     logCachingReport(cacheListener)
-}
-
-function shouldRestoreCaches(): boolean {
-    if (isCacheDisabled()) {
-        core.info('Cache is disabled: will not restore state from previous builds.')
-        return false
-    }
-
-    if (process.env[CACHE_RESTORED_VAR]) {
-        core.info('Cache only restored on first action step.')
-        return false
-    }
-    return true
 }
 
 function shouldSaveCaches(): boolean {
