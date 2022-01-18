@@ -14,7 +14,7 @@ jobs:
   # These builds should start fresh without cache hits, due to the seed injected into the cache key above.
   seed-build-groovy:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-groovy-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-groovy-
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -30,7 +30,7 @@ jobs:
 
   configuration-cache-groovy:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-groovy-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-groovy-
     needs: seed-build-groovy
     strategy:
       matrix:
@@ -52,7 +52,7 @@ jobs:
   # Check that the build can run when no extracted cache entries are restored
   no-extracted-cache-entries-restored:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-groovy-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-groovy-
     needs: seed-build-groovy
     strategy:
       matrix:
@@ -73,7 +73,7 @@ jobs:
 
   seed-build-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-kotlin-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-kotlin-
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -89,7 +89,7 @@ jobs:
 
   modify-build-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-kotlin-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-kotlin-
     needs: seed-build-kotlin
     strategy:
       matrix:
@@ -107,7 +107,7 @@ jobs:
  # Test restore configuration-cache from the third build invocation
   configuration-cache-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-kotlin-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-kotlin-
     needs: modify-build-kotlin
     strategy:
       matrix:
