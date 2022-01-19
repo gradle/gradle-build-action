@@ -130,16 +130,13 @@ export class GradleStateCache {
     restoreKeys:[${cacheKey.restoreKeys}]`
         )
 
-        const cacheResult = await restoreCache(this.getCachePath(), cacheKey.key, cacheKey.restoreKeys)
-        entryListener.markRequested(cacheKey.key, cacheKey.restoreKeys)
-
+        const cacheResult = await restoreCache(this.getCachePath(), cacheKey.key, cacheKey.restoreKeys, entryListener)
         if (!cacheResult) {
             core.info(`${this.cacheDescription} cache not found. Will initialize empty.`)
             return
         }
 
         core.saveState(this.cacheResultStateKey, cacheResult.key)
-        entryListener.markRestored(cacheResult.key, cacheResult.size)
 
         core.info(`Restored ${this.cacheDescription} from cache key: ${cacheResult.key}`)
 
@@ -186,11 +183,8 @@ export class GradleStateCache {
 
         core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKeyFromRestore}`)
         const cachePath = this.getCachePath()
-        const savedEntry = await saveCache(cachePath, cacheKeyFromRestore)
-
-        if (savedEntry) {
-            listener.entry(this.cacheDescription).markSaved(savedEntry.key, savedEntry.size)
-        }
+        const entryListener = listener.entry(this.cacheDescription)
+        await saveCache(cachePath, cacheKeyFromRestore, entryListener)
 
         return
     }

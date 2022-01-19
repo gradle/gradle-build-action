@@ -4,6 +4,8 @@ import * as crypto from 'crypto'
 import * as path from 'path'
 import * as fs from 'fs'
 
+import {CacheEntryListener} from './cache-reporting'
+
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
 const CACHE_DISABLED_PARAMETER = 'cache-disabled'
 const CACHE_READONLY_PARAMETER = 'cache-read-only'
@@ -49,23 +51,32 @@ export function hashStrings(values: string[]): string {
 export async function restoreCache(
     cachePath: string[],
     cacheKey: string,
-    cacheRestoreKeys: string[] = []
+    cacheRestoreKeys: string[],
+    listener: CacheEntryListener
 ): Promise<cache.CacheEntry | undefined> {
+    listener.markRequested(cacheKey, cacheRestoreKeys)
     try {
-        return await cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys)
+        const restoredEntry = await cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys)
+        if (restoredEntry !== undefined) {
+            listener.markRestored(restoredEntry.key, restoredEntry.size)
+        }
+        return restoredEntry
     } catch (error) {
         handleCacheFailure(error, `Failed to restore ${cacheKey}`)
         return undefined
     }
 }
 
-export async function saveCache(cachePath: string[], cacheKey: string): Promise<cache.CacheEntry | undefined> {
+export async function saveCache(cachePath: string[], cacheKey: string, listener: CacheEntryListener): Promise<void> {
     try {
-        return await cache.saveCache(cachePath, cacheKey)
+        const savedEntry = await cache.saveCache(cachePath, cacheKey)
+        listener.markSaved(savedEntry.key, savedEntry.size)
     } catch (error) {
+        if (error instanceof cache.ReserveCacheError) {
+            listener.markAlreadyExists(cacheKey)
+        }
         handleCacheFailure(error, `Failed to save cache entry ${cacheKey}`)
     }
-    return undefined
 }
 
 export function cacheDebug(message: string): void {
