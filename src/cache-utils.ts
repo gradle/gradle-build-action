@@ -99,11 +99,7 @@ export function handleCacheFailure(error: unknown, message: string): void {
     }
     if (error instanceof cache.ReserveCacheError) {
         // Reserve cache errors are expected if the artifact has been previously cached
-        if (isCacheDebuggingEnabled()) {
-            core.info(`${message}: ${error}`)
-        } else {
-            core.debug(`${message}: ${error}`)
-        }
+        core.info(`${message}: ${error}`)
     } else {
         // Warn on all other errors
         core.warning(`${message}: ${error}`)
