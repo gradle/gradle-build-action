@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}-
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
@@ -46,7 +46,7 @@ jobs:
     - name: Setup Gradle
       uses: ./
       with:
-        # Use the same configuration when restoring state from cache
+        # Use the same configuration as used in the seed build
         gradle-home-cache-includes: |
             caches
             enterprise
@@ -57,4 +57,47 @@ jobs:
       working-directory: __tests__/samples/groovy-dsl
       run: ./gradlew test --offline
 
+  # Test that build scans are captured when caching is explicitly disabled
+  cache-disabled:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle
+      uses: ./
+      with:
+        cache-disabled: true
+    - name: Run Gradle build
+      id: gradle
+      working-directory: __tests__/samples/no-wrapper${{ matrix.build-root-suffix }}
+      run: gradle help "-DgradleVersionCheck=${{matrix.gradle}}"
+    - name: Check build scan url is captured
+      if: ${{ !steps.gradle.outputs.build-scan-url }}
+      uses: actions/github-script@v3
+      with:
+        script: |
+          core.setFailed('No build scan detected')
 
+  # Test that build scans are captured when caching is disabled because Gradle User Home already exists
+  cache-disabled-pre-existing-gradle-home:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Create dummy Gradle User Home
+      run: mkdir -p ~/.gradle/caches
+    - name: Setup Gradle
+      uses: ./
+    - name: Run Gradle build
+      id: gradle
+      working-directory: __tests__/samples/no-wrapper${{ matrix.build-root-suffix }}
+      run: gradle help "-DgradleVersionCheck=${{matrix.gradle}}"
+    - name: Check build scan url is captured
+      if: ${{ !steps.gradle.outputs.build-scan-url }}
+      uses: actions/github-script@v3
+      with:
+        script: |
+          core.setFailed('No build scan detected')

@@ -99,6 +99,17 @@ export class GradleStateCache {
         this.initializeGradleUserHome(this.gradleUserHome, initScriptsDir)
     }
 
+    cacheOutputExists(): boolean {
+        const paths = this.getCachePath()
+        for (const p of paths) {
+            if (fs.existsSync(p)) {
+                cacheDebug(`Cache output exists at ${p}`)
+                return true
+            }
+        }
+        return false
+    }
+
     /**
      * Restores the cache entry, finding the closest match to the currently running job.
      */
