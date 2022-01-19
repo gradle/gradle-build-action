@@ -48,8 +48,12 @@ inputs:
 
   # EXPERIMENTAL & INTERNAL ACTION INPUTS
   # The following action properties allow fine-grained tweaking of the action caching behaviour.
-  # These properties are not designed for production use, and may change without notice in a subsequent release of `gradle-build-action`.
+  # These properties are experimental and not (yet) designed for production use, and may change without notice in a subsequent release of `gradle-build-action`.
   # Use at your own risk!
+  gradle-home-cache-strict-match:
+    description: When 'true', the action will not attempt to restore the Gradle User Home entries from other Jobs.
+    required: false
+    default: false
   workflow-job-context:
     description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users (INTERNAL).
     required: false

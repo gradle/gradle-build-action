@@ -15,12 +15,13 @@ import {
 } from './cache-utils'
 import {ConfigurationCacheEntryExtractor, GradleHomeEntryExtractor} from './cache-extract-entries'
 
-const CACHE_PROTOCOL_VERSION = 'v5-'
+const CACHE_PROTOCOL_VERSION = 'v6-'
 
 export const META_FILE_DIR = '.gradle-build-action'
 export const PROJECT_ROOTS_FILE = 'project-roots.txt'
 const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes'
 const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes'
+const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match'
 
 /**
  * Represents a key used to restore a cache entry.
@@ -69,6 +70,10 @@ function generateCacheKey(cacheName: string): CacheKey {
 
     // Exact match on Git SHA
     const cacheKey = `${cacheKeyForJobContext}-${github.context.sha}`
+
+    if (core.getBooleanInput(STRICT_CACHE_MATCH_PARAMETER)) {
+        return new CacheKey(cacheKey, [cacheKeyForJobContext])
+    }
 
     return new CacheKey(cacheKey, [cacheKeyForJobContext, cacheKeyForJob, cacheKeyForOs])
 }
