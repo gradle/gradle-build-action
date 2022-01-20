@@ -28,6 +28,9 @@ export class CacheListener {
     }
 
     static rehydrate(stringRep: string): CacheListener {
+        if (stringRep === '') {
+            return new CacheListener()
+        }
         const rehydrated: CacheListener = Object.assign(new CacheListener(), JSON.parse(stringRep))
         const entries = rehydrated.cacheEntries
         for (let index = 0; index < entries.length; index++) {

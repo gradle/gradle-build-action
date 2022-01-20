@@ -16,6 +16,7 @@ import {
 import {ConfigurationCacheEntryExtractor, GradleHomeEntryExtractor} from './cache-extract-entries'
 
 const CACHE_PROTOCOL_VERSION = 'v6-'
+const RESTORED_CACHE_KEY_KEY = 'restored-cache-key'
 
 export const META_FILE_DIR = '.gradle-build-action'
 export const PROJECT_ROOTS_FILE = 'project-roots.txt'
@@ -81,8 +82,6 @@ function generateCacheKey(cacheName: string): CacheKey {
 export class GradleStateCache {
     private cacheName: string
     private cacheDescription: string
-    private cacheKeyStateKey: string
-    private cacheResultStateKey: string
 
     protected readonly gradleUserHome: string
 
@@ -90,8 +89,6 @@ export class GradleStateCache {
         this.gradleUserHome = gradleUserHome
         this.cacheName = 'gradle'
         this.cacheDescription = 'Gradle User Home'
-        this.cacheKeyStateKey = `CACHE_KEY_gradle`
-        this.cacheResultStateKey = `CACHE_RESULT_gradle`
     }
 
     init(): void {
@@ -122,7 +119,6 @@ export class GradleStateCache {
         const entryListener = listener.entry(this.cacheDescription)
 
         const cacheKey = generateCacheKey(this.cacheName)
-        core.saveState(this.cacheKeyStateKey, cacheKey.key)
 
         cacheDebug(
             `Requesting ${this.cacheDescription} with
@@ -136,7 +132,7 @@ export class GradleStateCache {
             return
         }
 
-        core.saveState(this.cacheResultStateKey, cacheResult.key)
+        core.saveState(RESTORED_CACHE_KEY_KEY, cacheResult.key)
 
         core.info(`Restored ${this.cacheDescription} from cache key: ${cacheResult.key}`)
 
@@ -165,12 +161,11 @@ export class GradleStateCache {
      * it is saved with the exact key.
      */
     async save(listener: CacheListener): Promise<void> {
-        // Retrieve the state set in the previous 'restore' step.
-        const cacheKeyFromRestore = core.getState(this.cacheKeyStateKey)
-        const cacheResultFromRestore = core.getState(this.cacheResultStateKey)
+        const cacheKey = generateCacheKey(this.cacheName).key
+        const restoredCacheKey = core.getState(RESTORED_CACHE_KEY_KEY)
 
-        if (cacheResultFromRestore && cacheKeyFromRestore === cacheResultFromRestore) {
-            core.info(`Cache hit occurred on the cache key ${cacheKeyFromRestore}, not saving cache.`)
+        if (restoredCacheKey && cacheKey === restoredCacheKey) {
+            core.info(`Cache hit occurred on the cache key ${cacheKey}, not saving cache.`)
             return
         }
 
@@ -181,10 +176,10 @@ export class GradleStateCache {
             return
         }
 
-        core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKeyFromRestore}`)
+        core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKey}`)
         const cachePath = this.getCachePath()
         const entryListener = listener.entry(this.cacheDescription)
-        await saveCache(cachePath, cacheKeyFromRestore, entryListener)
+        await saveCache(cachePath, cacheKey, entryListener)
 
         return
     }

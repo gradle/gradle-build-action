@@ -9,6 +9,7 @@ import {CacheEntryListener} from './cache-reporting'
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
 const CACHE_DISABLED_PARAMETER = 'cache-disabled'
 const CACHE_READONLY_PARAMETER = 'cache-read-only'
+const CACHE_WRITEONLY_PARAMETER = 'cache-write-only'
 const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED'
 const CACHE_PREFIX_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX'
 
@@ -18,6 +19,10 @@ export function isCacheDisabled(): boolean {
 
 export function isCacheReadOnly(): boolean {
     return core.getBooleanInput(CACHE_READONLY_PARAMETER)
+}
+
+export function isCacheWriteOnly(): boolean {
+    return core.getBooleanInput(CACHE_WRITEONLY_PARAMETER)
 }
 
 export function isCacheDebuggingEnabled(): boolean {
