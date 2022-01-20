@@ -266,11 +266,11 @@ if (isTopLevelBuild) {
 
 def registerCallbacks(buildScanExtension, rootProjectName) {
     buildScanExtension.with {
-        def buildOutcome = ""
         def scanFile = new File("gradle-build-scan.txt")
+        def buildFailed = false
 
         buildFinished { result ->
-            buildOutcome = result.failure == null ? " succeeded" : " failed"
+            buildFailed = (result.failure != null)
         }
 
         buildScanPublished { buildScan ->
@@ -278,8 +278,11 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
 
             // Send commands directly to GitHub Actions via STDOUT.
             def gradleCommand = rootProjectName + " " + gradle.startParameter.taskNames.join(" ")
-            def message = "Gradle build '\${gradleCommand}'\${buildOutcome} - \${buildScan.buildScanUri}"
-            println("::notice ::\${message}")
+            if (buildFailed) {
+                println("::warning ::Gradle build '\${gradleCommand}' FAILED - \${buildScan.buildScanUri}")
+            } else {
+                println("::notice ::Gradle build '\${gradleCommand}' - \${buildScan.buildScanUri}")
+            }
             println("::set-output name=build-scan-url::\${buildScan.buildScanUri}")
         }
     }
