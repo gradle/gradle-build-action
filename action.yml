@@ -32,7 +32,7 @@ inputs:
     required: false
   # e.g. Use the following setting to prevent the local build cache from being saved/restored
   #      gradle-home-cache-excludes: |
-  #           ["caches/build-cache-1"]
+  #           caches/build-cache-1
 
   arguments:
     description: Gradle command line arguments (supports multi-line input)
