@@ -235,7 +235,7 @@ export class GradleStateCache {
 
     private initializeGradleUserHome(gradleUserHome: string, initScriptsDir: string): void {
         const propertiesFile = path.resolve(gradleUserHome, 'gradle.properties')
-        fs.writeFileSync(propertiesFile, 'org.gradle.daemon=false')
+        fs.appendFileSync(propertiesFile, 'org.gradle.daemon=false')
 
         const buildScanCapture = path.resolve(initScriptsDir, 'build-scan-capture.init.gradle')
         fs.writeFileSync(
