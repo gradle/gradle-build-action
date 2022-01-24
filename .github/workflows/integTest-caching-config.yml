@@ -101,3 +101,42 @@ jobs:
       with:
         script: |
           core.setFailed('No build scan detected')
+
+  # Test seed the cache with cache-write-only and verify with cache-read-only
+  seed-build-write-only:
+    env:
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-write-only-
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle
+      uses: ./
+      with:
+        cache-write-only: true
+    - name: Build using Gradle wrapper
+      working-directory: __tests__/samples/groovy-dsl
+      run: ./gradlew test
+
+  verify-write-only-build:
+    env:
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-write-only-
+    needs: seed-build-write-only
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle
+      uses: ./
+      with:
+        cache-read-only: true
+    - name: Execute Gradle build with --offline
+      working-directory: __tests__/samples/groovy-dsl
+      run: ./gradlew test --offline
+

@@ -28,6 +28,9 @@ export class CacheListener {
     }
 
     static rehydrate(stringRep: string): CacheListener {
+        if (stringRep === '') {
+            return new CacheListener()
+        }
         const rehydrated: CacheListener = Object.assign(new CacheListener(), JSON.parse(stringRep))
         const entries = rehydrated.cacheEntries
         for (let index = 0; index < entries.length; index++) {
@@ -76,6 +79,12 @@ export class CacheEntryListener {
         this.savedSize = size
         return this
     }
+
+    markAlreadyExists(key: string): CacheEntryListener {
+        this.savedKey = key
+        this.savedSize = 0
+        return this
+    }
 }
 
 export function logCachingReport(listener: CacheListener): void {
@@ -112,12 +121,18 @@ function getSum(
     cacheEntries: CacheEntryListener[],
     predicate: (value: CacheEntryListener) => number | undefined
 ): string {
+    if (cacheEntries.length === 0) {
+        return '0'
+    }
     return formatSize(cacheEntries.map(e => predicate(e) ?? 0).reduce((p, v) => p + v, 0))
 }
 
 function formatSize(bytes: number | undefined): string {
-    if (bytes === undefined || bytes === 0) {
+    if (bytes === undefined) {
         return ''
+    }
+    if (bytes === 0) {
+        return '0 (Entry already exists)'
     }
     return `${Math.round(bytes / (1024 * 1024))} MB (${bytes} B)`
 }

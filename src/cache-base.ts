@@ -15,12 +15,14 @@ import {
 } from './cache-utils'
 import {ConfigurationCacheEntryExtractor, GradleHomeEntryExtractor} from './cache-extract-entries'
 
-const CACHE_PROTOCOL_VERSION = 'v5-'
+const CACHE_PROTOCOL_VERSION = 'v6-'
+const RESTORED_CACHE_KEY_KEY = 'restored-cache-key'
 
 export const META_FILE_DIR = '.gradle-build-action'
 export const PROJECT_ROOTS_FILE = 'project-roots.txt'
 const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes'
 const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes'
+const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match'
 
 /**
  * Represents a key used to restore a cache entry.
@@ -70,14 +72,16 @@ function generateCacheKey(cacheName: string): CacheKey {
     // Exact match on Git SHA
     const cacheKey = `${cacheKeyForJobContext}-${github.context.sha}`
 
+    if (core.getBooleanInput(STRICT_CACHE_MATCH_PARAMETER)) {
+        return new CacheKey(cacheKey, [cacheKeyForJobContext])
+    }
+
     return new CacheKey(cacheKey, [cacheKeyForJobContext, cacheKeyForJob, cacheKeyForOs])
 }
 
 export class GradleStateCache {
     private cacheName: string
     private cacheDescription: string
-    private cacheKeyStateKey: string
-    private cacheResultStateKey: string
 
     protected readonly gradleUserHome: string
 
@@ -85,8 +89,6 @@ export class GradleStateCache {
         this.gradleUserHome = gradleUserHome
         this.cacheName = 'gradle'
         this.cacheDescription = 'Gradle User Home'
-        this.cacheKeyStateKey = `CACHE_KEY_gradle`
-        this.cacheResultStateKey = `CACHE_RESULT_gradle`
     }
 
     init(): void {
@@ -117,7 +119,6 @@ export class GradleStateCache {
         const entryListener = listener.entry(this.cacheDescription)
 
         const cacheKey = generateCacheKey(this.cacheName)
-        core.saveState(this.cacheKeyStateKey, cacheKey.key)
 
         cacheDebug(
             `Requesting ${this.cacheDescription} with
@@ -125,16 +126,13 @@ export class GradleStateCache {
     restoreKeys:[${cacheKey.restoreKeys}]`
         )
 
-        const cacheResult = await restoreCache(this.getCachePath(), cacheKey.key, cacheKey.restoreKeys)
-        entryListener.markRequested(cacheKey.key, cacheKey.restoreKeys)
-
+        const cacheResult = await restoreCache(this.getCachePath(), cacheKey.key, cacheKey.restoreKeys, entryListener)
         if (!cacheResult) {
             core.info(`${this.cacheDescription} cache not found. Will initialize empty.`)
             return
         }
 
-        core.saveState(this.cacheResultStateKey, cacheResult.key)
-        entryListener.markRestored(cacheResult.key, cacheResult.size)
+        core.saveState(RESTORED_CACHE_KEY_KEY, cacheResult.key)
 
         core.info(`Restored ${this.cacheDescription} from cache key: ${cacheResult.key}`)
 
@@ -163,12 +161,11 @@ export class GradleStateCache {
      * it is saved with the exact key.
      */
     async save(listener: CacheListener): Promise<void> {
-        // Retrieve the state set in the previous 'restore' step.
-        const cacheKeyFromRestore = core.getState(this.cacheKeyStateKey)
-        const cacheResultFromRestore = core.getState(this.cacheResultStateKey)
+        const cacheKey = generateCacheKey(this.cacheName).key
+        const restoredCacheKey = core.getState(RESTORED_CACHE_KEY_KEY)
 
-        if (cacheResultFromRestore && cacheKeyFromRestore === cacheResultFromRestore) {
-            core.info(`Cache hit occurred on the cache key ${cacheKeyFromRestore}, not saving cache.`)
+        if (restoredCacheKey && cacheKey === restoredCacheKey) {
+            core.info(`Cache hit occurred on the cache key ${cacheKey}, not saving cache.`)
             return
         }
 
@@ -179,13 +176,10 @@ export class GradleStateCache {
             return
         }
 
-        core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKeyFromRestore}`)
+        core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKey}`)
         const cachePath = this.getCachePath()
-        const savedEntry = await saveCache(cachePath, cacheKeyFromRestore)
-
-        if (savedEntry) {
-            listener.entry(this.cacheDescription).markSaved(savedEntry.key, savedEntry.size)
-        }
+        const entryListener = listener.entry(this.cacheDescription)
+        await saveCache(cachePath, cacheKey, entryListener)
 
         return
     }
@@ -272,11 +266,11 @@ if (isTopLevelBuild) {
 
 def registerCallbacks(buildScanExtension, rootProjectName) {
     buildScanExtension.with {
-        def buildOutcome = ""
         def scanFile = new File("gradle-build-scan.txt")
+        def buildFailed = false
 
         buildFinished { result ->
-            buildOutcome = result.failure == null ? " succeeded" : " failed"
+            buildFailed = (result.failure != null)
         }
 
         buildScanPublished { buildScan ->
@@ -284,8 +278,11 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
 
             // Send commands directly to GitHub Actions via STDOUT.
             def gradleCommand = rootProjectName + " " + gradle.startParameter.taskNames.join(" ")
-            def message = "Gradle build '\${gradleCommand}'\${buildOutcome} - \${buildScan.buildScanUri}"
-            println("::notice ::\${message}")
+            if (buildFailed) {
+                println("::warning ::Gradle build '\${gradleCommand}' FAILED - \${buildScan.buildScanUri}")
+            } else {
+                println("::notice ::Gradle build '\${gradleCommand}' - \${buildScan.buildScanUri}")
+            }
             println("::set-output name=build-scan-url::\${buildScan.buildScanUri}")
         }
     }
