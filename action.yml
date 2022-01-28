@@ -14,11 +14,13 @@ inputs:
     default: false
 
   cache-read-only:
-    description: When 'true', existing entries will be read from the cache but no entries will be written.
+    description: |
+      When 'true', existing entries will be read from the cache but no entries will be written.
+      By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
     required: false
-    default: false 
+    default: ${{ github.ref_name != github.event.repository.default_branch }}
   # e.g. Use the following setting to only write cache entries from your 'main' branch
-  #     cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+  #     cache-read-only: ${{ github.ref_name != 'main' }}
 
   gradle-home-cache-includes:
     description: Paths within Gradle User Home to cache.
