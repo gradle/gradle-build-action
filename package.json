@@ -38,7 +38,7 @@
     "@types/node": "16.11.11",
     "@types/jest": "^27.4.0",
     "@types/unzipper": "^0.10.5",
-    "@typescript-eslint/parser": "^5.10.1",
+    "@typescript-eslint/parser": "^5.10.2",
     "@zeit/ncc": "0.22.3",
     "eslint": "^8.8.0",
     "eslint-plugin-github": "4.3.5",
