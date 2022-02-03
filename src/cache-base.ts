@@ -102,12 +102,10 @@ export class GradleStateCache {
     }
 
     cacheOutputExists(): boolean {
-        const paths = this.getCachePath()
-        for (const p of paths) {
-            if (fs.existsSync(p)) {
-                cacheDebug(`Cache output exists at ${p}`)
-                return true
-            }
+        const cachesDir = path.resolve(this.gradleUserHome, 'caches')
+        if (fs.existsSync(cachesDir)) {
+            cacheDebug(`Cache output exists at ${cachesDir}`)
+            return true
         }
         return false
     }
