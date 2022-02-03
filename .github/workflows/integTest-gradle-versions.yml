@@ -15,7 +15,7 @@ jobs:
   provision-gradle:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: windows-latest
             script-suffix: '.bat'
@@ -49,7 +49,7 @@ jobs:
     strategy:
       matrix:
         gradle: [7.3, 6.9, 5.6.4, 4.10.3]
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - gradle: 5.6.4
             build-root-suffix: -gradle-5
