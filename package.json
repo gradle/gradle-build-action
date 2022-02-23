@@ -35,7 +35,7 @@
     "string-argv": "0.3.1"
   },
   "devDependencies": {
-    "@types/jest": "27.4.0",
+    "@types/jest": "27.4.1",
     "@types/node": "16.11.21",
     "@types/unzipper": "0.10.5",
     "@typescript-eslint/parser": "5.12.1",
