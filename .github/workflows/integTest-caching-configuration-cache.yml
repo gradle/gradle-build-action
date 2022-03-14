@@ -6,6 +6,9 @@ on:
   push:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}
+
 env:
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
