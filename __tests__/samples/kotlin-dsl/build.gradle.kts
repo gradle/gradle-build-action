@@ -18,10 +18,9 @@ tasks.test {
 }
 
 tasks.named("test").configure {
-    // Use an environment variable to bypass config-cache checks
-    if (System.getenv("VERIFY_CACHED_CONFIGURATION") != null) {
-        throw RuntimeException("Configuration was not cached: unexpected configuration of test task")
-    }
+    // Echo an output value so we can detect configuration-cache usage
+    println("::set-output name=task_configured::yes")
+
     doLast {
         if (System.getProperties().containsKey("verifyCachedBuild")) {
             throw RuntimeException("Build was not cached: unexpected execution of test task")

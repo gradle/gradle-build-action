@@ -46,11 +46,16 @@ jobs:
       uses: ./
       with:
         cache-read-only: true
-    - name: Execute Gradle build and verify cached configuration
-      env: 
-        VERIFY_CACHED_CONFIGURATION: true
+    - name: Groovy build with configuration-cache enabled
+      id: execute
       working-directory: __tests__/samples/groovy-dsl
       run: ./gradlew test --configuration-cache
+    - name: Check that configuration-cache was used
+      if: ${{ steps.execute.outputs.task_configured == 'yes' }}
+      uses: actions/github-script@v5
+      with:
+        script: |
+          core.setFailed('Configuration cache was not used - task was configured unexpectedly')
 
   # Check that the build can run when no extracted cache entries are restored
   no-extracted-cache-entries-restored:
@@ -123,8 +128,14 @@ jobs:
       uses: ./
       with:
         cache-read-only: true
-    - name: Execute 'test' again and verify cached configuration
-      env: 
-        VERIFY_CACHED_CONFIGURATION: true
+    - name: Execute 'test' again with configuration-cache enabled
+      id: execute
       working-directory: __tests__/samples/kotlin-dsl
       run: ./gradlew test --configuration-cache
+    - name: Check that configuration-cache was used
+      if: ${{ steps.execute.outputs.task_configured == 'yes' }}
+      uses: actions/github-script@v5
+      with:
+        script: |
+          core.setFailed('Configuration cache was not used - task was configured unexpectedly')
+
