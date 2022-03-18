@@ -24,13 +24,13 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@actions/cache": "1.0.9",
+    "@actions/cache": "1.0.10",
     "@actions/core": "1.6.0",
-    "@actions/exec": "1.1.0",
+    "@actions/exec": "1.1.1",
     "@actions/github": "5.0.0",
-    "@actions/glob": "0.2.0",
+    "@actions/glob": "0.2.1",
     "@actions/http-client": "1.0.11",
-    "@actions/tool-cache": "1.7.1",
+    "@actions/tool-cache": "1.7.2",
     "patch-package": "6.4.7",
     "string-argv": "0.3.1"
   },
