@@ -103,6 +103,9 @@ export function handleCacheFailure(error: unknown, message: string): void {
     } else {
         // Warn on all other errors
         core.warning(`${message}: ${error}`)
+        if (error instanceof Error && error.stack) {
+            cacheDebug(error.stack)
+        }
     }
 }
 
