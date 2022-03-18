@@ -1,5 +1,5 @@
 plugins {
-    id("com.gradle.enterprise") version("3.7")
+    id("com.gradle.enterprise") version "3.7"
 }
 
 gradleEnterprise {
