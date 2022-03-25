@@ -1,0 +1,28 @@
+plugins {
+    id 'base'
+    id 'org.gradle.wrapper-upgrade' version '0.10'
+}
+
+wrapperUpgrade {
+    gradle {
+        'gradle-build-action' {
+            repo = 'gradle/gradle-build-action'
+        }
+        'gradle-build-action-sample-gradle-plugin' {
+            repo = 'gradle/gradle-build-action'
+            dir = '__tests__/samples/gradle-plugin'
+        }
+        'gradle-build-action-sample-groovy-dsl' {
+            repo = 'gradle/gradle-build-action'
+            dir = '__tests__/samples/groovy-dsl'
+        }
+        'gradle-build-action-sample-java-toolchain' {
+            repo = 'gradle/gradle-build-action'
+            dir = '__tests__/samples/java-toolchain'
+        }
+        'gradle-build-action-sample-kotlin-dsl' {
+            repo = 'gradle/gradle-build-action'
+            dir = '__tests__/samples/kotlin-dsl'
+        }
+    }
+}

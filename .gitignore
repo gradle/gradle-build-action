@@ -104,3 +104,7 @@ __tests__/runner/*
 
 # ASDF tool configuration
 .tool-versions
+
+# Gradle
+.gradle/
+build/
