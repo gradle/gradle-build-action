@@ -1,0 +1,95 @@
+diff --git a/node_modules/@actions/cache/lib/cache.d.ts b/node_modules/@actions/cache/lib/cache.d.ts
+index 16b20f7..aea77ba 100644
+--- a/node_modules/@actions/cache/lib/cache.d.ts
++++ b/node_modules/@actions/cache/lib/cache.d.ts
+@@ -20,7 +20,7 @@ export declare function isFeatureAvailable(): boolean;
+  * @param downloadOptions cache download options
+  * @returns string returns the key for the cache hit, otherwise returns undefined
+  */
+-export declare function restoreCache(paths: string[], primaryKey: string, restoreKeys?: string[], options?: DownloadOptions): Promise<string | undefined>;
++export declare function restoreCache(paths: string[], primaryKey: string, restoreKeys?: string[], options?: DownloadOptions): Promise<CacheEntry | undefined>;
+ /**
+  * Saves a list of files with the specified key
+  *
+@@ -29,4 +29,12 @@ export declare function restoreCache(paths: string[], primaryKey: string, restor
+  * @param options cache upload options
+  * @returns number returns cacheId if the cache was saved successfully and throws an error if save fails
+  */
+-export declare function saveCache(paths: string[], key: string, options?: UploadOptions): Promise<number>;
++export declare function saveCache(paths: string[], key: string, options?: UploadOptions): Promise<CacheEntry>;
++
++// PATCHED: Add `CacheEntry` as return type for save/restore functions
++// This allows us to track and report on cache entry sizes.
++export declare class CacheEntry {
++    key: string;
++    size?: number;
++    constructor(key: string, size?: number);
++}
+diff --git a/node_modules/@actions/cache/lib/cache.js b/node_modules/@actions/cache/lib/cache.js
+index dd31592..cbe378a 100644
+--- a/node_modules/@actions/cache/lib/cache.js
++++ b/node_modules/@actions/cache/lib/cache.js
+@@ -37,6 +37,13 @@ class ReserveCacheError extends Error {
+     }
+ }
+ exports.ReserveCacheError = ReserveCacheError;
++class CacheEntry {
++    constructor(key, size) {
++        this.key = key;
++        this.size = size;
++    }
++}
++exports.CacheEntry = CacheEntry;
+ function checkPaths(paths) {
+     if (!paths || paths.length === 0) {
+         throw new ValidationError(`Path Validation Error: At least one directory or file path is required`);
+@@ -93,6 +100,7 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
+         }
+         const archivePath = path.join(yield utils.createTempDirectory(), utils.getCacheFileName(compressionMethod));
+         core.debug(`Archive Path: ${archivePath}`);
++        const restoredEntry = new CacheEntry(cacheEntry.cacheKey);
+         try {
+             // Download the cache from the cache entry
+             yield cacheHttpClient.downloadCache(cacheEntry.archiveLocation, archivePath, options);
+@@ -100,6 +108,7 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
+                 yield tar_1.listTar(archivePath, compressionMethod);
+             }
+             const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath);
++            restoredEntry.size = archiveFileSize;
+             core.info(`Cache Size: ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B)`);
+             yield tar_1.extractTar(archivePath, compressionMethod);
+             core.info('Cache restored successfully');
+@@ -113,7 +122,7 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
+                 core.debug(`Failed to delete archive: ${error}`);
+             }
+         }
+-        return cacheEntry.cacheKey;
++        return restoredEntry;
+     });
+ }
+ exports.restoreCache = restoreCache;
+@@ -144,6 +153,7 @@ function saveCache(paths, key, options) {
+         const archiveFolder = yield utils.createTempDirectory();
+         const archivePath = path.join(archiveFolder, utils.getCacheFileName(compressionMethod));
+         core.debug(`Archive Path: ${archivePath}`);
++        const savedEntry = new CacheEntry(key);
+         try {
+             yield tar_1.createTar(archiveFolder, cachePaths, compressionMethod);
+             if (core.isDebug()) {
+@@ -151,6 +161,7 @@ function saveCache(paths, key, options) {
+             }
+             const fileSizeLimit = 10 * 1024 * 1024 * 1024; // 10GB per repo limit
+             const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath);
++            savedEntry.size = archiveFileSize;
+             core.debug(`File Size: ${archiveFileSize}`);
+             if (archiveFileSize > fileSizeLimit) {
+                 throw new Error(`Cache size of ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B) is over the 10GB limit, not saving cache.`);
+@@ -167,7 +178,7 @@ function saveCache(paths, key, options) {
+                 core.debug(`Failed to delete archive: ${error}`);
+             }
+         }
+-        return cacheId;
++        return savedEntry;
+     });
+ }
+ exports.saveCache = saveCache;
