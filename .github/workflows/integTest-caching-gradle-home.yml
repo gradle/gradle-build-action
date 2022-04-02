@@ -4,6 +4,9 @@ on:
   pull_request:
     types: [assigned, review_requested]
   push:
+    paths:
+      - '.github/workflows/**'
+      - 'dist/**'
   workflow_dispatch:
 
 concurrency:
