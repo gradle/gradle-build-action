@@ -24,7 +24,7 @@ jobs:
     - name: Exucute Gradle build
       uses: ./
       with:
-        build-root-directory: __tests__/samples/groovy-dsl
+        build-root-directory: .github/workflows/samples/groovy-dsl
         arguments: test
 
   # Test that the gradle-user-home is restored
@@ -41,6 +41,6 @@ jobs:
       uses: ./
       with:
         cache-read-only: true
-        build-root-directory: __tests__/samples/groovy-dsl
+        build-root-directory: .github/workflows/samples/groovy-dsl
         arguments: test --offline -DverifyCachedBuild=true
 

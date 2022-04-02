@@ -30,19 +30,19 @@ jobs:
       uses: ./
       with:
         gradle-version: 6.9
-        build-root-directory: __tests__/samples/no-wrapper
+        build-root-directory: .github/workflows/samples/no-wrapper
         arguments: help -DgradleVersionCheck=6.9
     - name: Test use Gradle version alias
       uses: ./
       with:
         gradle-version: release-candidate
-        build-root-directory: __tests__/samples/no-wrapper
+        build-root-directory: .github/workflows/samples/no-wrapper
         arguments: help
     - name: Test use defined Gradle executable
       uses: ./
       with:
-        gradle-executable: __tests__/samples/groovy-dsl/gradlew${{ matrix.script-suffix }}
-        build-root-directory: __tests__/samples/no-wrapper
+        gradle-executable: .github/workflows/samples/groovy-dsl/gradlew${{ matrix.script-suffix }}
+        build-root-directory: .github/workflows/samples/no-wrapper
         arguments: help -DgradleVersionCheck=7.4.2
 
   gradle-versions:
@@ -64,7 +64,7 @@ jobs:
       id: gradle
       with:
         gradle-version: ${{matrix.gradle}}
-        build-root-directory: __tests__/samples/no-wrapper${{ matrix.build-root-suffix }}
+        build-root-directory: .github/workflows/samples/no-wrapper${{ matrix.build-root-suffix }}
         arguments: help -DgradleVersionCheck=${{matrix.gradle}}
     - name: Check build scan url
       if: ${{ !steps.gradle.outputs.build-scan-url }}

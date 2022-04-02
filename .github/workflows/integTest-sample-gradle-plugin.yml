@@ -25,7 +25,7 @@ jobs:
     - name: Setup Gradle
       uses: ./
     - name: Build gradle-plugin project
-      working-directory: __tests__/samples/gradle-plugin
+      working-directory: .github/workflows/samples/gradle-plugin
       run: ./gradlew build
 
   verify-build:
@@ -40,5 +40,5 @@ jobs:
     - name: Setup Gradle
       uses: ./
     - name: Build gradle-plugin project
-      working-directory: __tests__/samples/gradle-plugin
+      working-directory: .github/workflows/samples/gradle-plugin
       run: ./gradlew build --offline

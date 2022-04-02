@@ -13,37 +13,37 @@ updates:
     ignore:
       - dependency-name: "@types/node"
   - package-ecosystem: "gradle"
-    directory: "__tests__/samples/gradle-plugin"
+    directory: ".github/workflows/samples/gradle-plugin"
     registries:
       - gradle-plugin-portal
     schedule:
       interval: "daily"
   - package-ecosystem: "gradle"
-    directory: "__tests__/samples/groovy-dsl"
+    directory: ".github/workflows/samples/groovy-dsl"
     registries:
       - gradle-plugin-portal
     schedule:
       interval: "daily"
   - package-ecosystem: "gradle"
-    directory: "__tests__/samples/java-toolchain"
+    directory: ".github/workflows/samples/java-toolchain"
     registries:
       - gradle-plugin-portal
     schedule:
       interval: "daily"
   - package-ecosystem: "gradle"
-    directory: "__tests__/samples/kotlin-dsl"
+    directory: ".github/workflows/samples/kotlin-dsl"
     registries:
       - gradle-plugin-portal
     schedule:
       interval: "daily"
   - package-ecosystem: "gradle"
-    directory: "__tests__/samples/no-wrapper"
+    directory: ".github/workflows/samples/no-wrapper"
     registries:
       - gradle-plugin-portal
     schedule:
       interval: "daily"
   - package-ecosystem: "gradle"
-    directory: "__tests__/samples/no-wrapper-gradle-5"
+    directory: ".github/workflows/samples/no-wrapper-gradle-5"
     registries:
       - gradle-plugin-portal
     schedule:

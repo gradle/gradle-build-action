@@ -13,7 +13,7 @@ jobs:
         java-version: 11
     - uses: ./
     - id: gradle
-      working-directory: __tests__/samples/kotlin-dsl
+      working-directory: .github/workflows/samples/kotlin-dsl
       run: ./gradlew help
     - name: "Comment build scan url"
       uses: actions/github-script@v5

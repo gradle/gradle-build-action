@@ -24,7 +24,7 @@ jobs:
     - name: Invoke with multi-line arguments
       uses: ./
       with:
-        build-root-directory: __tests__/samples/groovy-dsl
+        build-root-directory: .github/workflows/samples/groovy-dsl
         arguments: |
             --configuration-cache
             --build-cache

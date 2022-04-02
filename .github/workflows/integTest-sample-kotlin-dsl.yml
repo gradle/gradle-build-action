@@ -25,7 +25,7 @@ jobs:
     - name: Setup Gradle
       uses: ./
     - name: Build kotlin-dsl project
-      working-directory: __tests__/samples/kotlin-dsl
+      working-directory: .github/workflows/samples/kotlin-dsl
       run: ./gradlew build
 
   verify-build:
@@ -40,5 +40,5 @@ jobs:
     - name: Setup Gradle
       uses: ./
     - name: Build kotlin-dsl project
-      working-directory: __tests__/samples/kotlin-dsl
+      working-directory: .github/workflows/samples/kotlin-dsl
       run: ./gradlew build --offline

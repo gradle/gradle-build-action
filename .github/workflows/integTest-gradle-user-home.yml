@@ -27,7 +27,7 @@ jobs:
     - name: Setup Gradle
       uses: ./
     - name: Build using Gradle wrapper
-      working-directory: __tests__/samples/groovy-dsl
+      working-directory: .github/workflows/samples/groovy-dsl
       run: ./gradlew test --info
 
   # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
@@ -45,7 +45,7 @@ jobs:
       with:
         cache-read-only: true
     - name: Execute Gradle build with --offline
-      working-directory: __tests__/samples/groovy-dsl
+      working-directory: .github/workflows/samples/groovy-dsl
       run: ./gradlew test --offline --info
 
   # Test that the gradle-user-home cache will cache and restore local build-cache
@@ -63,5 +63,5 @@ jobs:
       with:
         cache-read-only: true
     - name: Execute Gradle build and verify tasks from cache
-      working-directory: __tests__/samples/groovy-dsl
+      working-directory: .github/workflows/samples/groovy-dsl
       run: ./gradlew test -DverifyCachedBuild=true --info
