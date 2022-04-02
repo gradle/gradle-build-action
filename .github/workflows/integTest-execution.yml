@@ -43,7 +43,7 @@ jobs:
       with:
         gradle-executable: __tests__/samples/groovy-dsl/gradlew${{ matrix.script-suffix }}
         build-root-directory: __tests__/samples/no-wrapper
-        arguments: help -DgradleVersionCheck=7.4.1
+        arguments: help -DgradleVersionCheck=7.4.2
 
   gradle-versions:
     strategy:
