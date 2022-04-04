@@ -330,15 +330,14 @@ jobs:
   gradle:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-java@v2
-      with:
-        distribution: temurin
-        java-version: 11
-    - uses: gradle/gradle-build-action@v2
-    - id: gradle
-      run: ./gradlew build
-    - name: "Comment build scan url"
+    - name: Checkout project sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+    - name: Run build with Gradle wrapper
+      id: gradle
+      run: ./gradlew build --scan
+    - name: "Add build scan URL as PR comment"
       uses: actions/github-script@v5
       if: github.event_name == 'pull_request' && failure()
       with:
