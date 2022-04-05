@@ -5,7 +5,7 @@ on:
     types: [assigned, review_requested]
   push:
     paths:
-      - '.github/workflows/**'
+      - '.github/**'
       - 'dist/**'
   workflow_dispatch:
 
@@ -36,7 +36,7 @@ jobs:
         gradle-home-cache-excludes: |
             caches/build-cache-1
     - name: Build using Gradle wrapper
-      working-directory: .github/workflows/samples/groovy-dsl
+      working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test
 
   # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
@@ -60,7 +60,7 @@ jobs:
             caches/build-cache-1
         cache-read-only: true
     - name: Execute Gradle build with --offline
-      working-directory: .github/workflows/samples/groovy-dsl
+      working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test --offline
 
   # Test that build scans are captured when caching is explicitly disabled
@@ -78,7 +78,7 @@ jobs:
         cache-disabled: true
     - name: Run Gradle build
       id: gradle
-      working-directory: .github/workflows/samples/no-wrapper${{ matrix.build-root-suffix }}
+      working-directory: .github/workflow-samples/no-wrapper${{ matrix.build-root-suffix }}
       run: gradle help "-DgradleVersionCheck=${{matrix.gradle}}"
     - name: Check build scan url is captured
       if: ${{ !steps.gradle.outputs.build-scan-url }}
@@ -99,7 +99,7 @@ jobs:
       uses: ./
     - name: Run Gradle build
       id: gradle
-      working-directory: .github/workflows/samples/no-wrapper${{ matrix.build-root-suffix }}
+      working-directory: .github/workflow-samples/no-wrapper${{ matrix.build-root-suffix }}
       run: gradle help "-DgradleVersionCheck=${{matrix.gradle}}"
     - name: Check build scan url is captured
       if: ${{ !steps.gradle.outputs.build-scan-url }}
@@ -124,7 +124,7 @@ jobs:
       with:
         cache-write-only: true
     - name: Build using Gradle wrapper
-      working-directory: .github/workflows/samples/groovy-dsl
+      working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test
 
   verify-write-only-build:
@@ -143,6 +143,6 @@ jobs:
       with:
         cache-read-only: true
     - name: Execute Gradle build with --offline
-      working-directory: .github/workflows/samples/groovy-dsl
+      working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test --offline
 

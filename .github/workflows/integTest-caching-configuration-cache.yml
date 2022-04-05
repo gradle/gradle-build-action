@@ -5,7 +5,7 @@ on:
     types: [assigned, review_requested]
   push:
     paths:
-      - '.github/workflows/**'
+      - '.github/**'
       - 'dist/**'
   workflow_dispatch:
 
@@ -31,7 +31,7 @@ jobs:
     - name: Setup Gradle
       uses: ./
     - name: Groovy build with configuration-cache enabled
-      working-directory: .github/workflows/samples/groovy-dsl
+      working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test --configuration-cache
 
   configuration-cache-groovy:
@@ -51,7 +51,7 @@ jobs:
         cache-read-only: true
     - name: Groovy build with configuration-cache enabled
       id: execute
-      working-directory: .github/workflows/samples/groovy-dsl
+      working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test --configuration-cache
     - name: Check that configuration-cache was used
       if: ${{ steps.execute.outputs.task_configured == 'yes' }}
@@ -79,7 +79,7 @@ jobs:
       with:
         cache-read-only: true
     - name: Check execute Gradle build with configuration cache enabled (but not restored)
-      working-directory: .github/workflows/samples/groovy-dsl
+      working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test --configuration-cache
 
   seed-build-kotlin:
@@ -95,7 +95,7 @@ jobs:
     - name: Setup Gradle
       uses: ./
     - name: Execute 'help' with configuration-cache enabled
-      working-directory: .github/workflows/samples/kotlin-dsl
+      working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew help --configuration-cache
 
   modify-build-kotlin:
@@ -112,7 +112,7 @@ jobs:
     - name: Setup Gradle
       uses: ./
     - name: Execute 'test' with configuration-cache enabled
-      working-directory: .github/workflows/samples/kotlin-dsl
+      working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew test --configuration-cache
 
  # Test restore configuration-cache from the third build invocation
@@ -133,7 +133,7 @@ jobs:
         cache-read-only: true
     - name: Execute 'test' again with configuration-cache enabled
       id: execute
-      working-directory: .github/workflows/samples/kotlin-dsl
+      working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew test --configuration-cache
     - name: Check that configuration-cache was used
       if: ${{ steps.execute.outputs.task_configured == 'yes' }}

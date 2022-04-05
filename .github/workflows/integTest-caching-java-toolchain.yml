@@ -5,7 +5,7 @@ on:
     types: [assigned, review_requested]
   push:
     paths:
-      - '.github/workflows/**'
+      - '.github/**'
       - 'dist/**'
   workflow_dispatch:
 
@@ -27,7 +27,7 @@ jobs:
     - name: Setup Gradle
       uses: ./
     - name: Build using Gradle wrapper
-      working-directory: .github/workflows/samples/java-toolchain
+      working-directory: .github/workflow-samples/java-toolchain
       run: ./gradlew test --info
 
   # Test that the gradle-user-home cache will cache the toolchain, by running build with --offline
@@ -45,5 +45,5 @@ jobs:
       with:
         cache-read-only: true
     - name: Execute Gradle build with --offline
-      working-directory: .github/workflows/samples/java-toolchain
+      working-directory: .github/workflow-samples/java-toolchain
       run: ./gradlew test --info --offline

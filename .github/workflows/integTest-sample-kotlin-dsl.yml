@@ -5,7 +5,7 @@ on:
     types: [assigned, review_requested]
   push:
     paths:
-      - '.github/workflows/**'
+      - '.github/**'
       - 'dist/**'
   workflow_dispatch:
 
@@ -28,7 +28,7 @@ jobs:
     - name: Setup Gradle
       uses: ./
     - name: Build kotlin-dsl project
-      working-directory: .github/workflows/samples/kotlin-dsl
+      working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew build
 
   verify-build:
@@ -43,5 +43,5 @@ jobs:
     - name: Setup Gradle
       uses: ./
     - name: Build kotlin-dsl project
-      working-directory: .github/workflows/samples/kotlin-dsl
+      working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew build --offline

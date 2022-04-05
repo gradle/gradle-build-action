@@ -5,7 +5,7 @@ on:
     types: [assigned, review_requested]
   push:
     paths:
-      - '.github/workflows/**'
+      - '.github/**'
       - 'dist/**'
   workflow_dispatch:
 
@@ -34,21 +34,21 @@ jobs:
       with:
         gradle-version: 6.9
     - name: Test uses Gradle v6.9
-      working-directory: .github/workflows/samples/no-wrapper
+      working-directory: .github/workflow-samples/no-wrapper
       run: gradle help "-DgradleVersionCheck=6.9"
     - name: Setup Gradle with v7.1.1
       uses: ./
       with:
         gradle-version: 7.1.1
     - name: Test uses Gradle v7.1.1
-      working-directory: .github/workflows/samples/no-wrapper
+      working-directory: .github/workflow-samples/no-wrapper
       run: gradle help "-DgradleVersionCheck=7.1.1"
     - name: Setup Gradle with release-candidate
       uses: ./
       with:
         gradle-version: release-candidate
     - name: Test use release-candidate
-      working-directory: .github/workflows/samples/no-wrapper
+      working-directory: .github/workflow-samples/no-wrapper
       run: gradle help
   
   gradle-versions:
@@ -71,7 +71,7 @@ jobs:
         gradle-version: ${{ matrix.gradle }}
     - name: Run Gradle build
       id: gradle
-      working-directory: .github/workflows/samples/no-wrapper${{ matrix.build-root-suffix }}
+      working-directory: .github/workflow-samples/no-wrapper${{ matrix.build-root-suffix }}
       run: gradle help "-DgradleVersionCheck=${{matrix.gradle}}"
     - name: Check build scan url
       if: ${{ !steps.gradle.outputs.build-scan-url }}

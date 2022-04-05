@@ -12,7 +12,7 @@ jobs:
       uses: ./
     - name: Run build with Gradle wrapper
       id: gradle
-      working-directory: .github/workflows/samples/kotlin-dsl
+      working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew build --scan
     - name: "Add build scan URL as PR comment"
       uses: actions/github-script@v5

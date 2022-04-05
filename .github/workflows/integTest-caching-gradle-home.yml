@@ -5,7 +5,7 @@ on:
     types: [assigned, review_requested]
   push:
     paths:
-      - '.github/workflows/**'
+      - '.github/**'
       - 'dist/**'
   workflow_dispatch:
 
@@ -27,7 +27,7 @@ jobs:
     - name: Setup Gradle
       uses: ./
     - name: Build using Gradle wrapper
-      working-directory: .github/workflows/samples/groovy-dsl
+      working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test
 
   # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
@@ -45,7 +45,7 @@ jobs:
       with:
         cache-read-only: true
     - name: Execute Gradle build with --offline
-      working-directory: .github/workflows/samples/groovy-dsl
+      working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test --offline
 
   # Test that the gradle-user-home cache will cache and restore local build-cache
@@ -63,7 +63,7 @@ jobs:
       with:
         cache-read-only: true
     - name: Execute Gradle build and verify tasks from cache
-      working-directory: .github/workflows/samples/groovy-dsl
+      working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test -DverifyCachedBuild=true
 
   # Check that the build can run when Gradle User Home is not fully restored
@@ -83,6 +83,6 @@ jobs:
       with:
         cache-read-only: true
     - name: Check executee Gradle build
-      working-directory: .github/workflows/samples/groovy-dsl
+      working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test
 
