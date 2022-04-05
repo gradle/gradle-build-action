@@ -304,13 +304,19 @@ export class GradleHomeEntryExtractor extends AbstractEntryExtractor {
             patterns: string[],
             bundle: boolean
         ): ExtractedCacheEntryDefinition => {
-            const resolvedPattern = patterns.map(x => path.resolve(this.gradleUserHome, x)).join('\n')
-            return new ExtractedCacheEntryDefinition(artifactType, resolvedPattern, bundle)
+            const resolvedPatterns = patterns
+                .map(x => {
+                    const isDir = x.endsWith('/')
+                    const resolved = path.resolve(this.gradleUserHome, x)
+                    return isDir ? `${resolved}/` : resolved // Restore trailing '/' removed by path.resolve()
+                })
+                .join('\n')
+            return new ExtractedCacheEntryDefinition(artifactType, resolvedPatterns, bundle)
         }
 
         return [
             entryDefinition('generated-gradle-jars', ['caches/*/generated-gradle-jars/*.jar'], false),
-            entryDefinition('wrapper-zips', ['wrapper/dists/*/*/*.zip'], false),
+            entryDefinition('wrapper-zips', ['wrapper/dists/*/*/*/'], false), // Directories only
             entryDefinition('java-toolchains', ['jdks/*.zip', 'jdks/*.tar.gz'], false),
             entryDefinition('dependencies', ['caches/modules-*/files-*/*/*/*/*'], true),
             entryDefinition('instrumented-jars', ['caches/jars-*/*'], true),
