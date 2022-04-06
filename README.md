@@ -206,7 +206,7 @@ cache-disabled: true
 
 ### Cache keys
 
-For distributions downloaded to satisfy a `gradle-version` parametere are stored outside of Gradle User Home and cached separately. The cache key is unique to the downloaded distribution and will not change over time.
+Distributions downloaded to satisfy a `gradle-version` parameter are stored outside of Gradle User Home and cached separately. The cache key is unique to the downloaded distribution and will not change over time.
 
 The state of the Gradle User Home and configuration-cache are highly dependent on the Gradle execution, so the cache key is composed of the current commit hash and the GitHub actions job id.
 As such, the cache key is likely to change on each subsequent run of GitHub actions. 
