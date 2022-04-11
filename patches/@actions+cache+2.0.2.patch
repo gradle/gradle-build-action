@@ -26,7 +26,7 @@ index 16b20f7..aea77ba 100644
 +    constructor(key: string, size?: number);
 +}
 diff --git a/node_modules/@actions/cache/lib/cache.js b/node_modules/@actions/cache/lib/cache.js
-index 435f74b..7784f47 100644
+index 0b5a2a8..757ad88 100644
 --- a/node_modules/@actions/cache/lib/cache.js
 +++ b/node_modules/@actions/cache/lib/cache.js
 @@ -93,6 +93,7 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
