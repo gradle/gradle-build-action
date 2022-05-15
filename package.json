@@ -25,29 +25,27 @@
   "license": "MIT",
   "dependencies": {
     "@actions/cache": "2.0.2",
-    "@actions/core": "1.6.0",
+    "@actions/core": "1.8.2",
     "@actions/exec": "1.1.1",
     "@actions/github": "5.0.1",
     "@actions/glob": "0.3.0",
     "@actions/http-client": "1.0.11",
-    "@actions/tool-cache": "1.7.2",
+    "@actions/tool-cache": "2.0.1",
     "string-argv": "0.3.1"
   },
   "devDependencies": {
-    "@types/jest": "27.4.1",
     "@types/node": "16.11.21",
     "@types/unzipper": "0.10.5",
-    "@typescript-eslint/parser": "5.20.0",
-    "@zeit/ncc": "0.22.3",
+    "@typescript-eslint/parser": "5.23.0",
+    "@vercel/ncc": "0.33.4",
     "eslint": "8.14.0",
     "eslint-plugin-github": "4.3.6",
-    "eslint-plugin-jest": "26.1.4",
+    "eslint-plugin-jest": "26.2.0",
     "jest": "27.5.1",
-    "jest-circus": "27.5.1",
     "js-yaml": "4.1.0",
     "patch-package": "6.4.7",
     "prettier": "2.6.2",
     "ts-jest": "27.1.4",
-    "typescript": "4.6.3"
+    "typescript": "4.6.4"
   }
 }
