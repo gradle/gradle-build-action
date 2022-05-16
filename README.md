@@ -135,7 +135,7 @@ The initial Action step will perform the Gradle setup.
 
 ### Gradle command-line arguments
 
-The `arguments` input can used to pass arbitrary arguments to the `gradle` command line.
+The `arguments` input can be used to pass arbitrary arguments to the `gradle` command line.
 Arguments can be supplied in a single line, or as a multi-line input.
 
 Here are some valid examples:
