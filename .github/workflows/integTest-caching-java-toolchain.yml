@@ -13,7 +13,7 @@ concurrency:
   group: ${{ github.workflow }}
 
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ github.workflow }}#${{ github.run_number }}:${{ github.run_attempt }}-
 
 jobs:
   seed-build:
@@ -22,13 +22,13 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-    - name: Build using Gradle wrapper
-      working-directory: .github/workflow-samples/java-toolchain
-      run: ./gradlew test --info
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: ./
+      - name: Build using Gradle wrapper
+        working-directory: .github/workflow-samples/java-toolchain
+        run: ./gradlew test --info
 
   # Test that the gradle-user-home cache will cache the toolchain, by running build with --offline
   toolchain-cache:
@@ -38,12 +38,12 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-      with:
-        cache-read-only: true
-    - name: Execute Gradle build with --offline
-      working-directory: .github/workflow-samples/java-toolchain
-      run: ./gradlew test --info --offline
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: ./
+        with:
+          cache-read-only: true
+      - name: Execute Gradle build with --offline
+        working-directory: .github/workflow-samples/java-toolchain
+        run: ./gradlew test --info --offline

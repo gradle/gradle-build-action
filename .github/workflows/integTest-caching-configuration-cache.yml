@@ -20,125 +20,124 @@ jobs:
   # These builds should start fresh without cache hits, due to the seed injected into the cache key above.
   seed-build-groovy:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-groovy-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ github.workflow }}#${{ github.run_number }}:${{ github.run_attempt }}-groovy-
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-    - name: Groovy build with configuration-cache enabled
-      working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test --configuration-cache
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: ./
+      - name: Groovy build with configuration-cache enabled
+        working-directory: .github/workflow-samples/groovy-dsl
+        run: ./gradlew test --configuration-cache
 
   configuration-cache-groovy:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-groovy-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ github.workflow }}#${{ github.run_number }}:${{ github.run_attempt }}-groovy-
     needs: seed-build-groovy
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-      with:
-        cache-read-only: true
-    - name: Groovy build with configuration-cache enabled
-      id: execute
-      working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test --configuration-cache
-    - name: Check that configuration-cache was used
-      if: ${{ steps.execute.outputs.task_configured == 'yes' }}
-      uses: actions/github-script@v5
-      with:
-        script: |
-          core.setFailed('Configuration cache was not used - task was configured unexpectedly')
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: ./
+        with:
+          cache-read-only: true
+      - name: Groovy build with configuration-cache enabled
+        id: execute
+        working-directory: .github/workflow-samples/groovy-dsl
+        run: ./gradlew test --configuration-cache
+      - name: Check that configuration-cache was used
+        if: ${{ steps.execute.outputs.task_configured == 'yes' }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.setFailed('Configuration cache was not used - task was configured unexpectedly')
 
   # Check that the build can run when no extracted cache entries are restored
   no-extracted-cache-entries-restored:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-groovy-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ github.workflow }}#${{ github.run_number }}:${{ github.run_attempt }}-groovy-
     needs: seed-build-groovy
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle with no extracted cache entries restored
-      uses: ./
-      env: 
-        GRADLE_BUILD_ACTION_SKIP_RESTORE: "generated-gradle-jars|wrapper-zips|java-toolchains|instrumented-jars|dependencies|kotlin-dsl"
-      with:
-        cache-read-only: true
-    - name: Check execute Gradle build with configuration cache enabled (but not restored)
-      working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test --configuration-cache
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle with no extracted cache entries restored
+        uses: ./
+        env:
+          GRADLE_BUILD_ACTION_SKIP_RESTORE: "generated-gradle-jars|wrapper-zips|java-toolchains|instrumented-jars|dependencies|kotlin-dsl"
+        with:
+          cache-read-only: true
+      - name: Check execute Gradle build with configuration cache enabled (but not restored)
+        working-directory: .github/workflow-samples/groovy-dsl
+        run: ./gradlew test --configuration-cache
 
   seed-build-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-kotlin-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ github.workflow }}#${{ github.run_number }}:${{ github.run_attempt }}-kotlin-
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-    - name: Execute 'help' with configuration-cache enabled
-      working-directory: .github/workflow-samples/kotlin-dsl
-      run: ./gradlew help --configuration-cache
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: ./
+      - name: Execute 'help' with configuration-cache enabled
+        working-directory: .github/workflow-samples/kotlin-dsl
+        run: ./gradlew help --configuration-cache
 
   modify-build-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-kotlin-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ github.workflow }}#${{ github.run_number }}:${{ github.run_attempt }}-kotlin-
     needs: seed-build-kotlin
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-    - name: Execute 'test' with configuration-cache enabled
-      working-directory: .github/workflow-samples/kotlin-dsl
-      run: ./gradlew test --configuration-cache
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: ./
+      - name: Execute 'test' with configuration-cache enabled
+        working-directory: .github/workflow-samples/kotlin-dsl
+        run: ./gradlew test --configuration-cache
 
  # Test restore configuration-cache from the third build invocation
   configuration-cache-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-kotlin-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ github.workflow }}#${{ github.run_number }}:${{ github.run_attempt }}-kotlin-
     needs: modify-build-kotlin
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-      with:
-        cache-read-only: true
-    - name: Execute 'test' again with configuration-cache enabled
-      id: execute
-      working-directory: .github/workflow-samples/kotlin-dsl
-      run: ./gradlew test --configuration-cache
-    - name: Check that configuration-cache was used
-      if: ${{ steps.execute.outputs.task_configured == 'yes' }}
-      uses: actions/github-script@v5
-      with:
-        script: |
-          core.setFailed('Configuration cache was not used - task was configured unexpectedly')
-
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: ./
+        with:
+          cache-read-only: true
+      - name: Execute 'test' again with configuration-cache enabled
+        id: execute
+        working-directory: .github/workflow-samples/kotlin-dsl
+        run: ./gradlew test --configuration-cache
+      - name: Check that configuration-cache was used
+        if: ${{ steps.execute.outputs.task_configured == 'yes' }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.setFailed('Configuration cache was not used - task was configured unexpectedly')

@@ -13,10 +13,10 @@ concurrency:
   group: ${{ github.workflow }}
 
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ github.workflow }}#${{ github.run_number }}:${{ github.run_attempt }}-
 
-jobs:   
-  # Tests for executing with different Gradle versions. 
+jobs:
+  # Tests for executing with different Gradle versions.
   # Each build verifies that it is executed with the expected Gradle version.
   gradle-execution:
     strategy:
@@ -24,29 +24,29 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: windows-latest
-            script-suffix: '.bat'
+            script-suffix: .bat
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Test use defined Gradle version
-      uses: ./
-      with:
-        gradle-version: 6.9
-        build-root-directory: .github/workflow-samples/no-wrapper
-        arguments: help -DgradleVersionCheck=6.9
-    - name: Test use Gradle version alias
-      uses: ./
-      with:
-        gradle-version: release-candidate
-        build-root-directory: .github/workflow-samples/no-wrapper
-        arguments: help
-    - name: Test use defined Gradle executable
-      uses: ./
-      with:
-        gradle-executable: .github/workflow-samples/groovy-dsl/gradlew${{ matrix.script-suffix }}
-        build-root-directory: .github/workflow-samples/no-wrapper
-        arguments: help -DgradleVersionCheck=7.4.2
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Test use defined Gradle version
+        uses: ./
+        with:
+          gradle-version: 6.9
+          build-root-directory: .github/workflow-samples/no-wrapper
+          arguments: help -DgradleVersionCheck=6.9
+      - name: Test use Gradle version alias
+        uses: ./
+        with:
+          gradle-version: release-candidate
+          build-root-directory: .github/workflow-samples/no-wrapper
+          arguments: help
+      - name: Test use defined Gradle executable
+        uses: ./
+        with:
+          gradle-executable: .github/workflow-samples/groovy-dsl/gradlew${{ matrix.script-suffix }}
+          build-root-directory: .github/workflow-samples/no-wrapper
+          arguments: help -DgradleVersionCheck=7.4.2
 
   gradle-versions:
     strategy:
@@ -60,20 +60,18 @@ jobs:
             build-root-suffix: -gradle-4
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Run Gradle build
-      uses: ./
-      id: gradle
-      with:
-        gradle-version: ${{matrix.gradle}}
-        build-root-directory: .github/workflow-samples/no-wrapper${{ matrix.build-root-suffix }}
-        arguments: help -DgradleVersionCheck=${{matrix.gradle}}
-    - name: Check build scan url
-      if: ${{ !steps.gradle.outputs.build-scan-url }}
-      uses: actions/github-script@v3
-      with:
-        script: |
-          core.setFailed('No build scan detected')    
-  
-   
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Run Gradle build
+        uses: ./
+        id: gradle
+        with:
+          gradle-version: ${{ matrix.gradle }}
+          build-root-directory: .github/workflow-samples/no-wrapper${{ matrix.build-root-suffix }}
+          arguments: help -DgradleVersionCheck=${{ matrix.gradle }}
+      - name: Check build scan url
+        if: ${{ !steps.gradle.outputs.build-scan-url }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.setFailed('No build scan detected')

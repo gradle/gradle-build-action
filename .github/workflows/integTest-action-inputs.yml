@@ -13,7 +13,7 @@ concurrency:
   group: ${{ github.workflow }}
 
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ github.workflow }}#${{ github.run_number }}:${{ github.run_attempt }}-
 
 jobs:
   action-inputs:
@@ -22,13 +22,13 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Invoke with multi-line arguments
-      uses: ./
-      with:
-        build-root-directory: .github/workflow-samples/groovy-dsl
-        arguments: |
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Invoke with multi-line arguments
+        uses: ./
+        with:
+          build-root-directory: .github/workflow-samples/groovy-dsl
+          arguments: |
             --configuration-cache
             --build-cache
             -DsystemProperty=FOO

@@ -13,7 +13,7 @@ concurrency:
   group: ${{ github.workflow }}
 
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ github.workflow }}#${{ github.run_number }}:${{ github.run_attempt }}-
 
 jobs:
   seed-build:
@@ -22,13 +22,13 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Exucute Gradle build
-      uses: ./
-      with:
-        build-root-directory: .github/workflow-samples/groovy-dsl
-        arguments: test
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Exucute Gradle build
+        uses: ./
+        with:
+          build-root-directory: .github/workflow-samples/groovy-dsl
+          arguments: test
 
   # Test that the gradle-user-home is restored
   verify-build:
@@ -38,12 +38,11 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Execute Gradle build
-      uses: ./
-      with:
-        cache-read-only: true
-        build-root-directory: .github/workflow-samples/groovy-dsl
-        arguments: test --offline -DverifyCachedBuild=true
-
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Execute Gradle build
+        uses: ./
+        with:
+          cache-read-only: true
+          build-root-directory: .github/workflow-samples/groovy-dsl
+          arguments: test --offline -DverifyCachedBuild=true

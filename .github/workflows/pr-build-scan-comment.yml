@@ -6,22 +6,22 @@ jobs:
   gradle:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout project sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-    - name: Run build with Gradle wrapper
-      id: gradle
-      working-directory: .github/workflow-samples/kotlin-dsl
-      run: ./gradlew build --scan
-    - name: "Add build scan URL as PR comment"
-      uses: actions/github-script@v5
-      with:
-        github-token: ${{secrets.GITHUB_TOKEN}}
-        script: |
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: 'PR ready for review: ${{ steps.gradle.outputs.build-scan-url }}'
-          })
+      - name: Checkout project sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: ./
+      - name: Run build with Gradle wrapper
+        id: gradle
+        working-directory: .github/workflow-samples/kotlin-dsl
+        run: ./gradlew build --scan
+      - name: Add build scan URL as PR comment
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'PR ready for review: ${{ steps.gradle.outputs.build-scan-url }}'
+            })

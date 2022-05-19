@@ -13,7 +13,7 @@ concurrency:
   group: ${{ github.workflow }}
 
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ github.workflow }}#${{ github.run_number }}:${{ github.run_attempt }}-
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
@@ -23,13 +23,13 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-    - name: Build gradle-plugin project
-      working-directory: .github/workflow-samples/gradle-plugin
-      run: ./gradlew build
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: ./
+      - name: Build gradle-plugin project
+        working-directory: .github/workflow-samples/gradle-plugin
+        run: ./gradlew build
 
   verify-build:
     needs: seed-build
@@ -38,10 +38,10 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-    - name: Build gradle-plugin project
-      working-directory: .github/workflow-samples/gradle-plugin
-      run: ./gradlew build --offline
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: ./
+      - name: Build gradle-plugin project
+        working-directory: .github/workflow-samples/gradle-plugin
+        run: ./gradlew build --offline

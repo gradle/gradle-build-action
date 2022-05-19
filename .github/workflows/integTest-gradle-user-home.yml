@@ -13,8 +13,8 @@ concurrency:
   group: ${{ github.workflow }}
 
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-
-  GRADLE_USER_HOME: ${{github.workspace}}/custom/gradle/home
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ github.workflow }}#${{ github.run_number }}:${{ github.run_attempt }}-
+  GRADLE_USER_HOME: ${{ github.workspace }}/custom/gradle/home
 
 jobs:
   # Run initial Gradle builds to push initial cache entries
@@ -25,13 +25,13 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-    - name: Build using Gradle wrapper
-      working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test --info
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: ./
+      - name: Build using Gradle wrapper
+        working-directory: .github/workflow-samples/groovy-dsl
+        run: ./gradlew test --info
 
   # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
   dependencies-cache:
@@ -41,15 +41,15 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-      with:
-        cache-read-only: true
-    - name: Execute Gradle build with --offline
-      working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test --offline --info
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: ./
+        with:
+          cache-read-only: true
+      - name: Execute Gradle build with --offline
+        working-directory: .github/workflow-samples/groovy-dsl
+        run: ./gradlew test --offline --info
 
   # Test that the gradle-user-home cache will cache and restore local build-cache
   build-cache:
@@ -59,12 +59,12 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: ./
-      with:
-        cache-read-only: true
-    - name: Execute Gradle build and verify tasks from cache
-      working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test -DverifyCachedBuild=true --info
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: ./
+        with:
+          cache-read-only: true
+      - name: Execute Gradle build and verify tasks from cache
+        working-directory: .github/workflow-samples/groovy-dsl
+        run: ./gradlew test -DverifyCachedBuild=true --info
