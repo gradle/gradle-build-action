@@ -19,34 +19,33 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-java@v2
-      with:
-        distribution: temurin
-        java-version: 11
-        
-    - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2
-    
-    - name: Execute Gradle build
-      run: ./gradlew build
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 11
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Execute Gradle build
+        run: ./gradlew build
 ```
 
 ## Why use the `gradle-build-action`?
 
-It is possible to directly invoke Gradle in your workflow, and the `actions/setup-java@v2` action provides a simple way to cache Gradle dependencies. 
+It is possible to directly invoke Gradle in your workflow, and the `actions/setup-java@v3` action provides a simple way to cache Gradle dependencies.
 
 However, the `gradle-build-action` offers a number of advantages over this approach:
-
-- Easily [run the build with different versions of Gradle](#download-install-and-use-a-specific-gradle-version) using the `gradle-version` parameter. Gradle distributions are automatically downloaded and cached. 
+- Easily [run the build with different versions of Gradle](#download-install-and-use-a-specific-gradle-version) using the `gradle-version` parameter. Gradle distributions are automatically downloaded and cached.
 - More sophisticated and more efficient caching of Gradle User Home between invocations, compared to `setup-java` and most custom configurations using `actions/cache`. [More details below](#caching).
 - Detailed reporting of cache usage and cache configuration options allow you to [optimize the use of the GitHub actions cache](#optimizing-cache-effectiveness).
 - [Automatic capture of build scan links](#build-scans) from the build, making these easier to locate for workflow run.
 
-The `gradle-build-action` is designed to provide these benefits with minimal configuration. 
+The `gradle-build-action` is designed to provide these benefits with minimal configuration.
 These features work both when Gradle is executed via the `gradle-build-action` and for any Gradle execution in subsequent steps.
 
-When using `gradle-build-action` we recommend that you _not_ use `actions/cache` or `actions/setup-java@v2` to explicitly cache the Gradle User Home. Doing so may interfere with the caching provided by this action.
+When using `gradle-build-action` we recommend that you _not_ use `actions/cache` or `actions/setup-java@v3` to explicitly cache the Gradle User Home. Doing so may interfere with the caching provided by this action.
 
 ## Use a specific Gradle version
 
@@ -63,13 +62,13 @@ The `gradle-version` parameter can be set to any valid Gradle version.
 
 Moreover, you can use the following aliases:
 
-| Alias | Selects |
-| --- |---|
+| Alias               | Selects |
+| ---                 | --- |
 | `wrapper`           | The Gradle wrapper's version (default, useful for matrix builds) |
 | `current`           | The current [stable release](https://gradle.org/install/) |
 | `release-candidate` | The current [release candidate](https://gradle.org/release-candidate/) if any, otherwise fallback to `current` |
 | `nightly`           | The latest [nightly](https://gradle.org/nightly/), fails if none. |
-| `release-nightly`   | The latest [release nightly](https://gradle.org/release-nightly/), fails if none.      |
+| `release-nightly`   | The latest [release nightly](https://gradle.org/release-nightly/), fails if none. |
 
 This can be handy to automatically verify your build works with the latest release candidate of Gradle:
 
@@ -77,19 +76,20 @@ This can be handy to automatically verify your build works with the latest relea
 name: Test latest Gradle RC
 on:
   schedule:
-    - cron: 0 0 * * * # daily
+    - cron: '0 0 * * *' # daily
 jobs:
   gradle-rc:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-java@v2
-      with:
-        java-version: 11
-    - uses: gradle/gradle-build-action@v2
-      with:
-        gradle-version: release-candidate
-    - run: gradle build --dry-run # just test build configuration
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 11
+      - uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: release-candidate
+      - run: gradle build --dry-run # just test build configuration
 ```
 
 ## Gradle Execution
@@ -108,15 +108,16 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-java@v2
-      with:
-        java-version: 11
-    
-    - name: Setup and execute Gradle 'test' task
-      uses: gradle/gradle-build-action@v2
-      with:
-        arguments: test
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 11
+
+      - name: Setup and execute Gradle 'test' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: test
 ```
 
 ### Multiple Gradle executions in the same Job
@@ -145,10 +146,10 @@ arguments: check --scan
 arguments: some arbitrary tasks
 arguments: build -PgradleProperty=foo
 arguments: |
-    build
-    --scan
-    -PgradleProperty=foo
-    -DsystemProperty=bar
+  build
+  --scan
+  -PgradleProperty=foo
+  -DsystemProperty=bar
 ```
 
 If you need to pass environment variables, use the GitHub Actions workflow syntax:
@@ -190,7 +191,7 @@ This mechanism can also be used to target a Gradle wrapper script that is locate
 
 ## Caching
 
-By default, this action aims to cache any and all reusable state that may be speed up a subsequent build invocation. 
+By default, this action aims to cache any and all reusable state that may be speed up a subsequent build invocation.
 
 The state that is cached includes:
 - Any distributions downloaded to satisfy a `gradle-version` parameter ;
@@ -238,12 +239,12 @@ The contents to be cached can be fine tuned by including and excluding certain p
 ```yaml
 # Cache downloaded JDKs in addition to the default directories.
 gradle-home-cache-includes: |
-    caches
-    notifications
-    jdks
+  caches
+  notifications
+  jdks
 # Exclude the local build-cache from the directories cached.
 gradle-home-cache-excludes: |
-    caches/build-cache-1
+  caches/build-cache-1
 ```
 
 You can specify any number of fixed paths or patterns to include or exclude. 
@@ -297,21 +298,22 @@ To save selected files from your build execution, you can use the core [Upload-A
 For example:
 
 ```yaml
-jobs:   
+jobs:
   gradle:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout project sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2
-    - name: Run build with Gradle wrapper
-      run: ./gradlew build --scan
-    - name: Upload build reports
-      uses: actions/upload-artifact@v3
-      with:
-        name: build-reports
-        path: build/reports/
+      - name: Checkout project sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Run build with Gradle wrapper
+        run: ./gradlew build --scan
+      - name: Upload build reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-reports
+          path: build/reports
+          if-no-files-found: error
 ```
 
 ## Build scans
@@ -330,23 +332,23 @@ jobs:
   gradle:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout project sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2
-    - name: Run build with Gradle wrapper
-      id: gradle
-      run: ./gradlew build --scan
-    - name: "Add build scan URL as PR comment"
-      uses: actions/github-script@v5
-      if: github.event_name == 'pull_request' && failure()
-      with:
-        github-token: ${{secrets.GITHUB_TOKEN}}
-        script: |
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: '❌ ${{ github.workflow }} failed: ${{ steps.gradle.outputs.build-scan-url }}'
-          })
+      - name: Checkout project sources
+        uses: actions/checkout@v3
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Run build with Gradle wrapper
+        id: gradle
+        run: ./gradlew build --scan
+      - name: Add build scan URL as PR comment
+        uses: actions/github-script@v6
+        if: github.event_name == 'pull_request' && failure()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ ${{ github.workflow }} failed: ${{ steps.gradle.outputs.build-scan-url }}'
+            })
 ```
