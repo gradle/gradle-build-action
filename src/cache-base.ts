@@ -275,9 +275,9 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
 
             def githubSummaryFile = new File(System.getenv("GITHUB_STEP_SUMMARY"))
             if (buildFailed) {
-                githubSummaryFile << "❌ Gradle Build \`\${gradleCommand}\` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-FAILED-red?logo=Gradle)](\${buildScan.buildScanUri})"
+                githubSummaryFile << ":x: Gradle Build \`\${gradleCommand}\` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-FAILED-red?logo=Gradle)](\${buildScan.buildScanUri})"
             } else {
-                githubSummaryFile << "✅ Gradle Build \`\${gradleCommand}\` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-SUCCESS-brightgreen?logo=Gradle)](\${buildScan.buildScanUri})"
+                githubSummaryFile << ":white_check_mark: Gradle Build \`\${gradleCommand}\` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-SUCCESS-brightgreen?logo=Gradle)](\${buildScan.buildScanUri})"
             }
             println("::set-output name=build-scan-url::\${buildScan.buildScanUri}")
         }
