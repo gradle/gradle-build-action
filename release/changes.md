@@ -1,0 +1,1 @@
+- [NEW] Use Job Summary to display build scan links, instead of GHA annotations
