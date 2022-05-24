@@ -8,6 +8,18 @@ env:
 
 jobs:
 
+  failing-build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Test build failure
+      uses: ./
+      continue-on-error: true
+      with:
+        build-root-directory: .github/workflow-samples/groovy-dsl
+        arguments: not-a-valid-task
+
   wrapper-missing:
     runs-on: ubuntu-latest
     steps:
