@@ -272,10 +272,12 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
         buildScanPublished { buildScan ->
             // Send commands directly to GitHub Actions via STDOUT.
             def gradleCommand = rootProjectName + " " + gradle.startParameter.taskNames.join(" ")
+
+            def githubSummaryFile = new File(System.getenv("GITHUB_STEP_SUMMARY"))
             if (buildFailed) {
-                println("::warning ::Gradle build '\${gradleCommand}' FAILED - \${buildScan.buildScanUri}")
+                githubSummaryFile << "❌ Gradle Build \`\${gradleCommand}\` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-FAILED-red?logo=Gradle)](\${buildScan.buildScanUri})"
             } else {
-                println("::notice ::Gradle build '\${gradleCommand}' - \${buildScan.buildScanUri}")
+                githubSummaryFile << "✅ Gradle Build \`\${gradleCommand}\` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-SUCCESS-brightgreen?logo=Gradle)](\${buildScan.buildScanUri})"
             }
             println("::set-output name=build-scan-url::\${buildScan.buildScanUri}")
         }
