@@ -15,10 +15,19 @@ jobs:
       run: |
         npm install
         npm run all
-    - name: Check for uncommitted changes
-      # Ensure no changes, but ignore node_modules dir since dev/fresh ci deps installed.
+
+    - name: Compare the expected and actual dist/ directories
       run: |
-        git diff --exit-code --stat -- . ':!node_modules' \
-        || (echo "##[error] found changed files after build. please 'npm run all'" \
-                 "and check in all changes" \
-            && exit 1)
+        if [ "$(git diff --ignore-space-at-eol dist/ | wc -l)" -gt "0" ]; then
+          echo "Detected uncommitted changes after build.  See status below:"
+          git diff
+          exit 1
+        fi
+      id: diff
+
+    # If index.js was different than expected, upload the expected version as an artifact
+    - uses: actions/upload-artifact@v2
+      if: ${{ failure() && steps.diff.conclusion == 'failure' }}
+      with:
+        name: dist
+        path: dist/
