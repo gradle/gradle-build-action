@@ -1,83 +1,17 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
-import * as github from '@actions/github'
 import path from 'path'
 import fs from 'fs'
 import {CacheListener} from './cache-reporting'
-import {
-    getCacheKeyPrefix,
-    determineJobContext,
-    saveCache,
-    restoreCache,
-    cacheDebug,
-    isCacheDebuggingEnabled,
-    tryDelete
-} from './cache-utils'
+import {saveCache, restoreCache, cacheDebug, isCacheDebuggingEnabled, tryDelete, generateCacheKey} from './cache-utils'
 import {ConfigurationCacheEntryExtractor, GradleHomeEntryExtractor} from './cache-extract-entries'
 
-const CACHE_PROTOCOL_VERSION = 'v6-'
 const RESTORED_CACHE_KEY_KEY = 'restored-cache-key'
 
 export const META_FILE_DIR = '.gradle-build-action'
 export const PROJECT_ROOTS_FILE = 'project-roots.txt'
 const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes'
 const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes'
-const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match'
-
-/**
- * Represents a key used to restore a cache entry.
- * The Github Actions cache will first try for an exact match on the key.
- * If that fails, it will try for a prefix match on any of the restoreKeys.
- */
-class CacheKey {
-    key: string
-    restoreKeys: string[]
-
-    constructor(key: string, restoreKeys: string[]) {
-        this.key = key
-        this.restoreKeys = restoreKeys
-    }
-}
-
-/**
- * Generates a cache key specific to the current job execution.
- * The key is constructed from the following inputs:
- * - A user-defined prefix (optional)
- * - The cache protocol version
- * - The name of the cache
- * - The runner operating system
- * - The name of the Job being executed
- * - The matrix values for the Job being executed (job context)
- * - The SHA of the commit being executed
- *
- * Caches are restored by trying to match the these key prefixes in order:
- * - The full key with SHA
- * - A previous key for this Job + matrix
- * - Any previous key for this Job (any matrix)
- * - Any previous key for this cache on the current OS
- */
-function generateCacheKey(cacheName: string): CacheKey {
-    const cacheKeyBase = `${getCacheKeyPrefix()}${CACHE_PROTOCOL_VERSION}${cacheName}`
-
-    // At the most general level, share caches for all executions on the same OS
-    const runnerOs = process.env['RUNNER_OS'] || ''
-    const cacheKeyForOs = `${cacheKeyBase}|${runnerOs}`
-
-    // Prefer caches that run this job
-    const cacheKeyForJob = `${cacheKeyForOs}|${github.context.job}`
-
-    // Prefer (even more) jobs that run this job with the same context (matrix)
-    const cacheKeyForJobContext = `${cacheKeyForJob}[${determineJobContext()}]`
-
-    // Exact match on Git SHA
-    const cacheKey = `${cacheKeyForJobContext}-${github.context.sha}`
-
-    if (core.getBooleanInput(STRICT_CACHE_MATCH_PARAMETER)) {
-        return new CacheKey(cacheKey, [cacheKeyForJobContext])
-    }
-
-    return new CacheKey(cacheKey, [cacheKeyForJobContext, cacheKeyForJob, cacheKeyForOs])
-}
 
 export class GradleStateCache {
     private cacheName: string
