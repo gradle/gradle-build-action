@@ -1,0 +1,37 @@
+name: Demo Job Summary for Gradle builds
+
+on:
+  workflow_dispatch:
+  push:
+
+env:
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+
+jobs:
+  run-gradle-builds:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Build distribution
+      shell: bash
+      run: |
+        npm install
+        npm run build
+    - name: Setup Gradle
+      uses: ./
+    - name: Build kotlin-dsl project
+      working-directory: .github/workflow-samples/kotlin-dsl
+      run: ./gradlew assemble
+    - name: Build groovy-dsl project
+      working-directory: .github/workflow-samples/groovy-dsl
+      run: ./gradlew assemble
+    - name: Build kotlin-dsl project again
+      working-directory: .github/workflow-samples/kotlin-dsl
+      run: | 
+         ./gradlew tasks --no-daemon
+         ./gradlew help check
+    - name: Fail groovy-dsl project
+      working-directory: .github/workflow-samples/groovy-dsl
+      continue-on-error: true
+      run: ./gradlew not-a-real-task
