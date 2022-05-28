@@ -34,7 +34,7 @@ jobs:
       working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test --configuration-cache
 
-  configuration-cache-groovy:
+  verify-build-groovy:
     env:
       GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-groovy-
     needs: seed-build-groovy
@@ -61,7 +61,7 @@ jobs:
           core.setFailed('Configuration cache was not used - task was configured unexpectedly')
 
   # Check that the build can run when no extracted cache entries are restored
-  no-extracted-cache-entries-restored:
+  gradle-user-home-not-fully-restored:
     env:
       GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-groovy-
     needs: seed-build-groovy
@@ -115,8 +115,8 @@ jobs:
       working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew test --configuration-cache
 
- # Test restore configuration-cache from the third build invocation
-  configuration-cache-kotlin:
+  # Test restore configuration-cache from the third build invocation
+  verify-build-kotlin:
     env:
       GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-kotlin-
     needs: modify-build-kotlin
