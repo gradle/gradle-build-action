@@ -1,19 +1,15 @@
-name: Test save/restore Gradle Home directory
+name: Test caching with a custom GRADLE_USER_HOME
 
 on:
-  pull_request:
-    types: [assigned, review_requested]
-  push:
-    paths:
-      - '.github/**'
-      - 'dist/**'
+  workflow_call:
+    inputs:
+      cache-key-prefix:
+        type: string
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}
-
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: restore-custom-gradle-home-${{ inputs.cache-key-prefix }}
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
   seed-build:
@@ -28,7 +24,7 @@ jobs:
       uses: ./
     - name: Build using Gradle wrapper
       working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test
+      run: ./gradlew test --info
 
   # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
   dependencies-cache:
@@ -46,7 +42,7 @@ jobs:
         cache-read-only: true
     - name: Execute Gradle build with --offline
       working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test --offline
+      run: ./gradlew test --offline --info
 
   # Test that the gradle-user-home cache will cache and restore local build-cache
   build-cache:
@@ -64,25 +60,4 @@ jobs:
         cache-read-only: true
     - name: Execute Gradle build and verify tasks from cache
       working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test -DverifyCachedBuild=true
-
-  # Check that the build can run when Gradle User Home is not fully restored
-  no-extracted-cache-entries-restored:
-    needs: seed-build
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - name: Setup Gradle with no extracted cache entries restored
-      uses: ./
-      env: 
-        GRADLE_BUILD_ACTION_SKIP_RESTORE: "generated-gradle-jars|wrapper-zips|java-toolchains|instrumented-jars|dependencies|kotlin-dsl"
-      with:
-        cache-read-only: true
-    - name: Check executee Gradle build
-      working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test
-
+      run: ./gradlew test -DverifyCachedBuild=true --info

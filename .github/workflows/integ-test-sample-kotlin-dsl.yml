@@ -1,19 +1,14 @@
-name: Test caching with Gradle Plugin project using TestKit
+name: Test caching with Kotlin DSL
 
 on:
-  pull_request:
-    types: [assigned, review_requested]
-  push:
-    paths:
-      - '.github/**'
-      - 'dist/**'
+  workflow_call:
+    inputs:
+      cache-key-prefix:
+        type: string
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}
-
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: sample-kotlin-dsl-${{ inputs.cache-key-prefix }}
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
@@ -27,8 +22,8 @@ jobs:
       uses: actions/checkout@v2
     - name: Setup Gradle
       uses: ./
-    - name: Build gradle-plugin project
-      working-directory: .github/workflow-samples/gradle-plugin
+    - name: Build kotlin-dsl project
+      working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew build
 
   verify-build:
@@ -42,6 +37,8 @@ jobs:
       uses: actions/checkout@v2
     - name: Setup Gradle
       uses: ./
-    - name: Build gradle-plugin project
-      working-directory: .github/workflow-samples/gradle-plugin
+      with:
+        cache-read-only: true
+    - name: Build kotlin-dsl project
+      working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew build --offline

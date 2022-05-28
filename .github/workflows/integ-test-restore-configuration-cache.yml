@@ -1,26 +1,20 @@
 name: Test save/restore configuration-cache state
 
 on:
-  pull_request:
-    types: [assigned, review_requested]
-  push:
-    paths:
-      - '.github/**'
-      - 'dist/**'
+  workflow_call:
+    inputs:
+      cache-key-prefix:
+        type: string
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}
-
 env:
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: restore-configuration-cache-${{ inputs.cache-key-prefix }}
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
-  # Run initial Gradle builds to push initial cache entries
-  # These builds should start fresh without cache hits, due to the seed injected into the cache key above.
   seed-build-groovy:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-groovy-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-groovy-
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -36,7 +30,7 @@ jobs:
 
   verify-build-groovy:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-groovy-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-groovy-
     needs: seed-build-groovy
     strategy:
       matrix:
@@ -63,7 +57,7 @@ jobs:
   # Check that the build can run when no extracted cache entries are restored
   gradle-user-home-not-fully-restored:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-groovy-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-groovy-
     needs: seed-build-groovy
     strategy:
       matrix:
@@ -84,7 +78,7 @@ jobs:
 
   seed-build-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-kotlin-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-kotlin-
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -100,7 +94,7 @@ jobs:
 
   modify-build-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-kotlin-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-kotlin-
     needs: seed-build-kotlin
     strategy:
       matrix:
@@ -118,7 +112,7 @@ jobs:
   # Test restore configuration-cache from the third build invocation
   verify-build-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-kotlin-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-kotlin-
     needs: modify-build-kotlin
     strategy:
       matrix:

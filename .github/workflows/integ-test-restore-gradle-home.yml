@@ -1,24 +1,18 @@
-name: Test caching with a custom GRADLE_USER_HOME
+name: Test save/restore Gradle Home directory
 
 on:
-  pull_request:
-    types: [assigned, review_requested]
-  push:
-    paths:
-      - '.github/**'
-      - 'dist/**'
+  workflow_call:
+    inputs:
+      cache-key-prefix:
+        type: string
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}
-
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-
-  GRADLE_USER_HOME: ${{github.workspace}}/custom/gradle/home
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: restore-gradle-home-${{ inputs.cache-key-prefix }}
+  GRADLE_BUILD_ACTION_CACHE_KEY_JOB: restore-gradle-home
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
-  # Run initial Gradle builds to push initial cache entries
-  # These builds should start fresh without cache hits, due to the seed injected into the cache key above.
   seed-build:
     strategy:
       matrix:
@@ -31,7 +25,7 @@ jobs:
       uses: ./
     - name: Build using Gradle wrapper
       working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test --info
+      run: ./gradlew test
 
   # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
   dependencies-cache:
@@ -49,7 +43,7 @@ jobs:
         cache-read-only: true
     - name: Execute Gradle build with --offline
       working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test --offline --info
+      run: ./gradlew test --offline
 
   # Test that the gradle-user-home cache will cache and restore local build-cache
   build-cache:
@@ -67,4 +61,25 @@ jobs:
         cache-read-only: true
     - name: Execute Gradle build and verify tasks from cache
       working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test -DverifyCachedBuild=true --info
+      run: ./gradlew test -DverifyCachedBuild=true
+
+  # Check that the build can run when Gradle User Home is not fully restored
+  no-extracted-cache-entries-restored:
+    needs: seed-build
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Setup Gradle with no extracted cache entries restored
+      uses: ./
+      env: 
+        GRADLE_BUILD_ACTION_SKIP_RESTORE: "generated-gradle-jars|wrapper-zips|java-toolchains|instrumented-jars|dependencies|kotlin-dsl"
+      with:
+        cache-read-only: true
+    - name: Check executee Gradle build
+      working-directory: .github/workflow-samples/groovy-dsl
+      run: ./gradlew test
+

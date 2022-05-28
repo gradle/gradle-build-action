@@ -1,19 +1,15 @@
 name: Test Gradle execution
 
 on:
-  pull_request:
-    types: [assigned, review_requested]
-  push:
-    paths:
-      - '.github/**'
-      - 'dist/**'
+  workflow_call:
+    inputs:
+      cache-key-prefix:
+        type: string
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}
-
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: execution-${{ inputs.cache-key-prefix }}
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:   
   # Tests for executing with different Gradle versions. 

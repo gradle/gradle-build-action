@@ -1,0 +1,40 @@
+name: Run integration tests allowing cache reuse
+
+on:
+  pull_request:
+    types: [assigned, review_requested]
+  push:
+
+jobs:
+  action-inputs:
+    uses: ./.github/workflows/integ-test-action-inputs.yml
+
+  caching-config:
+    uses: ./.github/workflows/integ-test-action-inputs-caching.yml
+
+  execution-with-caching:
+    uses: ./.github/workflows/integ-test-execution-with-caching.yml
+
+  execution:
+    uses: ./.github/workflows/integ-test-execution.yml
+
+  gradle-versions:
+    uses: ./.github/workflows/integ-test-gradle-versions.yml
+
+  restore-configuration-cache:
+    uses: ./.github/workflows/integ-test-restore-configuration-cache.yml
+
+  restore-custom-gradle-home:
+    uses: ./.github/workflows/integ-test-restore-custom-gradle-home.yml
+
+  restore-gradle-home:
+    uses: ./.github/workflows/integ-test-restore-gradle-home.yml
+
+  restore-java-toolchain:
+    uses: ./.github/workflows/integ-test-restore-java-toolchain.yml
+
+  sample-kotlin-dsl:
+    uses: ./.github/workflows/integ-test-sample-kotlin-dsl.yml
+
+  sample-gradle-plugin:
+    uses: ./.github/workflows/integ-test-sample-gradle-plugin.yml

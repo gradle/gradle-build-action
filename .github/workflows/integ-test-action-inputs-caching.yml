@@ -1,19 +1,14 @@
-name: Test caching configuration
+name: Test action inputs that control caching
 
 on:
-  pull_request:
-    types: [assigned, review_requested]
-  push:
-    paths:
-      - '.github/**'
-      - 'dist/**'
+  workflow_call:
+    inputs:
+      cache-key-prefix:
+        type: string
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}
-
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: action-inputs-caching-${{ inputs.cache-key-prefix }}
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
@@ -111,7 +106,7 @@ jobs:
   # Test seed the cache with cache-write-only and verify with cache-read-only
   seed-build-write-only:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-write-only-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-write-only-
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -129,7 +124,7 @@ jobs:
 
   verify-write-only-build:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-write-only-
+      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-write-only-
     needs: seed-build-write-only
     strategy:
       matrix:
