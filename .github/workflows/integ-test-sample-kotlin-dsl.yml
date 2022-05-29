@@ -1,4 +1,4 @@
-name: Test caching with Kotlin DSL
+name: Test sample Kotlin DSL project
 
 on:
   workflow_call:

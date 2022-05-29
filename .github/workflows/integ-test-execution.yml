@@ -1,4 +1,4 @@
-name: Test Gradle execution
+name: Test execution
 
 on:
   workflow_call:

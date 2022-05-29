@@ -1,4 +1,4 @@
-name: Test save/restore java toolchains
+name: Test restore java toolchains
 
 on:
   workflow_call:

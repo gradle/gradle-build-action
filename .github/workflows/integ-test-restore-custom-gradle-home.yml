@@ -1,4 +1,4 @@
-name: Test caching with a custom GRADLE_USER_HOME
+name: Test restore custom Gradle Home
 
 on:
   workflow_call:

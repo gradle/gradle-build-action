@@ -1,4 +1,4 @@
-name: Test action inputs that control caching
+name: Test action inputs for caching
 
 on:
   workflow_call:

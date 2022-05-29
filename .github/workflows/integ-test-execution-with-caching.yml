@@ -1,4 +1,4 @@
-name: Test save/restore Gradle Home with direct execution
+name: Test execution with caching
 
 on:
   workflow_call:

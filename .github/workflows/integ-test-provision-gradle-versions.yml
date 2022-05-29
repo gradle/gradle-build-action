@@ -1,4 +1,4 @@
-name: Test provision different Gradle versions
+name: Test provision Gradle versions
 
 on:
   workflow_call:
@@ -14,7 +14,7 @@ on:
 
 env:
   DOWNLOAD_DIST: ${{ inputs.download-dist }}
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: gradle-versions-${{ inputs.cache-key-prefix }}
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: provision-gradle-versions-${{ inputs.cache-key-prefix }}
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:   

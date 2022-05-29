@@ -1,4 +1,4 @@
-name: Test save/restore configuration-cache state
+name: Test restore configuration-cache
 
 on:
   workflow_call:

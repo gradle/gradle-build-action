@@ -1,4 +1,4 @@
-name: Add a build scan comment to PR
+name: Demo adding build scan comment to PR
 on:
   pull_request:
     types: [assigned, review_requested]

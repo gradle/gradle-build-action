@@ -1,4 +1,4 @@
-name: quick-check
+name: ci-quick-check
 
 on:
   push:
@@ -41,9 +41,9 @@ jobs:
       runner-os: '["ubuntu-latest"]'
       download-dist: true
 
-  gradle-versions:
+  provision-gradle-versions:
     needs: build-distribution
-    uses: ./.github/workflows/integ-test-gradle-versions.yml
+    uses: ./.github/workflows/integ-test-provision-gradle-versions.yml
     with:
       runner-os: '["ubuntu-latest"]'
       download-dist: true

@@ -1,4 +1,4 @@
-name: Test save/restore Gradle Home directory
+name: Test restore Gradle Home
 
 on:
   workflow_call:

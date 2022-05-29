@@ -1,4 +1,4 @@
-name: Execute failure cases
+name: demo-failure-cases
 
 on:
   workflow_dispatch:

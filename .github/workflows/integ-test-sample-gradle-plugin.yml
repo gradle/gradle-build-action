@@ -1,4 +1,4 @@
-name: Test caching with Gradle Plugin project using TestKit
+name: Test sample Gradle Plugin project
 
 on:
   workflow_call:
