@@ -14,7 +14,7 @@ env:
 jobs:
   seed-build-groovy:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-groovy-
+      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: build-groovy
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -30,7 +30,7 @@ jobs:
 
   verify-build-groovy:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-groovy-
+      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: build-groovy
     needs: seed-build-groovy
     strategy:
       matrix:
@@ -57,7 +57,7 @@ jobs:
   # Check that the build can run when no extracted cache entries are restored
   gradle-user-home-not-fully-restored:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-groovy-
+      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: build-groovy
     needs: seed-build-groovy
     strategy:
       matrix:
@@ -78,7 +78,7 @@ jobs:
 
   seed-build-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-kotlin-
+      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: build-kotlin
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -94,7 +94,7 @@ jobs:
 
   modify-build-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-kotlin-
+      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: build-kotlin
     needs: seed-build-kotlin
     strategy:
       matrix:
@@ -112,7 +112,7 @@ jobs:
   # Test restore configuration-cache from the third build invocation
   verify-build-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-kotlin-
+      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: build-kotlin
     needs: modify-build-kotlin
     strategy:
       matrix:
