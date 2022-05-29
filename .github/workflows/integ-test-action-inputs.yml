@@ -5,7 +5,9 @@ on:
     inputs:
       cache-key-prefix:
         type: string
-  workflow_dispatch:
+      runner-os:
+        type: string
+        default: '["ubuntu-latest"]'
 
 env:
   GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: action-inputs-${{ inputs.cache-key-prefix }}
@@ -15,7 +17,7 @@ jobs:
   action-inputs:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources

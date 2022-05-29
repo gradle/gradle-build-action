@@ -5,7 +5,9 @@ on:
     inputs:
       cache-key-prefix:
         type: string
-  workflow_dispatch:
+      runner-os:
+        type: string
+        default: '["ubuntu-latest"]'
 
 env:
   GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: action-inputs-caching-${{ inputs.cache-key-prefix }}
@@ -15,7 +17,7 @@ jobs:
   seed-build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
@@ -39,7 +41,7 @@ jobs:
     needs: seed-build
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
@@ -62,7 +64,7 @@ jobs:
   cache-disabled:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
@@ -109,7 +111,7 @@ jobs:
       GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}-write-only-
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
@@ -128,7 +130,7 @@ jobs:
     needs: seed-build-write-only
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources

@@ -5,7 +5,9 @@ on:
     inputs:
       cache-key-prefix:
         type: string
-  workflow_dispatch:
+      runner-os:
+        type: string
+        default: '["ubuntu-latest"]'
 
 env:
   GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: gradle-versions-${{ inputs.cache-key-prefix }}
@@ -17,7 +19,7 @@ jobs:
   provision-gradle:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{fromJSON(inputs.runner-os)}}
         include:
           - os: windows-latest
             script-suffix: '.bat'
@@ -51,7 +53,7 @@ jobs:
     strategy:
       matrix:
         gradle: [7.3, 6.9, 5.6.4, 4.10.3]
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{fromJSON(inputs.runner-os)}}
         include:
           - gradle: 5.6.4
             build-root-suffix: -gradle-5
