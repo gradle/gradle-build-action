@@ -1,4 +1,4 @@
-name: ci-quick-check
+name: CI-quick-check
 
 on:
   push:

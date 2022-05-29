@@ -1,4 +1,4 @@
-name: ci-verify-outputs
+name: CI-verify-outputs
 
 on:
   pull_request:
