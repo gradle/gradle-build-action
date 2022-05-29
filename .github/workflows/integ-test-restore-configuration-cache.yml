@@ -20,7 +20,7 @@ env:
 jobs:
   seed-build-groovy:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: build-groovy
+      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: restore-cc-groovy
     strategy:
       matrix:
         os: ${{fromJSON(inputs.runner-os)}}
@@ -38,7 +38,7 @@ jobs:
 
   verify-build-groovy:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: build-groovy
+      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: restore-cc-groovy
     needs: seed-build-groovy
     strategy:
       matrix:
@@ -67,7 +67,7 @@ jobs:
   # Check that the build can run when no extracted cache entries are restored
   gradle-user-home-not-fully-restored:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: build-groovy
+      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: restore-cc-groovy
     needs: seed-build-groovy
     strategy:
       matrix:
@@ -90,7 +90,7 @@ jobs:
 
   seed-build-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: build-kotlin
+      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: restore-cc-kotlin
     strategy:
       matrix:
         os: ${{fromJSON(inputs.runner-os)}}
@@ -108,7 +108,7 @@ jobs:
 
   modify-build-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: build-kotlin
+      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: restore-cc-kotlin-modified
     needs: seed-build-kotlin
     strategy:
       matrix:
@@ -128,7 +128,7 @@ jobs:
   # Test restore configuration-cache from the third build invocation
   verify-build-kotlin:
     env:
-      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: build-kotlin
+      GRADLE_BUILD_ACTION_CACHE_KEY_JOB: restore-cc-kotlin-modified
     needs: modify-build-kotlin
     strategy:
       matrix:
