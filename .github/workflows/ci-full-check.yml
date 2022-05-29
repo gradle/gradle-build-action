@@ -1,4 +1,4 @@
-name: Run integration tests starting with empty cache
+name: full-check
 
 on:
   pull_request:

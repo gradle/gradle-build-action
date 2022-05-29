@@ -1,4 +1,4 @@
-name: Run integration tests allowing cache reuse
+name: quick-check
 
 on:
   pull_request:

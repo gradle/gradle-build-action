@@ -1,4 +1,4 @@
-name: Verify generated outputs
+name: verify-outputs
 
 on:
   pull_request:
