@@ -1,4 +1,4 @@
-name: Purgee old workflow runs
+name: Purge old workflow runs
 on:
   workflow_dispatch:
     inputs:
