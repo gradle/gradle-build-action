@@ -1,0 +1,41 @@
+name: Test different action inputs
+
+on:
+  workflow_call:
+    inputs:
+      cache-key-prefix:
+        type: string
+      runner-os:
+        type: string
+        default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
+      download-dist:
+        type: boolean
+        default: false
+
+env:
+  DOWNLOAD_DIST: ${{ inputs.download-dist }}
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: action-inputs-${{ inputs.cache-key-prefix }}
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+
+jobs:
+  action-inputs:
+    strategy:
+      matrix:
+        os: ${{fromJSON(inputs.runner-os)}}
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
+    - name: Invoke with multi-line arguments
+      uses: ./
+      with:
+        build-root-directory: .github/workflow-samples/groovy-dsl
+        arguments: |
+            --configuration-cache
+            --build-cache
+            -DsystemProperty=FOO
+            -PgradleProperty=BAR
+            test
+            jar

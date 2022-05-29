@@ -1,30 +1,33 @@
 name: Test caching with Gradle Plugin project using TestKit
 
 on:
-  pull_request:
-    types: [assigned, review_requested]
-  push:
-    paths:
-      - '.github/**'
-      - 'dist/**'
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}
+  workflow_call:
+    inputs:
+      cache-key-prefix:
+        type: string
+      runner-os:
+        type: string
+        default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
+      download-dist:
+        type: boolean
+        default: false
 
 env:
-  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: ${{github.workflow}}#${{github.run_number}}:${{github.run_attempt}}-
+  DOWNLOAD_DIST: ${{ inputs.download-dist }}
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: sample-gradle-plugin-${{ inputs.cache-key-prefix }}
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
   seed-build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
     - name: Build gradle-plugin project
@@ -35,13 +38,17 @@ jobs:
     needs: seed-build
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
+      with:
+        cache-read-only: true
     - name: Build gradle-plugin project
       working-directory: .github/workflow-samples/gradle-plugin
       run: ./gradlew build --offline

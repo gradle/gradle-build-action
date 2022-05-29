@@ -1,17 +1,26 @@
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
+import * as github from '@actions/github'
 import * as crypto from 'crypto'
 import * as path from 'path'
 import * as fs from 'fs'
 
 import {CacheEntryListener} from './cache-reporting'
 
+const CACHE_PROTOCOL_VERSION = 'v6-'
+
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
 const CACHE_DISABLED_PARAMETER = 'cache-disabled'
 const CACHE_READONLY_PARAMETER = 'cache-read-only'
 const CACHE_WRITEONLY_PARAMETER = 'cache-write-only'
+const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match'
 const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED'
-const CACHE_PREFIX_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX'
+
+const CACHE_KEY_PREFIX_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX'
+const CACHE_KEY_OS_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_ENVIRONMENT'
+const CACHE_KEY_JOB_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB'
+const CACHE_KEY_JOB_INSTANCE_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_INSTANCE'
+const CACHE_KEY_JOB_EXECUTION_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_EXECUTION'
 
 export function isCacheDisabled(): boolean {
     return core.getBooleanInput(CACHE_DISABLED_PARAMETER)
@@ -29,16 +38,89 @@ export function isCacheDebuggingEnabled(): boolean {
     return process.env[CACHE_DEBUG_VAR] ? true : false
 }
 
-export function getCacheKeyPrefix(): string {
-    // Prefix can be used to force change all cache keys (defaults to cache protocol version)
-    return process.env[CACHE_PREFIX_VAR] || ''
+/**
+ * Represents a key used to restore a cache entry.
+ * The Github Actions cache will first try for an exact match on the key.
+ * If that fails, it will try for a prefix match on any of the restoreKeys.
+ */
+export class CacheKey {
+    key: string
+    restoreKeys: string[]
+
+    constructor(key: string, restoreKeys: string[]) {
+        this.key = key
+        this.restoreKeys = restoreKeys
+    }
 }
 
-export function determineJobContext(): string {
+/**
+ * Generates a cache key specific to the current job execution.
+ * The key is constructed from the following inputs (with some user overrides):
+ * - The cache protocol version
+ * - The name of the cache
+ * - The runner operating system
+ * - The name of the Job being executed
+ * - The matrix values for the Job being executed (job context)
+ * - The SHA of the commit being executed
+ *
+ * Caches are restored by trying to match the these key prefixes in order:
+ * - The full key with SHA
+ * - A previous key for this Job + matrix
+ * - Any previous key for this Job (any matrix)
+ * - Any previous key for this cache on the current OS
+ */
+export function generateCacheKey(cacheName: string): CacheKey {
+    const cacheKeyBase = `${getCacheKeyPrefix()}${CACHE_PROTOCOL_VERSION}${cacheName}`
+
+    // At the most general level, share caches for all executions on the same OS
+    const cacheKeyForEnvironment = `${cacheKeyBase}|${getCacheKeyEnvironment()}`
+
+    // Prefer caches that run this job
+    const cacheKeyForJob = `${cacheKeyForEnvironment}|${getCacheKeyJob()}`
+
+    // Prefer (even more) jobs that run this job with the same context (matrix)
+    const cacheKeyForJobContext = `${cacheKeyForJob}[${getCacheKeyJobInstance()}]`
+
+    // Exact match on Git SHA
+    const cacheKey = `${cacheKeyForJobContext}-${getCacheKeyJobExecution()}`
+
+    if (core.getBooleanInput(STRICT_CACHE_MATCH_PARAMETER)) {
+        return new CacheKey(cacheKey, [cacheKeyForJobContext])
+    }
+
+    return new CacheKey(cacheKey, [cacheKeyForJobContext, cacheKeyForJob, cacheKeyForEnvironment])
+}
+
+export function getCacheKeyPrefix(): string {
+    // Prefix can be used to force change all cache keys (defaults to cache protocol version)
+    return process.env[CACHE_KEY_PREFIX_VAR] || ''
+}
+
+function getCacheKeyEnvironment(): string {
+    const runnerOs = process.env['RUNNER_OS'] || ''
+    return process.env[CACHE_KEY_OS_VAR] || runnerOs
+}
+
+function getCacheKeyJob(): string {
+    // Prefix can be used to force change all cache keys (defaults to cache protocol version)
+    return process.env[CACHE_KEY_JOB_VAR] || github.context.job
+}
+
+function getCacheKeyJobInstance(): string {
+    const override = process.env[CACHE_KEY_JOB_INSTANCE_VAR]
+    if (override) {
+        return override
+    }
+
     // By default, we hash the full `matrix` data for the run, to uniquely identify this job invocation
     // The only way we can obtain the `matrix` data is via the `workflow-job-context` parameter in action.yml.
     const workflowJobContext = core.getInput(JOB_CONTEXT_PARAMETER)
     return hashStrings([workflowJobContext])
+}
+
+function getCacheKeyJobExecution(): string {
+    // Used to associate a cache key with a particular execution (default is bound to the git commit sha)
+    return process.env[CACHE_KEY_JOB_EXECUTION_VAR] || github.context.sha
 }
 
 export function hashFileNames(fileNames: string[]): string {
