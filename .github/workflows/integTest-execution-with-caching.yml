@@ -24,7 +24,7 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Exucute Gradle build
+    - name: Execute Gradle build
       uses: ./
       with:
         build-root-directory: .github/workflow-samples/groovy-dsl
