@@ -2,9 +2,12 @@ name: full-check
 
 on:
   pull_request:
-    types: [assigned, review_requested]
+    types:
+      - assigned
+      - review_requested
   push:
-    branches: [ main, dd/dpe-main ]
+    branches: 
+      - main
 
 jobs:
   action-inputs:

@@ -1,9 +1,8 @@
 name: quick-check
 
 on:
-  pull_request:
-    types: [assigned, review_requested]
   push:
+    branches-ignore: main
 
 jobs:
   build-distribution:

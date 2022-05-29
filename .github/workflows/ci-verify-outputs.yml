@@ -2,8 +2,12 @@ name: verify-outputs
 
 on:
   pull_request:
-    types: [assigned, review_requested]
+    types:
+      - assigned
+      - review_requested
   push:
+    branches: 
+      - main
 
 jobs:
   check:
