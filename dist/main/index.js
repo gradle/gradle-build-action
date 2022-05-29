@@ -64846,36 +64846,15 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GradleStateCache = exports.PROJECT_ROOTS_FILE = exports.META_FILE_DIR = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
-const github = __importStar(__nccwpck_require__(5438));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const cache_utils_1 = __nccwpck_require__(1678);
 const cache_extract_entries_1 = __nccwpck_require__(6161);
-const CACHE_PROTOCOL_VERSION = 'v6-';
 const RESTORED_CACHE_KEY_KEY = 'restored-cache-key';
 exports.META_FILE_DIR = '.gradle-build-action';
 exports.PROJECT_ROOTS_FILE = 'project-roots.txt';
 const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes';
 const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes';
-const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match';
-class CacheKey {
-    constructor(key, restoreKeys) {
-        this.key = key;
-        this.restoreKeys = restoreKeys;
-    }
-}
-function generateCacheKey(cacheName) {
-    const cacheKeyBase = `${(0, cache_utils_1.getCacheKeyPrefix)()}${CACHE_PROTOCOL_VERSION}${cacheName}`;
-    const runnerOs = process.env['RUNNER_OS'] || '';
-    const cacheKeyForOs = `${cacheKeyBase}|${runnerOs}`;
-    const cacheKeyForJob = `${cacheKeyForOs}|${github.context.job}`;
-    const cacheKeyForJobContext = `${cacheKeyForJob}[${(0, cache_utils_1.determineJobContext)()}]`;
-    const cacheKey = `${cacheKeyForJobContext}-${github.context.sha}`;
-    if (core.getBooleanInput(STRICT_CACHE_MATCH_PARAMETER)) {
-        return new CacheKey(cacheKey, [cacheKeyForJobContext]);
-    }
-    return new CacheKey(cacheKey, [cacheKeyForJobContext, cacheKeyForJob, cacheKeyForOs]);
-}
 class GradleStateCache {
     constructor(gradleUserHome) {
         this.gradleUserHome = gradleUserHome;
@@ -64900,7 +64879,7 @@ class GradleStateCache {
     restore(listener) {
         return __awaiter(this, void 0, void 0, function* () {
             const entryListener = listener.entry(this.cacheDescription);
-            const cacheKey = generateCacheKey(this.cacheName);
+            const cacheKey = (0, cache_utils_1.generateCacheKey)(this.cacheName);
             (0, cache_utils_1.cacheDebug)(`Requesting ${this.cacheDescription} with
     key:${cacheKey.key}
     restoreKeys:[${cacheKey.restoreKeys}]`);
@@ -64929,7 +64908,7 @@ class GradleStateCache {
     }
     save(listener) {
         return __awaiter(this, void 0, void 0, function* () {
-            const cacheKey = generateCacheKey(this.cacheName).key;
+            const cacheKey = (0, cache_utils_1.generateCacheKey)(this.cacheName).key;
             const restoredCacheKey = core.getState(RESTORED_CACHE_KEY_KEY);
             if (restoredCacheKey && cacheKey === restoredCacheKey) {
                 core.info(`Cache hit occurred on the cache key ${cacheKey}, not saving cache.`);
@@ -65546,18 +65525,25 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.tryDelete = exports.handleCacheFailure = exports.cacheDebug = exports.saveCache = exports.restoreCache = exports.hashStrings = exports.hashFileNames = exports.determineJobContext = exports.getCacheKeyPrefix = exports.isCacheDebuggingEnabled = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
+exports.tryDelete = exports.handleCacheFailure = exports.cacheDebug = exports.saveCache = exports.restoreCache = exports.hashStrings = exports.hashFileNames = exports.getCacheKeyPrefix = exports.generateCacheKey = exports.CacheKey = exports.isCacheDebuggingEnabled = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const cache = __importStar(__nccwpck_require__(7799));
+const github = __importStar(__nccwpck_require__(5438));
 const crypto = __importStar(__nccwpck_require__(6113));
 const path = __importStar(__nccwpck_require__(1017));
 const fs = __importStar(__nccwpck_require__(7147));
+const CACHE_PROTOCOL_VERSION = 'v6-';
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context';
 const CACHE_DISABLED_PARAMETER = 'cache-disabled';
 const CACHE_READONLY_PARAMETER = 'cache-read-only';
 const CACHE_WRITEONLY_PARAMETER = 'cache-write-only';
+const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match';
 const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED';
-const CACHE_PREFIX_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX';
+const CACHE_KEY_PREFIX_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX';
+const CACHE_KEY_OS_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_ENVIRONMENT';
+const CACHE_KEY_JOB_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB';
+const CACHE_KEY_JOB_INSTANCE_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_INSTANCE';
+const CACHE_KEY_JOB_EXECUTION_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_EXECUTION';
 function isCacheDisabled() {
     return core.getBooleanInput(CACHE_DISABLED_PARAMETER);
 }
@@ -65574,15 +65560,47 @@ function isCacheDebuggingEnabled() {
     return process.env[CACHE_DEBUG_VAR] ? true : false;
 }
 exports.isCacheDebuggingEnabled = isCacheDebuggingEnabled;
+class CacheKey {
+    constructor(key, restoreKeys) {
+        this.key = key;
+        this.restoreKeys = restoreKeys;
+    }
+}
+exports.CacheKey = CacheKey;
+function generateCacheKey(cacheName) {
+    const cacheKeyBase = `${getCacheKeyPrefix()}${CACHE_PROTOCOL_VERSION}${cacheName}`;
+    const cacheKeyForEnvironment = `${cacheKeyBase}|${getCacheKeyEnvironment()}`;
+    const cacheKeyForJob = `${cacheKeyForEnvironment}|${getCacheKeyJob()}`;
+    const cacheKeyForJobContext = `${cacheKeyForJob}[${getCacheKeyJobInstance()}]`;
+    const cacheKey = `${cacheKeyForJobContext}-${getCacheKeyJobExecution()}`;
+    if (core.getBooleanInput(STRICT_CACHE_MATCH_PARAMETER)) {
+        return new CacheKey(cacheKey, [cacheKeyForJobContext]);
+    }
+    return new CacheKey(cacheKey, [cacheKeyForJobContext, cacheKeyForJob, cacheKeyForEnvironment]);
+}
+exports.generateCacheKey = generateCacheKey;
 function getCacheKeyPrefix() {
-    return process.env[CACHE_PREFIX_VAR] || '';
+    return process.env[CACHE_KEY_PREFIX_VAR] || '';
 }
 exports.getCacheKeyPrefix = getCacheKeyPrefix;
-function determineJobContext() {
+function getCacheKeyEnvironment() {
+    const runnerOs = process.env['RUNNER_OS'] || '';
+    return process.env[CACHE_KEY_OS_VAR] || runnerOs;
+}
+function getCacheKeyJob() {
+    return process.env[CACHE_KEY_JOB_VAR] || github.context.job;
+}
+function getCacheKeyJobInstance() {
+    const override = process.env[CACHE_KEY_JOB_INSTANCE_VAR];
+    if (override) {
+        return override;
+    }
     const workflowJobContext = core.getInput(JOB_CONTEXT_PARAMETER);
     return hashStrings([workflowJobContext]);
 }
-exports.determineJobContext = determineJobContext;
+function getCacheKeyJobExecution() {
+    return process.env[CACHE_KEY_JOB_EXECUTION_VAR] || github.context.sha;
+}
 function hashFileNames(fileNames) {
     return hashStrings(fileNames.map(x => x.replace(new RegExp(`\\${path.sep}`, 'g'), '/')));
 }
