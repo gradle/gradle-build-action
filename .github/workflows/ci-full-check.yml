@@ -30,8 +30,8 @@ jobs:
     with:
       cache-key-prefix: ${{github.run_number}}-
 
-  gradle-versions:
-    uses: ./.github/workflows/integ-test-gradle-versions.yml
+  provision-gradle-versions:
+    uses: ./.github/workflows/integ-test-provision-gradle-versions.yml
     with:
       cache-key-prefix: ${{github.run_number}}-
 
