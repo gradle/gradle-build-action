@@ -6,35 +6,87 @@ on:
   push:
 
 jobs:
+  build-distribution:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Build and upload distribution
+      uses: ./.github/actions/build-dist
+
   action-inputs:
+    needs: build-distribution
     uses: ./.github/workflows/integ-test-action-inputs.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
 
   caching-config:
+    needs: build-distribution
     uses: ./.github/workflows/integ-test-action-inputs-caching.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
 
   execution-with-caching:
+    needs: build-distribution
     uses: ./.github/workflows/integ-test-execution-with-caching.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
 
   execution:
+    needs: build-distribution
     uses: ./.github/workflows/integ-test-execution.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
 
   gradle-versions:
+    needs: build-distribution
     uses: ./.github/workflows/integ-test-gradle-versions.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
 
   restore-configuration-cache:
+    needs: build-distribution
     uses: ./.github/workflows/integ-test-restore-configuration-cache.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
 
   restore-custom-gradle-home:
+    needs: build-distribution
     uses: ./.github/workflows/integ-test-restore-custom-gradle-home.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
 
   restore-gradle-home:
+    needs: build-distribution
     uses: ./.github/workflows/integ-test-restore-gradle-home.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
 
   restore-java-toolchain:
+    needs: build-distribution
     uses: ./.github/workflows/integ-test-restore-java-toolchain.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
 
   sample-kotlin-dsl:
+    needs: build-distribution
     uses: ./.github/workflows/integ-test-sample-kotlin-dsl.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
 
   sample-gradle-plugin:
+    needs: build-distribution
     uses: ./.github/workflows/integ-test-sample-gradle-plugin.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true

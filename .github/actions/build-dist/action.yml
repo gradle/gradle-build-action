@@ -1,0 +1,16 @@
+name: 'Build and upload distribution'
+# Builds the action distribution an uploads as an artifact for later download
+runs:
+  using: "composite"
+  steps: 
+    - name: Build distribution
+      shell: bash
+      run: |
+        npm install
+        npm run all
+    - name: Upload distribution
+      uses: actions/upload-artifact@v2
+      with:
+        name: dist
+        path: dist/
+

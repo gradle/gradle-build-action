@@ -7,9 +7,13 @@ on:
         type: string
       runner-os:
         type: string
-        default: '["ubuntu-latest"]'
+        default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
+      download-dist:
+        type: boolean
+        default: false
 
 env:
+  DOWNLOAD_DIST: ${{ inputs.download-dist }}
   GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: restore-configuration-cache-${{ inputs.cache-key-prefix }}
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
@@ -24,6 +28,8 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
     - name: Groovy build with configuration-cache enabled
@@ -41,6 +47,8 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
       with:
@@ -68,6 +76,8 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
     - name: Setup Gradle with no extracted cache entries restored
       uses: ./
       env: 
@@ -88,6 +98,8 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
     - name: Execute 'help' with configuration-cache enabled
@@ -105,6 +117,8 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
     - name: Execute 'test' with configuration-cache enabled
@@ -123,6 +137,8 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
       with:
