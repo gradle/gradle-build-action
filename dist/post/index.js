@@ -144,9 +144,6 @@ function saveCache(paths, key, options) {
         const cachePaths = yield utils.resolvePaths(paths);
         core.debug('Cache Paths:');
         core.debug(`${JSON.stringify(cachePaths)}`);
-        if (cachePaths.length === 0) {
-            throw new Error(`Path Validation Error: Path(s) specified in the action for caching do(es) not exist, hence no cache is being saved.`);
-        }
         const archiveFolder = yield utils.createTempDirectory();
         const archivePath = path.join(archiveFolder, utils.getCacheFileName(compressionMethod));
         core.debug(`Archive Path: ${archivePath}`);
@@ -64337,6 +64334,28 @@ class GradleHomeEntryExtractor extends AbstractEntryExtractor {
     constructor(gradleUserHome) {
         super(gradleUserHome, 'gradle-home');
     }
+    extract(listener) {
+        const _super = Object.create(null, {
+            extract: { get: () => super.extract }
+        });
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.deleteWrapperZips();
+            return _super.extract.call(this, listener);
+        });
+    }
+    deleteWrapperZips() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const wrapperZips = path_1.default.resolve(this.gradleUserHome, 'wrapper/dists/*/*/*.zip');
+            const globber = yield glob.create(wrapperZips, {
+                implicitDescendants: false,
+                followSymbolicLinks: false
+            });
+            for (const p of yield globber.glob()) {
+                (0, cache_utils_1.cacheDebug)(`Deleting wrapper zip: ${p}`);
+                (0, cache_utils_1.tryDelete)(p);
+            }
+        });
+    }
     getExtractedCacheEntryDefinitions() {
         const entryDefinition = (artifactType, patterns, bundle) => {
             const resolvedPatterns = patterns
@@ -64350,7 +64369,7 @@ class GradleHomeEntryExtractor extends AbstractEntryExtractor {
         };
         return [
             entryDefinition('generated-gradle-jars', ['caches/*/generated-gradle-jars/*.jar'], false),
-            entryDefinition('wrapper-zips', ['wrapper/dists/*/*/*/'], false),
+            entryDefinition('wrapper-zips', ['wrapper/dists/*/*/'], false),
             entryDefinition('java-toolchains', ['jdks/*.zip', 'jdks/*.tar.gz'], false),
             entryDefinition('dependencies', ['caches/modules-*/files-*/*/*/*/*'], true),
             entryDefinition('instrumented-jars', ['caches/jars-*/*'], true),

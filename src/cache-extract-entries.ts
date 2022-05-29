@@ -294,6 +294,28 @@ export class GradleHomeEntryExtractor extends AbstractEntryExtractor {
         super(gradleUserHome, 'gradle-home')
     }
 
+    async extract(listener: CacheListener): Promise<void> {
+        await this.deleteWrapperZips()
+        return super.extract(listener)
+    }
+
+    /**
+     * Delete any downloaded wrapper zip files that are not needed after extraction.
+     * These files are cleaned up by Gradle >= 7.5, but for older versions we remove them manually.
+     */
+    private async deleteWrapperZips(): Promise<void> {
+        const wrapperZips = path.resolve(this.gradleUserHome, 'wrapper/dists/*/*/*.zip')
+        const globber = await glob.create(wrapperZips, {
+            implicitDescendants: false,
+            followSymbolicLinks: false
+        })
+
+        for (const p of await globber.glob()) {
+            cacheDebug(`Deleting wrapper zip: ${p}`)
+            tryDelete(p)
+        }
+    }
+
     /**
      * Return the extracted cache entry definitions, which determine which artifacts will be cached
      * separately from the rest of the Gradle User Home cache entry.
@@ -316,7 +338,7 @@ export class GradleHomeEntryExtractor extends AbstractEntryExtractor {
 
         return [
             entryDefinition('generated-gradle-jars', ['caches/*/generated-gradle-jars/*.jar'], false),
-            entryDefinition('wrapper-zips', ['wrapper/dists/*/*/*/'], false), // Directories only
+            entryDefinition('wrapper-zips', ['wrapper/dists/*/*/'], false), // Entire wrapper directory cached together
             entryDefinition('java-toolchains', ['jdks/*.zip', 'jdks/*.tar.gz'], false),
             entryDefinition('dependencies', ['caches/modules-*/files-*/*/*/*/*'], true),
             entryDefinition('instrumented-jars', ['caches/jars-*/*'], true),
