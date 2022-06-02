@@ -92,22 +92,47 @@ export function logCachingReport(listener: CacheListener): void {
         return
     }
 
-    core.info(`---------- Caching Summary -------------
-Restored Entries Count: ${getCount(listener.cacheEntries, e => e.restoredSize)}
-                  Size: ${getSum(listener.cacheEntries, e => e.restoredSize)}
-Saved Entries    Count: ${getCount(listener.cacheEntries, e => e.savedSize)}
-                  Size: ${getSum(listener.cacheEntries, e => e.savedSize)}`)
+    core.summary.addHeading('Caching Summary')
 
-    core.startGroup('Cache Entry details')
-    for (const entry of listener.cacheEntries) {
-        core.info(`Entry: ${entry.entryName}
+    const entries = listener.cacheEntries
+        .map(
+            entry =>
+                `Entry: ${entry.entryName}
     Requested Key : ${entry.requestedKey ?? ''}
     Restored  Key : ${entry.restoredKey ?? ''}
               Size: ${formatSize(entry.restoredSize)}
     Saved     Key : ${entry.savedKey ?? ''}
-              Size: ${formatSize(entry.savedSize)}`)
-    }
-    core.endGroup()
+              Size: ${formatSize(entry.savedSize)}`
+        )
+        .join('\n')
+
+    core.summary.addRaw(
+        `
+
+| | Count | Size (Mb) | Size (B) |
+| - | -: | -: | -: |
+| Restored | ${getCount(listener.cacheEntries, e => e.restoredSize)} | ${getMegaBytes(
+            listener.cacheEntries,
+            e => e.restoredSize
+        )} | ${getBytes(listener.cacheEntries, e => e.restoredSize)} |
+| Saved | ${getCount(listener.cacheEntries, e => e.savedSize)} | ${getMegaBytes(
+            listener.cacheEntries,
+            e => e.savedSize
+        )} | ${getBytes(listener.cacheEntries, e => e.savedSize)} |
+
+`
+    )
+
+    core.summary.addDetails(
+        'Cache Entry Details',
+        `
+<pre>
+${entries}
+</pre>
+`
+    )
+
+    core.summary.write()
 }
 
 function getCount(
@@ -117,14 +142,19 @@ function getCount(
     return cacheEntries.filter(e => predicate(e) !== undefined).length
 }
 
-function getSum(
+function getBytes(
     cacheEntries: CacheEntryListener[],
     predicate: (value: CacheEntryListener) => number | undefined
-): string {
-    if (cacheEntries.length === 0) {
-        return '0'
-    }
-    return formatSize(cacheEntries.map(e => predicate(e) ?? 0).reduce((p, v) => p + v, 0))
+): number {
+    return cacheEntries.map(e => predicate(e) ?? 0).reduce((p, v) => p + v, 0)
+}
+
+function getMegaBytes(
+    cacheEntries: CacheEntryListener[],
+    predicate: (value: CacheEntryListener) => number | undefined
+): number {
+    const bytes = getBytes(cacheEntries, predicate)
+    return Math.round(bytes / (1024 * 1024))
 }
 
 function formatSize(bytes: number | undefined): string {

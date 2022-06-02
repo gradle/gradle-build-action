@@ -34,6 +34,7 @@ function loadBuildResults(): BuildResult[] {
 }
 
 function writeSummaryTable(results: BuildResult[]): void {
+    core.summary.addHeading('Gradle Builds', 3)
     core.summary.addRaw(`| Root Project | Tasks | Gradle Version | Outcome |\n| - | - | - | - |\n`)
     for (const result of results) {
         const tableRow = `| ${result.rootProject} \
