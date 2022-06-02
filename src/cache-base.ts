@@ -169,72 +169,18 @@ export class GradleStateCache {
         const propertiesFile = path.resolve(gradleUserHome, 'gradle.properties')
         fs.appendFileSync(propertiesFile, 'org.gradle.daemon=false')
 
-        const buildScanCapture = path.resolve(initScriptsDir, 'build-scan-capture.init.gradle')
-        fs.writeFileSync(
-            buildScanCapture,
-            `import org.gradle.util.GradleVersion
-
-// Only run against root build. Do not run against included builds.
-def isTopLevelBuild = gradle.getParent() == null
-if (isTopLevelBuild) {
-    def version = GradleVersion.current().baseVersion
-    def atLeastGradle4 = version >= GradleVersion.version("4.0")
-    def atLeastGradle6 = version >= GradleVersion.version("6.0")
-
-    if (atLeastGradle6) {
-        settingsEvaluated { settings ->
-            if (settings.pluginManager.hasPlugin("com.gradle.enterprise")) {
-                registerCallbacks(settings.extensions["gradleEnterprise"].buildScan, settings.rootProject.name)
-            }
-        }
-    } else if (atLeastGradle4) {
-        projectsEvaluated { gradle ->
-            if (gradle.rootProject.pluginManager.hasPlugin("com.gradle.build-scan")) {
-                registerCallbacks(gradle.rootProject.extensions["buildScan"], gradle.rootProject.name)
-            }
+        const initScriptFilenames = ['build-result-capture.init.gradle', 'project-root-capture.init.gradle']
+        for (const initScriptFilename of initScriptFilenames) {
+            const initScriptContent = this.readResourceAsString(initScriptFilename)
+            const initScriptPath = path.resolve(initScriptsDir, initScriptFilename)
+            fs.writeFileSync(initScriptPath, initScriptContent)
         }
     }
-}
 
-def registerCallbacks(buildScanExtension, rootProjectName) {
-    buildScanExtension.with {
-        def buildFailed = false
-        buildFinished { result ->
-            buildFailed = (result.failure != null)
-        }
-
-        buildScanPublished { buildScan ->
-            // Send commands directly to GitHub Actions via STDOUT.
-            def gradleCommand = rootProjectName + " " + gradle.startParameter.taskNames.join(" ")
-
-            def githubSummaryFile = new File(System.getenv("GITHUB_STEP_SUMMARY"))
-            if (buildFailed) {
-                githubSummaryFile << ":x: Gradle Build \`\${gradleCommand}\` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-FAILED-red?logo=Gradle)](\${buildScan.buildScanUri})"
-            } else {
-                githubSummaryFile << ":white_check_mark: Gradle Build \`\${gradleCommand}\` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-SUCCESS-brightgreen?logo=Gradle)](\${buildScan.buildScanUri})"
-            }
-            println("::set-output name=build-scan-url::\${buildScan.buildScanUri}")
-        }
-    }
-}`
-        )
-
-        const projectRootCapture = path.resolve(initScriptsDir, 'project-root-capture.init.gradle')
-        fs.writeFileSync(
-            projectRootCapture,
-            `
-// Only run against root build. Do not run against included builds.
-def isTopLevelBuild = gradle.getParent() == null
-if (isTopLevelBuild) {
-    settingsEvaluated { settings ->
-        def projectRootEntry = settings.rootDir.absolutePath + "\\n"
-        def projectRootList = new File(settings.gradle.gradleUserHomeDir, "${PROJECT_ROOTS_FILE}")
-        if (!projectRootList.exists() || !projectRootList.text.contains(projectRootEntry)) {
-            projectRootList << projectRootEntry
-        }
-    }
-}`
-        )
+    private readResourceAsString(resource: string): string {
+        // Resolving relative to __dirname will force the compiler to inline the content in the distribution
+        const absolutePath = path.resolve(__dirname, '..', '..', 'src', 'resources', resource)
+        return fs.readFileSync(absolutePath, 'utf8')
     }
 
     /**

@@ -1,0 +1,12 @@
+// Capture the build root directory for each executed Gradle build.
+// Only run against root build. Do not run against included builds.
+def isTopLevelBuild = gradle.getParent() == null
+if (isTopLevelBuild) {
+    settingsEvaluated { settings ->
+        def projectRootEntry = settings.rootDir.absolutePath + '\n'
+        def projectRootList = new File(settings.gradle.gradleUserHomeDir, "project-roots.txt")
+        if (!projectRootList.exists() || !projectRootList.text.contains(projectRootEntry)) {
+            projectRootList << projectRootEntry
+        }
+    }
+}
