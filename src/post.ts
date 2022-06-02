@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import * as caches from './caches'
+import * as setupGradle from './setup-gradle'
 
 // Catch and log any unhandled exceptions.  These exceptions can leak out of the uploadChunk method in
 // @actions/toolkit when a failed upload closes the file descriptor causing any in-process reads to
@@ -11,14 +11,14 @@ process.on('uncaughtException', e => handleFailure(e))
  */
 export async function run(): Promise<void> {
     try {
-        await caches.save()
+        await setupGradle.complete()
     } catch (error) {
         handleFailure(error)
     }
 }
 
 function handleFailure(error: unknown): void {
-    core.warning(`Unhandled error saving cache - job will continue: ${error}`)
+    core.warning(`Unhandled error in Gradle post-action - job will continue: ${error}`)
     if (error instanceof Error && error.stack) {
         core.info(error.stack)
     }

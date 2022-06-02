@@ -1,9 +1,8 @@
 import * as core from '@actions/core'
 import * as path from 'path'
-import * as os from 'os'
 import {parseArgsStringToArgv} from 'string-argv'
 
-import * as caches from './caches'
+import * as setupGradle from './setup-gradle'
 import * as execution from './execution'
 import * as provision from './provision'
 
@@ -14,9 +13,8 @@ export async function run(): Promise<void> {
     try {
         const workspaceDirectory = process.env[`GITHUB_WORKSPACE`] || ''
         const buildRootDirectory = resolveBuildRootDirectory(workspaceDirectory)
-        const gradleUserHome = determineGradleUserHome(buildRootDirectory)
 
-        await caches.restore(gradleUserHome)
+        await setupGradle.setup(buildRootDirectory)
 
         const executable = await provisionGradle(workspaceDirectory)
         // executable will be undefined if using Gradle wrapper
@@ -58,15 +56,6 @@ function resolveBuildRootDirectory(baseDirectory: string): string {
     const resolvedBuildRootDirectory =
         buildRootDirectory === '' ? path.resolve(baseDirectory) : path.resolve(baseDirectory, buildRootDirectory)
     return resolvedBuildRootDirectory
-}
-
-function determineGradleUserHome(rootDir: string): string {
-    const customGradleUserHome = process.env['GRADLE_USER_HOME']
-    if (customGradleUserHome) {
-        return path.resolve(rootDir, customGradleUserHome)
-    }
-
-    return path.resolve(os.homedir(), '.gradle')
 }
 
 function parseCommandLineArguments(): string[] {
