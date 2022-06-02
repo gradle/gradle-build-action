@@ -64015,65 +64015,16 @@ class GradleStateCache {
     initializeGradleUserHome(gradleUserHome, initScriptsDir) {
         const propertiesFile = path_1.default.resolve(gradleUserHome, 'gradle.properties');
         fs_1.default.appendFileSync(propertiesFile, 'org.gradle.daemon=false');
-        const buildScanCapture = path_1.default.resolve(initScriptsDir, 'build-scan-capture.init.gradle');
-        fs_1.default.writeFileSync(buildScanCapture, `import org.gradle.util.GradleVersion
-
-// Only run against root build. Do not run against included builds.
-def isTopLevelBuild = gradle.getParent() == null
-if (isTopLevelBuild) {
-    def version = GradleVersion.current().baseVersion
-    def atLeastGradle4 = version >= GradleVersion.version("4.0")
-    def atLeastGradle6 = version >= GradleVersion.version("6.0")
-
-    if (atLeastGradle6) {
-        settingsEvaluated { settings ->
-            if (settings.pluginManager.hasPlugin("com.gradle.enterprise")) {
-                registerCallbacks(settings.extensions["gradleEnterprise"].buildScan, settings.rootProject.name)
-            }
-        }
-    } else if (atLeastGradle4) {
-        projectsEvaluated { gradle ->
-            if (gradle.rootProject.pluginManager.hasPlugin("com.gradle.build-scan")) {
-                registerCallbacks(gradle.rootProject.extensions["buildScan"], gradle.rootProject.name)
-            }
+        const initScriptFilenames = ['build-result-capture.init.gradle', 'project-root-capture.init.gradle'];
+        for (const initScriptFilename of initScriptFilenames) {
+            const initScriptContent = this.readResourceAsString(initScriptFilename);
+            const initScriptPath = path_1.default.resolve(initScriptsDir, initScriptFilename);
+            fs_1.default.writeFileSync(initScriptPath, initScriptContent);
         }
     }
-}
-
-def registerCallbacks(buildScanExtension, rootProjectName) {
-    buildScanExtension.with {
-        def buildFailed = false
-        buildFinished { result ->
-            buildFailed = (result.failure != null)
-        }
-
-        buildScanPublished { buildScan ->
-            // Send commands directly to GitHub Actions via STDOUT.
-            def gradleCommand = rootProjectName + " " + gradle.startParameter.taskNames.join(" ")
-
-            def githubSummaryFile = new File(System.getenv("GITHUB_STEP_SUMMARY"))
-            if (buildFailed) {
-                githubSummaryFile << ":x: Gradle Build \`\${gradleCommand}\` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-FAILED-red?logo=Gradle)](\${buildScan.buildScanUri})"
-            } else {
-                githubSummaryFile << ":white_check_mark: Gradle Build \`\${gradleCommand}\` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-SUCCESS-brightgreen?logo=Gradle)](\${buildScan.buildScanUri})"
-            }
-            println("::set-output name=build-scan-url::\${buildScan.buildScanUri}")
-        }
-    }
-}`);
-        const projectRootCapture = path_1.default.resolve(initScriptsDir, 'project-root-capture.init.gradle');
-        fs_1.default.writeFileSync(projectRootCapture, `
-// Only run against root build. Do not run against included builds.
-def isTopLevelBuild = gradle.getParent() == null
-if (isTopLevelBuild) {
-    settingsEvaluated { settings ->
-        def projectRootEntry = settings.rootDir.absolutePath + "\\n"
-        def projectRootList = new File(settings.gradle.gradleUserHomeDir, "${exports.PROJECT_ROOTS_FILE}")
-        if (!projectRootList.exists() || !projectRootList.text.contains(projectRootEntry)) {
-            projectRootList << projectRootEntry
-        }
-    }
-}`);
+    readResourceAsString(resource) {
+        const absolutePath = path_1.default.resolve(__dirname, '..', '..', 'src', 'resources', resource);
+        return fs_1.default.readFileSync(absolutePath, 'utf8');
     }
     debugReportGradleUserHomeSize(label) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -64799,7 +64750,6 @@ const cache_utils_1 = __nccwpck_require__(1678);
 const cache_reporting_1 = __nccwpck_require__(6674);
 const cache_base_1 = __nccwpck_require__(7591);
 const CACHE_RESTORED_VAR = 'GRADLE_BUILD_ACTION_CACHE_RESTORED';
-const GRADLE_USER_HOME = 'GRADLE_USER_HOME';
 const CACHE_LISTENER = 'CACHE_LISTENER';
 function restore(gradleUserHome) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -64821,7 +64771,6 @@ function restore(gradleUserHome) {
         }
         gradleStateCache.init();
         core.saveState(CACHE_RESTORED_VAR, true);
-        core.saveState(GRADLE_USER_HOME, gradleUserHome);
         if ((0, cache_utils_1.isCacheWriteOnly)()) {
             core.info('Cache is write-only: will not restore from cache.');
             return;
@@ -64834,7 +64783,7 @@ function restore(gradleUserHome) {
     });
 }
 exports.restore = restore;
-function save() {
+function save(gradleUserHome) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!shouldSaveCaches()) {
             return;
@@ -64846,7 +64795,6 @@ function save() {
             return;
         }
         yield core.group('Caching Gradle state', () => __awaiter(this, void 0, void 0, function* () {
-            const gradleUserHome = core.getState(GRADLE_USER_HOME);
             return new cache_base_1.GradleStateCache(gradleUserHome).save(cacheListener);
         }));
         (0, cache_reporting_1.logCachingReport)(cacheListener);
@@ -64908,12 +64856,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = void 0;
 const core = __importStar(__nccwpck_require__(2186));
-const caches = __importStar(__nccwpck_require__(3800));
+const setupGradle = __importStar(__nccwpck_require__(8652));
 process.on('uncaughtException', e => handleFailure(e));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            yield caches.save();
+            yield setupGradle.complete();
         }
         catch (error) {
             handleFailure(error);
@@ -64922,12 +64870,93 @@ function run() {
 }
 exports.run = run;
 function handleFailure(error) {
-    core.warning(`Unhandled error saving cache - job will continue: ${error}`);
+    core.warning(`Unhandled error in Gradle post-action - job will continue: ${error}`);
     if (error instanceof Error && error.stack) {
         core.info(error.stack);
     }
 }
 run();
+
+
+/***/ }),
+
+/***/ 8652:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.complete = exports.setup = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const path = __importStar(__nccwpck_require__(1017));
+const os = __importStar(__nccwpck_require__(2037));
+const caches = __importStar(__nccwpck_require__(3800));
+const GRADLE_SETUP_VAR = 'GRADLE_BUILD_ACTION_SETUP_COMPLETED';
+const GRADLE_USER_HOME = 'GRADLE_USER_HOME';
+function setup(buildRootDirectory) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const gradleUserHome = determineGradleUserHome(buildRootDirectory);
+        if (process.env[GRADLE_SETUP_VAR]) {
+            core.info('Gradle setup only performed on first gradle-build-action step in workflow.');
+            return;
+        }
+        core.exportVariable(GRADLE_SETUP_VAR, true);
+        core.saveState(GRADLE_SETUP_VAR, true);
+        core.saveState(GRADLE_USER_HOME, gradleUserHome);
+        yield caches.restore(gradleUserHome);
+    });
+}
+exports.setup = setup;
+function complete() {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!core.getState(GRADLE_SETUP_VAR)) {
+            core.info('Gradle setup post-action only performed for first gradle-build-action step in workflow.');
+            return;
+        }
+        const gradleUserHome = core.getState(GRADLE_USER_HOME);
+        yield caches.save(gradleUserHome);
+    });
+}
+exports.complete = complete;
+function determineGradleUserHome(rootDir) {
+    const customGradleUserHome = process.env['GRADLE_USER_HOME'];
+    if (customGradleUserHome) {
+        return path.resolve(rootDir, customGradleUserHome);
+    }
+    return path.resolve(os.homedir(), '.gradle');
+}
 
 
 /***/ }),

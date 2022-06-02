@@ -4,7 +4,6 @@ import {logCachingReport, CacheListener} from './cache-reporting'
 import {GradleStateCache} from './cache-base'
 
 const CACHE_RESTORED_VAR = 'GRADLE_BUILD_ACTION_CACHE_RESTORED'
-const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
 const CACHE_LISTENER = 'CACHE_LISTENER'
 
 export async function restore(gradleUserHome: string): Promise<void> {
@@ -34,8 +33,6 @@ export async function restore(gradleUserHome: string): Promise<void> {
     gradleStateCache.init()
     // Mark the state as restored so that post-action will perform save.
     core.saveState(CACHE_RESTORED_VAR, true)
-    // Save the Gradle User Home for the post-action step.
-    core.saveState(GRADLE_USER_HOME, gradleUserHome)
 
     if (isCacheWriteOnly()) {
         core.info('Cache is write-only: will not restore from cache.')
@@ -50,7 +47,7 @@ export async function restore(gradleUserHome: string): Promise<void> {
     })
 }
 
-export async function save(): Promise<void> {
+export async function save(gradleUserHome: string): Promise<void> {
     if (!shouldSaveCaches()) {
         return
     }
@@ -64,7 +61,6 @@ export async function save(): Promise<void> {
     }
 
     await core.group('Caching Gradle state', async () => {
-        const gradleUserHome = core.getState(GRADLE_USER_HOME)
         return new GradleStateCache(gradleUserHome).save(cacheListener)
     })
 

@@ -1,0 +1,50 @@
+/*
+ * Capture information for each executed Gradle build to display in the job summary.
+ */
+import org.gradle.util.GradleVersion
+
+// Only run against root build. Do not run against included builds.
+def isTopLevelBuild = gradle.getParent() == null
+if (isTopLevelBuild) {
+    def version = GradleVersion.current().baseVersion
+    def atLeastGradle4 = version >= GradleVersion.version("4.0")
+    def atLeastGradle6 = version >= GradleVersion.version("6.0")
+
+    if (atLeastGradle6) {
+        settingsEvaluated { settings ->
+            if (settings.pluginManager.hasPlugin("com.gradle.enterprise")) {
+                registerCallbacks(settings.extensions["gradleEnterprise"].buildScan, settings.rootProject.name)
+            }
+        }
+    } else if (atLeastGradle4) {
+        projectsEvaluated { gradle ->
+            if (gradle.rootProject.pluginManager.hasPlugin("com.gradle.build-scan")) {
+                registerCallbacks(gradle.rootProject.extensions["buildScan"], gradle.rootProject.name)
+            }
+        }
+    }
+}
+
+def registerCallbacks(buildScanExtension, rootProjectName) {
+    buildScanExtension.with {
+        def buildFailed = false
+        buildFinished { result ->
+            buildFailed = (result.failure != null)
+        }
+
+        buildScanPublished { buildScan ->
+            def gradleCommand = rootProjectName + " " + gradle.startParameter.taskNames.join(" ")
+
+            // Write job summary to magic file defined by GitHub Actions.
+            def githubSummaryFile = new File(System.getenv("GITHUB_STEP_SUMMARY"))
+            if (buildFailed) {
+                githubSummaryFile << ":x: Gradle Build `${gradleCommand}` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-FAILED-red?logo=Gradle)](${buildScan.buildScanUri})"
+            } else {
+                githubSummaryFile << ":white_check_mark: Gradle Build `${gradleCommand}` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-SUCCESS-brightgreen?logo=Gradle)](${buildScan.buildScanUri})"
+            }
+         
+            // Send 'set-output' command directly to GitHub Actions via STDOUT.
+            println("::set-output name=build-scan-url::${buildScan.buildScanUri}")
+        }
+    }
+}
