@@ -170,7 +170,11 @@ export class GradleStateCache {
         const propertiesFile = path.resolve(gradleUserHome, 'gradle.properties')
         fs.appendFileSync(propertiesFile, 'org.gradle.daemon=false')
 
-        const initScriptFilenames = ['build-result-capture.init.gradle', 'project-root-capture.init.gradle']
+        const initScriptFilenames = [
+            'build-result-capture.init.gradle',
+            'project-root-capture.init.gradle',
+            'project-root-capture.plugin.groovy'
+        ]
         for (const initScriptFilename of initScriptFilenames) {
             const initScriptContent = this.readResourceAsString(initScriptFilename)
             const initScriptPath = path.resolve(initScriptsDir, initScriptFilename)

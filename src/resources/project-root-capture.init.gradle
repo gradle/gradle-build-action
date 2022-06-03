@@ -1,12 +1,10 @@
-// Capture the build root directory for each executed Gradle build.
+import org.gradle.util.GradleVersion
+
 // Only run against root build. Do not run against included builds.
 def isTopLevelBuild = gradle.getParent() == null
-if (isTopLevelBuild) {
-    settingsEvaluated { settings ->
-        def projectRootEntry = settings.rootDir.absolutePath + '\n'
-        def projectRootList = new File(settings.gradle.gradleUserHomeDir, "project-roots.txt")
-        if (!projectRootList.exists() || !projectRootList.text.contains(projectRootEntry)) {
-            projectRootList << projectRootEntry
-        }
-    }
+// Only record configuration-cache entries for Gradle 7+
+def isAtLeastGradle7 = GradleVersion.current() >= GradleVersion.version('7.0')
+
+if (isTopLevelBuild && isAtLeastGradle7) {   
+    apply from: 'project-root-capture.plugin.groovy'
 }
