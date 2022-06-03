@@ -179,7 +179,7 @@ export class GradleStateCache {
     }
 
     private readResourceAsString(resource: string): string {
-        // Resolving relative to __dirname will force the compiler to inline the content in the distribution
+        // Resolving relative to __dirname will allow node to find the resource at runtime
         const absolutePath = path.resolve(__dirname, '..', '..', 'src', 'resources', resource)
         return fs.readFileSync(absolutePath, 'utf8')
     }
