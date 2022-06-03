@@ -92,7 +92,7 @@ export function logCachingReport(listener: CacheListener): void {
         return
     }
 
-    core.summary.addHeading('Caching Summary')
+    core.summary.addHeading('Caching Summary', 3)
 
     const entries = listener.cacheEntries
         .map(
@@ -129,10 +129,9 @@ export function logCachingReport(listener: CacheListener): void {
 <pre>
 ${entries}
 </pre>
+
 `
     )
-
-    core.summary.write()
 }
 
 function getCount(

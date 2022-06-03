@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 import fs from 'fs'
 import path from 'path'
+import {logCachingReport, CacheListener} from './cache-reporting'
 
 interface BuildResult {
     get rootProject(): string
@@ -10,13 +11,21 @@ interface BuildResult {
     get buildScanUri(): string
 }
 
-export function writeJobSummary(): void {
+export function writeJobSummary(cacheListener: CacheListener): void {
+    core.info('Writing job summary...')
+
     const buildResults = loadBuildResults()
     if (buildResults.length === 0) {
         core.debug('No Gradle build results found. Summary table will not be generated.')
     } else {
+        core.info('Writing summary table')
         writeSummaryTable(buildResults)
     }
+
+    core.info('Writing cache report...')
+    logCachingReport(cacheListener)
+
+    core.summary.write()
 }
 
 function loadBuildResults(): BuildResult[] {
@@ -34,8 +43,9 @@ function loadBuildResults(): BuildResult[] {
 }
 
 function writeSummaryTable(results: BuildResult[]): void {
+    core.summary.addRaw('\n')
     core.summary.addHeading('Gradle Builds', 3)
-    core.summary.addRaw(`| Root Project | Tasks | Gradle Version | Outcome |\n| - | - | - | - |\n`)
+    core.summary.addRaw('\n| Root Project | Tasks | Gradle Version | Outcome |\n| - | - | - | - |\n')
     for (const result of results) {
         const tableRow = `| ${result.rootProject} \
                           | ${result.requestedTasks} \
@@ -44,7 +54,7 @@ function writeSummaryTable(results: BuildResult[]): void {
                           |\n`
         core.summary.addRaw(tableRow)
     }
-    core.summary.write()
+    core.summary.addRaw('\n')
 }
 
 function renderOutcome(result: BuildResult): string {
