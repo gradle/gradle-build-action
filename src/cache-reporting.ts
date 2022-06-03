@@ -6,6 +6,8 @@ import * as core from '@actions/core'
  */
 export class CacheListener {
     cacheEntries: CacheEntryListener[] = []
+    isCacheReadOnly = false
+    isCacheWriteOnly = false
 
     get fullyRestored(): boolean {
         return this.cacheEntries.every(x => !x.wasRequestedButNotRestored())
@@ -54,6 +56,8 @@ export class CacheEntryListener {
     savedKey: string | undefined
     savedSize: number | undefined
 
+    unchanged: string | undefined
+
     constructor(entryName: string) {
         this.entryName = entryName
     }
@@ -85,6 +89,11 @@ export class CacheEntryListener {
         this.savedSize = 0
         return this
     }
+
+    markUnchanged(message: string): CacheEntryListener {
+        this.unchanged = message
+        return this
+    }
 }
 
 export function logCachingReport(listener: CacheListener): void {
@@ -92,22 +101,85 @@ export function logCachingReport(listener: CacheListener): void {
         return
     }
 
-    core.info(`---------- Caching Summary -------------
-Restored Entries Count: ${getCount(listener.cacheEntries, e => e.restoredSize)}
-                  Size: ${getSum(listener.cacheEntries, e => e.restoredSize)}
-Saved Entries    Count: ${getCount(listener.cacheEntries, e => e.savedSize)}
-                  Size: ${getSum(listener.cacheEntries, e => e.savedSize)}`)
+    core.summary.addHeading('Gradle Home Caching Summary', 3)
 
-    core.startGroup('Cache Entry details')
-    for (const entry of listener.cacheEntries) {
-        core.info(`Entry: ${entry.entryName}
+    const entries = listener.cacheEntries
+        .map(
+            entry =>
+                `Entry: ${entry.entryName}
     Requested Key : ${entry.requestedKey ?? ''}
     Restored  Key : ${entry.restoredKey ?? ''}
               Size: ${formatSize(entry.restoredSize)}
+              ${getRestoredMessage(entry, listener.isCacheWriteOnly)}
     Saved     Key : ${entry.savedKey ?? ''}
-              Size: ${formatSize(entry.savedSize)}`)
+              Size: ${formatSize(entry.savedSize)}
+              ${getSavedMessage(entry, listener.isCacheReadOnly)}
+---`
+        )
+        .join('\n')
+
+    core.summary.addRaw(
+        `
+
+| | Count | Size (Mb) | Size (B) |
+| - | -: | -: | -: |
+| Restored | ${getCount(listener.cacheEntries, e => e.restoredSize)} | ${getMegaBytes(
+            listener.cacheEntries,
+            e => e.restoredSize
+        )} | ${getBytes(listener.cacheEntries, e => e.restoredSize)} |
+| Saved | ${getCount(listener.cacheEntries, e => e.savedSize)} | ${getMegaBytes(
+            listener.cacheEntries,
+            e => e.savedSize
+        )} | ${getBytes(listener.cacheEntries, e => e.savedSize)} |
+
+`
+    )
+
+    if (listener.isCacheReadOnly) {
+        core.summary.addRaw('- **Cache is read-only**\n')
     }
-    core.endGroup()
+    if (listener.isCacheWriteOnly) {
+        core.summary.addRaw('- **Cache is write-only**\n')
+    }
+
+    core.summary.addDetails(
+        'Cache Entry Details',
+        `
+<pre>
+${entries}
+</pre>
+
+`
+    )
+}
+
+function getRestoredMessage(entry: CacheEntryListener, isCacheWriteOnly: boolean): string {
+    if (isCacheWriteOnly) {
+        return '(Entry not restored: cache is write-only)'
+    }
+    if (entry.restoredKey === undefined) {
+        return '(Entry not restored: no match found)'
+    }
+    if (entry.restoredKey === entry.requestedKey) {
+        return '(Entry restored: exact match found)'
+    }
+    return '(Entry restored: partial match found)'
+}
+
+function getSavedMessage(entry: CacheEntryListener, isCacheReadOnly: boolean): string {
+    if (entry.unchanged) {
+        return `(Entry not saved: ${entry.unchanged})`
+    }
+    if (entry.savedKey === undefined) {
+        if (isCacheReadOnly) {
+            return '(Entry not saved: cache is read-only)'
+        }
+        return '(Entry not saved: reason unknown)'
+    }
+    if (entry.savedSize === 0) {
+        return '(Entry not saved: entry with key already exists)'
+    }
+    return '(Entry saved)'
 }
 
 function getCount(
@@ -117,14 +189,19 @@ function getCount(
     return cacheEntries.filter(e => predicate(e) !== undefined).length
 }
 
-function getSum(
+function getBytes(
     cacheEntries: CacheEntryListener[],
     predicate: (value: CacheEntryListener) => number | undefined
-): string {
-    if (cacheEntries.length === 0) {
-        return '0'
-    }
-    return formatSize(cacheEntries.map(e => predicate(e) ?? 0).reduce((p, v) => p + v, 0))
+): number {
+    return cacheEntries.map(e => predicate(e) ?? 0).reduce((p, v) => p + v, 0)
+}
+
+function getMegaBytes(
+    cacheEntries: CacheEntryListener[],
+    predicate: (value: CacheEntryListener) => number | undefined
+): number {
+    const bytes = getBytes(cacheEntries, predicate)
+    return Math.round(bytes / (1024 * 1024))
 }
 
 function formatSize(bytes: number | undefined): string {

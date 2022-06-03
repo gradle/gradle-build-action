@@ -63961,8 +63961,10 @@ class GradleStateCache {
         return __awaiter(this, void 0, void 0, function* () {
             const cacheKey = (0, cache_utils_1.generateCacheKey)(this.cacheName).key;
             const restoredCacheKey = core.getState(RESTORED_CACHE_KEY_KEY);
+            const entryListener = listener.entry(this.cacheDescription);
             if (restoredCacheKey && cacheKey === restoredCacheKey) {
                 core.info(`Cache hit occurred on the cache key ${cacheKey}, not saving cache.`);
+                entryListener.markUnchanged('cache key not changed');
                 return;
             }
             try {
@@ -63974,7 +63976,6 @@ class GradleStateCache {
             }
             core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKey}`);
             const cachePath = this.getCachePath();
-            const entryListener = listener.entry(this.cacheDescription);
             yield (0, cache_utils_1.saveCache)(cachePath, cacheKey, entryListener);
             return;
         });
@@ -64206,6 +64207,7 @@ class AbstractEntryExtractor {
             const previouslyRestoredKey = (_a = previouslyRestoredEntries.find(x => x.artifactType === artifactType && x.pattern === pattern)) === null || _a === void 0 ? void 0 : _a.cacheKey;
             if (previouslyRestoredKey === cacheKey) {
                 (0, cache_utils_1.cacheDebug)(`No change to previously restored ${artifactType}. Not saving.`);
+                entryListener.markUnchanged('contents unchanged');
             }
             else {
                 core.info(`Caching ${artifactType} with path '${pattern}' and cache key: ${cacheKey}`);
@@ -64385,6 +64387,8 @@ const core = __importStar(__nccwpck_require__(2186));
 class CacheListener {
     constructor() {
         this.cacheEntries = [];
+        this.isCacheReadOnly = false;
+        this.isCacheWriteOnly = false;
     }
     get fullyRestored() {
         return this.cacheEntries.every(x => !x.wasRequestedButNotRestored());
@@ -64443,38 +64447,89 @@ class CacheEntryListener {
         this.savedSize = 0;
         return this;
     }
+    markUnchanged(message) {
+        this.unchanged = message;
+        return this;
+    }
 }
 exports.CacheEntryListener = CacheEntryListener;
 function logCachingReport(listener) {
-    var _a, _b, _c;
     if (listener.cacheEntries.length === 0) {
         return;
     }
-    core.info(`---------- Caching Summary -------------
-Restored Entries Count: ${getCount(listener.cacheEntries, e => e.restoredSize)}
-                  Size: ${getSum(listener.cacheEntries, e => e.restoredSize)}
-Saved Entries    Count: ${getCount(listener.cacheEntries, e => e.savedSize)}
-                  Size: ${getSum(listener.cacheEntries, e => e.savedSize)}`);
-    core.startGroup('Cache Entry details');
-    for (const entry of listener.cacheEntries) {
-        core.info(`Entry: ${entry.entryName}
+    core.summary.addHeading('Gradle Home Caching Summary', 3);
+    const entries = listener.cacheEntries
+        .map(entry => {
+        var _a, _b, _c;
+        return `Entry: ${entry.entryName}
     Requested Key : ${(_a = entry.requestedKey) !== null && _a !== void 0 ? _a : ''}
     Restored  Key : ${(_b = entry.restoredKey) !== null && _b !== void 0 ? _b : ''}
               Size: ${formatSize(entry.restoredSize)}
+              ${getRestoredMessage(entry, listener.isCacheWriteOnly)}
     Saved     Key : ${(_c = entry.savedKey) !== null && _c !== void 0 ? _c : ''}
-              Size: ${formatSize(entry.savedSize)}`);
+              Size: ${formatSize(entry.savedSize)}
+              ${getSavedMessage(entry, listener.isCacheReadOnly)}
+---`;
+    })
+        .join('\n');
+    core.summary.addRaw(`
+
+| | Count | Size (Mb) | Size (B) |
+| - | -: | -: | -: |
+| Restored | ${getCount(listener.cacheEntries, e => e.restoredSize)} | ${getMegaBytes(listener.cacheEntries, e => e.restoredSize)} | ${getBytes(listener.cacheEntries, e => e.restoredSize)} |
+| Saved | ${getCount(listener.cacheEntries, e => e.savedSize)} | ${getMegaBytes(listener.cacheEntries, e => e.savedSize)} | ${getBytes(listener.cacheEntries, e => e.savedSize)} |
+
+`);
+    if (listener.isCacheReadOnly) {
+        core.summary.addRaw('- **Cache is read-only**\n');
     }
-    core.endGroup();
+    if (listener.isCacheWriteOnly) {
+        core.summary.addRaw('- **Cache is write-only**\n');
+    }
+    core.summary.addDetails('Cache Entry Details', `
+<pre>
+${entries}
+</pre>
+
+`);
 }
 exports.logCachingReport = logCachingReport;
+function getRestoredMessage(entry, isCacheWriteOnly) {
+    if (isCacheWriteOnly) {
+        return '(Entry not restored: cache is write-only)';
+    }
+    if (entry.restoredKey === undefined) {
+        return '(Entry not restored: no match found)';
+    }
+    if (entry.restoredKey === entry.requestedKey) {
+        return '(Entry restored: exact match found)';
+    }
+    return '(Entry restored: partial match found)';
+}
+function getSavedMessage(entry, isCacheReadOnly) {
+    if (entry.unchanged) {
+        return `(Entry not saved: ${entry.unchanged})`;
+    }
+    if (entry.savedKey === undefined) {
+        if (isCacheReadOnly) {
+            return '(Entry not saved: cache is read-only)';
+        }
+        return '(Entry not saved: reason unknown)';
+    }
+    if (entry.savedSize === 0) {
+        return '(Entry not saved: entry with key already exists)';
+    }
+    return '(Entry saved)';
+}
 function getCount(cacheEntries, predicate) {
     return cacheEntries.filter(e => predicate(e) !== undefined).length;
 }
-function getSum(cacheEntries, predicate) {
-    if (cacheEntries.length === 0) {
-        return '0';
-    }
-    return formatSize(cacheEntries.map(e => { var _a; return (_a = predicate(e)) !== null && _a !== void 0 ? _a : 0; }).reduce((p, v) => p + v, 0));
+function getBytes(cacheEntries, predicate) {
+    return cacheEntries.map(e => { var _a; return (_a = predicate(e)) !== null && _a !== void 0 ? _a : 0; }).reduce((p, v) => p + v, 0);
+}
+function getMegaBytes(cacheEntries, predicate) {
+    const bytes = getBytes(cacheEntries, predicate);
+    return Math.round(bytes / (1024 * 1024));
 }
 function formatSize(bytes) {
     if (bytes === undefined) {
@@ -64747,11 +64802,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.save = exports.restore = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const cache_utils_1 = __nccwpck_require__(1678);
-const cache_reporting_1 = __nccwpck_require__(6674);
 const cache_base_1 = __nccwpck_require__(7591);
 const CACHE_RESTORED_VAR = 'GRADLE_BUILD_ACTION_CACHE_RESTORED';
-const CACHE_LISTENER = 'CACHE_LISTENER';
-function restore(gradleUserHome) {
+function restore(gradleUserHome, cacheListener) {
     return __awaiter(this, void 0, void 0, function* () {
         if (process.env[CACHE_RESTORED_VAR]) {
             core.info('Cache only restored on first action step.');
@@ -64773,31 +64826,28 @@ function restore(gradleUserHome) {
         core.saveState(CACHE_RESTORED_VAR, true);
         if ((0, cache_utils_1.isCacheWriteOnly)()) {
             core.info('Cache is write-only: will not restore from cache.');
+            cacheListener.isCacheWriteOnly = true;
             return;
         }
         yield core.group('Restore Gradle state from cache', () => __awaiter(this, void 0, void 0, function* () {
-            const cacheListener = new cache_reporting_1.CacheListener();
             yield gradleStateCache.restore(cacheListener);
-            core.saveState(CACHE_LISTENER, cacheListener.stringify());
         }));
     });
 }
 exports.restore = restore;
-function save(gradleUserHome) {
+function save(gradleUserHome, cacheListener) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!shouldSaveCaches()) {
             return;
         }
-        const cacheListener = cache_reporting_1.CacheListener.rehydrate(core.getState(CACHE_LISTENER));
         if ((0, cache_utils_1.isCacheReadOnly)()) {
             core.info('Cache is read-only: will not save state for use in subsequent builds.');
-            (0, cache_reporting_1.logCachingReport)(cacheListener);
+            cacheListener.isCacheReadOnly = true;
             return;
         }
         yield core.group('Caching Gradle state', () => __awaiter(this, void 0, void 0, function* () {
             return new cache_base_1.GradleStateCache(gradleUserHome).save(cacheListener);
         }));
-        (0, cache_reporting_1.logCachingReport)(cacheListener);
     });
 }
 exports.save = save;
@@ -64811,6 +64861,93 @@ function shouldSaveCaches() {
         return false;
     }
     return true;
+}
+
+
+/***/ }),
+
+/***/ 7345:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.writeJobSummary = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const fs_1 = __importDefault(__nccwpck_require__(7147));
+const path_1 = __importDefault(__nccwpck_require__(1017));
+const cache_reporting_1 = __nccwpck_require__(6674);
+function writeJobSummary(cacheListener) {
+    core.info('Writing job summary...');
+    const buildResults = loadBuildResults();
+    if (buildResults.length === 0) {
+        core.debug('No Gradle build results found. Summary table will not be generated.');
+    }
+    else {
+        core.info('Writing summary table');
+        writeSummaryTable(buildResults);
+    }
+    core.info('Writing cache report...');
+    (0, cache_reporting_1.logCachingReport)(cacheListener);
+    core.summary.write();
+}
+exports.writeJobSummary = writeJobSummary;
+function loadBuildResults() {
+    const buildResultsDir = path_1.default.resolve(process.env['RUNNER_TEMP'], '.build-results');
+    if (!fs_1.default.existsSync(buildResultsDir)) {
+        return [];
+    }
+    return fs_1.default.readdirSync(buildResultsDir).map(file => {
+        const filePath = path_1.default.join(buildResultsDir, file);
+        const content = fs_1.default.readFileSync(filePath, 'utf8');
+        return JSON.parse(content);
+    });
+}
+function writeSummaryTable(results) {
+    core.summary.addRaw('\n');
+    core.summary.addHeading('Gradle Builds', 3);
+    core.summary.addRaw('\n| Root Project | Tasks | Gradle Version | Outcome |\n| - | - | - | - |\n');
+    for (const result of results) {
+        const tableRow = `| ${result.rootProject} \
+                          | ${result.requestedTasks} \
+                          | ${result.gradleVersion} \
+                          | ${renderOutcome(result)} \
+                          |\n`;
+        core.summary.addRaw(tableRow);
+    }
+    core.summary.addRaw('\n');
+}
+function renderOutcome(result) {
+    if (result.buildScanUri) {
+        return `[![Gradle Build](https://img.shields.io/badge/Build%20Scan%E2%84%A2-${result.buildFailed ? 'FAILED-red' : 'SUCCESS-brightgreen'}?logo=Gradle)](${result.buildScanUri})`;
+    }
+    return `![Gradle Build](https://img.shields.io/badge/${result.buildFailed ? 'FAILED-red' : 'SUCCESS-brightgreen'}?logo=Gradle)`;
 }
 
 
@@ -64923,8 +65060,11 @@ const core = __importStar(__nccwpck_require__(2186));
 const path = __importStar(__nccwpck_require__(1017));
 const os = __importStar(__nccwpck_require__(2037));
 const caches = __importStar(__nccwpck_require__(3800));
+const cache_reporting_1 = __nccwpck_require__(6674);
+const job_summary_1 = __nccwpck_require__(7345);
 const GRADLE_SETUP_VAR = 'GRADLE_BUILD_ACTION_SETUP_COMPLETED';
 const GRADLE_USER_HOME = 'GRADLE_USER_HOME';
+const CACHE_LISTENER = 'CACHE_LISTENER';
 function setup(buildRootDirectory) {
     return __awaiter(this, void 0, void 0, function* () {
         const gradleUserHome = determineGradleUserHome(buildRootDirectory);
@@ -64935,18 +65075,24 @@ function setup(buildRootDirectory) {
         core.exportVariable(GRADLE_SETUP_VAR, true);
         core.saveState(GRADLE_SETUP_VAR, true);
         core.saveState(GRADLE_USER_HOME, gradleUserHome);
-        yield caches.restore(gradleUserHome);
+        const cacheListener = new cache_reporting_1.CacheListener();
+        yield caches.restore(gradleUserHome, cacheListener);
+        core.saveState(CACHE_LISTENER, cacheListener.stringify());
     });
 }
 exports.setup = setup;
 function complete() {
     return __awaiter(this, void 0, void 0, function* () {
+        core.info('Inside setupGradle.complete()');
         if (!core.getState(GRADLE_SETUP_VAR)) {
             core.info('Gradle setup post-action only performed for first gradle-build-action step in workflow.');
             return;
         }
+        core.info('In final post-action step, saving state and writing summary');
+        const cacheListener = cache_reporting_1.CacheListener.rehydrate(core.getState(CACHE_LISTENER));
         const gradleUserHome = core.getState(GRADLE_USER_HOME);
-        yield caches.save(gradleUserHome);
+        yield caches.save(gradleUserHome, cacheListener);
+        (0, job_summary_1.writeJobSummary)(cacheListener);
     });
 }
 exports.complete = complete;

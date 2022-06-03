@@ -33,17 +33,23 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
         }
 
         buildScanPublished { buildScan ->
-            def gradleCommand = rootProjectName + " " + gradle.startParameter.taskNames.join(" ")
+            def buildResultsDir = new File(System.getenv("RUNNER_TEMP"), ".build-results")
+            buildResultsDir.mkdirs()
+            
+            def buildResultsFile = new File(buildResultsDir, System.getenv("GITHUB_ACTION") + System.currentTimeMillis() + ".json")
 
-            // Write job summary to magic file defined by GitHub Actions.
-            def githubSummaryFile = new File(System.getenv("GITHUB_STEP_SUMMARY"))
-            if (buildFailed) {
-                githubSummaryFile << ":x: Gradle Build `${gradleCommand}` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-FAILED-red?logo=Gradle)](${buildScan.buildScanUri})"
-            } else {
-                githubSummaryFile << ":white_check_mark: Gradle Build `${gradleCommand}` [![Gradle Enterprise Build Scan](https://img.shields.io/badge/Gradle%20Enterprise%20Build%20Scan%E2%84%A2-SUCCESS-brightgreen?logo=Gradle)](${buildScan.buildScanUri})"
-            }
-         
-            // Send 'set-output' command directly to GitHub Actions via STDOUT.
+            def requestedTasks = gradle.startParameter.taskNames.join(" ")
+            def gradleVersion = GradleVersion.current().version
+            def buildScanUri = buildScan.buildScanUri.toASCIIString()
+            def buildResults = [
+                rootProject: rootProjectName, 
+                requestedTasks: requestedTasks,
+                gradleVersion: gradleVersion, 
+                buildFailed: buildFailed, 
+                buildScanUri: buildScanUri
+            ]
+            buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
+
             println("::set-output name=build-scan-url::${buildScan.buildScanUri}")
         }
     }
