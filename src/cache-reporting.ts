@@ -54,6 +54,8 @@ export class CacheEntryListener {
     savedKey: string | undefined
     savedSize: number | undefined
 
+    unchanged: string | undefined
+
     constructor(entryName: string) {
         this.entryName = entryName
     }
@@ -85,6 +87,11 @@ export class CacheEntryListener {
         this.savedSize = 0
         return this
     }
+
+    markUnchanged(message: string): CacheEntryListener {
+        this.unchanged = message
+        return this
+    }
 }
 
 export function logCachingReport(listener: CacheListener): void {
@@ -92,7 +99,7 @@ export function logCachingReport(listener: CacheListener): void {
         return
     }
 
-    core.summary.addHeading('Caching Summary', 3)
+    core.summary.addHeading('Gradle Home Caching Summary', 3)
 
     const entries = listener.cacheEntries
         .map(
@@ -101,8 +108,11 @@ export function logCachingReport(listener: CacheListener): void {
     Requested Key : ${entry.requestedKey ?? ''}
     Restored  Key : ${entry.restoredKey ?? ''}
               Size: ${formatSize(entry.restoredSize)}
+              ${getRestoredMessage(entry)}
     Saved     Key : ${entry.savedKey ?? ''}
-              Size: ${formatSize(entry.savedSize)}`
+              Size: ${formatSize(entry.savedSize)}
+              ${getSavedMessage(entry)}
+---`
         )
         .join('\n')
 
@@ -132,6 +142,29 @@ ${entries}
 
 `
     )
+}
+
+function getRestoredMessage(entry: CacheEntryListener): string {
+    if (entry.restoredKey === undefined) {
+        return '(No match found)'
+    }
+    if (entry.restoredKey === entry.requestedKey) {
+        return '(Exact match found)'
+    }
+    return '(Fuzzy match found)'
+}
+
+function getSavedMessage(entry: CacheEntryListener): string {
+    if (entry.unchanged) {
+        return `(Entry not saved: ${entry.unchanged})`
+    }
+    if (entry.savedKey === undefined) {
+        return '(Entry not saved: ???'
+    }
+    if (entry.savedSize === 0) {
+        return '(Could not save: entry exists)'
+    }
+    return '(Entry saved)'
 }
 
 function getCount(
