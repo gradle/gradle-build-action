@@ -6,6 +6,8 @@ import * as core from '@actions/core'
  */
 export class CacheListener {
     cacheEntries: CacheEntryListener[] = []
+    isCacheReadOnly = false
+    isCacheWriteOnly = false
 
     get fullyRestored(): boolean {
         return this.cacheEntries.every(x => !x.wasRequestedButNotRestored())
@@ -108,10 +110,10 @@ export function logCachingReport(listener: CacheListener): void {
     Requested Key : ${entry.requestedKey ?? ''}
     Restored  Key : ${entry.restoredKey ?? ''}
               Size: ${formatSize(entry.restoredSize)}
-              ${getRestoredMessage(entry)}
+              ${getRestoredMessage(entry, listener.isCacheWriteOnly)}
     Saved     Key : ${entry.savedKey ?? ''}
               Size: ${formatSize(entry.savedSize)}
-              ${getSavedMessage(entry)}
+              ${getSavedMessage(entry, listener.isCacheReadOnly)}
 ---`
         )
         .join('\n')
@@ -133,6 +135,13 @@ export function logCachingReport(listener: CacheListener): void {
 `
     )
 
+    if (listener.isCacheReadOnly) {
+        core.summary.addRaw('- **Cache is read-only**\n')
+    }
+    if (listener.isCacheWriteOnly) {
+        core.summary.addRaw('- **Cache is write-only**\n')
+    }
+
     core.summary.addDetails(
         'Cache Entry Details',
         `
@@ -144,25 +153,31 @@ ${entries}
     )
 }
 
-function getRestoredMessage(entry: CacheEntryListener): string {
+function getRestoredMessage(entry: CacheEntryListener, isCacheWriteOnly: boolean): string {
+    if (isCacheWriteOnly) {
+        return '(Entry not restored: cache is write-only)'
+    }
     if (entry.restoredKey === undefined) {
-        return '(No match found)'
+        return '(Entry not restored: no match found)'
     }
     if (entry.restoredKey === entry.requestedKey) {
-        return '(Exact match found)'
+        return '(Entry restored: exact match found)'
     }
-    return '(Fuzzy match found)'
+    return '(Entry restored: partial match found)'
 }
 
-function getSavedMessage(entry: CacheEntryListener): string {
+function getSavedMessage(entry: CacheEntryListener, isCacheReadOnly: boolean): string {
     if (entry.unchanged) {
         return `(Entry not saved: ${entry.unchanged})`
     }
     if (entry.savedKey === undefined) {
-        return '(Entry not saved: ???'
+        if (isCacheReadOnly) {
+            return '(Entry not saved: cache is read-only)'
+        }
+        return '(Entry not saved: reason unknown)'
     }
     if (entry.savedSize === 0) {
-        return '(Could not save: entry exists)'
+        return '(Entry not saved: entry with key already exists)'
     }
     return '(Entry saved)'
 }

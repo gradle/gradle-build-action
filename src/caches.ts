@@ -35,6 +35,7 @@ export async function restore(gradleUserHome: string, cacheListener: CacheListen
 
     if (isCacheWriteOnly()) {
         core.info('Cache is write-only: will not restore from cache.')
+        cacheListener.isCacheWriteOnly = true
         return
     }
 
@@ -50,6 +51,7 @@ export async function save(gradleUserHome: string, cacheListener: CacheListener)
 
     if (isCacheReadOnly()) {
         core.info('Cache is read-only: will not save state for use in subsequent builds.')
+        cacheListener.isCacheReadOnly = true
         return
     }
 
