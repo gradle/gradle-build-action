@@ -8,8 +8,6 @@
 
 import org.gradle.tooling.events.*
 
-println "Applying Project tracker plugin"
-
 settingsEvaluated { settings ->
     def rootDir = settings.rootDir.absolutePath
     def rootListLocation = new File(settings.gradle.gradleUserHomeDir, "project-roots.txt").absolutePath
@@ -32,12 +30,10 @@ abstract class ProjectTracker implements BuildService<ProjectTracker.Params>, Op
 
     @Override
     public void close() {
-        print "Closing ProjectTracker"
         def rootDir = getParameters().getRootDir().get()
         def rootDirEntry = rootDir + '\n'
         def rootListFile = new File(getParameters().getRootListLocation().get())
         if (!rootListFile.exists() || !rootListFile.text.contains(rootDirEntry)) {
-            println "Added rootDir entry to list: ${rootDir}"
             rootListFile << rootDirEntry
         }
     }
