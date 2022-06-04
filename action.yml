@@ -22,6 +22,13 @@ inputs:
   # e.g. Use the following setting to only write cache entries from your 'main' branch
   #     cache-read-only: ${{ github.ref_name != 'main' }}
 
+  cache-write-only:
+    description: |
+      When 'true', entries will not be restored from the cache but will be saved at the end of the Job. 
+      Setting this to 'true' implies cache-read-only will be 'false'.
+    required: false
+    default: false
+
   gradle-home-cache-includes:
     description: Paths within Gradle User Home to cache.
     required: false
@@ -52,10 +59,6 @@ inputs:
   # The following action properties allow fine-grained tweaking of the action caching behaviour.
   # These properties are experimental and not (yet) designed for production use, and may change without notice in a subsequent release of `gradle-build-action`.
   # Use at your own risk!
-  cache-write-only:
-    description: When 'true', entries will not be restored from the cache but will be saved at the end of the Job. This allows a 'clean' cache entry to be written.
-    required: false
-    default: false
   gradle-home-cache-strict-match:
     description: When 'true', the action will not attempt to restore the Gradle User Home entries from other Jobs.
     required: false
