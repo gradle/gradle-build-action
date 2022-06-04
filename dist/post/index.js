@@ -64016,7 +64016,11 @@ class GradleStateCache {
     initializeGradleUserHome(gradleUserHome, initScriptsDir) {
         const propertiesFile = path_1.default.resolve(gradleUserHome, 'gradle.properties');
         fs_1.default.appendFileSync(propertiesFile, 'org.gradle.daemon=false');
-        const initScriptFilenames = ['build-result-capture.init.gradle', 'project-root-capture.init.gradle'];
+        const initScriptFilenames = [
+            'build-result-capture.init.gradle',
+            'project-root-capture.init.gradle',
+            'project-root-capture.plugin.groovy'
+        ];
         for (const initScriptFilename of initScriptFilenames) {
             const initScriptContent = this.readResourceAsString(initScriptFilename);
             const initScriptPath = path_1.default.resolve(initScriptsDir, initScriptFilename);

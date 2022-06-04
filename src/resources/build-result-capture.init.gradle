@@ -27,7 +27,10 @@ if (isTopLevelBuild) {
 
 def registerCallbacks(buildScanExtension, rootProjectName) {
     buildScanExtension.with {
+        def requestedTasks = gradle.startParameter.taskNames.join(" ")
+        def gradleVersion = GradleVersion.current().version
         def buildFailed = false
+
         buildFinished { result ->
             buildFailed = (result.failure != null)
         }
@@ -38,8 +41,6 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
             
             def buildResultsFile = new File(buildResultsDir, System.getenv("GITHUB_ACTION") + System.currentTimeMillis() + ".json")
 
-            def requestedTasks = gradle.startParameter.taskNames.join(" ")
-            def gradleVersion = GradleVersion.current().version
             def buildScanUri = buildScan.buildScanUri.toASCIIString()
             def buildResults = [
                 rootProject: rootProjectName, 

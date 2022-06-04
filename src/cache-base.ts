@@ -170,7 +170,11 @@ export class GradleStateCache {
         const propertiesFile = path.resolve(gradleUserHome, 'gradle.properties')
         fs.appendFileSync(propertiesFile, 'org.gradle.daemon=false')
 
-        const initScriptFilenames = ['build-result-capture.init.gradle', 'project-root-capture.init.gradle']
+        const initScriptFilenames = [
+            'build-result-capture.init.gradle',
+            'project-root-capture.init.gradle',
+            'project-root-capture.plugin.groovy'
+        ]
         for (const initScriptFilename of initScriptFilenames) {
             const initScriptContent = this.readResourceAsString(initScriptFilename)
             const initScriptPath = path.resolve(initScriptsDir, initScriptFilename)
@@ -179,7 +183,7 @@ export class GradleStateCache {
     }
 
     private readResourceAsString(resource: string): string {
-        // Resolving relative to __dirname will force the compiler to inline the content in the distribution
+        // Resolving relative to __dirname will allow node to find the resource at runtime
         const absolutePath = path.resolve(__dirname, '..', '..', 'src', 'resources', resource)
         return fs.readFileSync(absolutePath, 'utf8')
     }
