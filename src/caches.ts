@@ -19,6 +19,7 @@ export async function restore(gradleUserHome: string, cacheListener: CacheListen
         core.info('Cache is disabled: will not restore state from previous builds.')
         // Initialize the Gradle User Home even when caching is disabled.
         gradleStateCache.init()
+        cacheListener.isCacheDisabled = true
         return
     }
 

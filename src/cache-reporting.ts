@@ -8,9 +8,17 @@ export class CacheListener {
     cacheEntries: CacheEntryListener[] = []
     isCacheReadOnly = false
     isCacheWriteOnly = false
+    isCacheDisabled = false
 
     get fullyRestored(): boolean {
         return this.cacheEntries.every(x => !x.wasRequestedButNotRestored())
+    }
+
+    get cacheStatus(): string {
+        if (this.isCacheDisabled) return 'disabled'
+        if (this.isCacheWriteOnly) return 'write-only'
+        if (this.isCacheReadOnly) return 'read-only'
+        return 'enabled'
     }
 
     entry(name: string): CacheEntryListener {
@@ -97,13 +105,25 @@ export class CacheEntryListener {
 }
 
 export function logCachingReport(listener: CacheListener): void {
-    if (listener.cacheEntries.length === 0) {
-        return
-    }
-
-    core.summary.addHeading('Gradle Home Caching Summary', 3)
-
     const entries = listener.cacheEntries
+
+    core.summary.addRaw(
+        `\n<details><summary><h4>Caching for gradle-build-action was ${listener.cacheStatus} - expand for details</h4></summary>\n`
+    )
+
+    core.summary.addTable([
+        [
+            {data: '', header: true},
+            {data: 'Count', header: true},
+            {data: 'Total Size (Mb)', header: true}
+        ],
+        ['Entries Restored', `${getCount(entries, e => e.restoredSize)}`, `${getSize(entries, e => e.restoredSize)}`],
+        ['Entries Saved', `${getCount(entries, e => e.savedSize)}`, `${getSize(entries, e => e.savedSize)}`]
+    ])
+
+    core.summary.addHeading('Cache Entry Details', 5)
+
+    const entryDetails = listener.cacheEntries
         .map(
             entry =>
                 `Entry: ${entry.entryName}
@@ -114,43 +134,15 @@ export function logCachingReport(listener: CacheListener): void {
     Saved     Key : ${entry.savedKey ?? ''}
               Size: ${formatSize(entry.savedSize)}
               ${getSavedMessage(entry, listener.isCacheReadOnly)}
----`
+`
         )
-        .join('\n')
+        .join('---\n')
 
-    core.summary.addRaw(
-        `
-
-| | Count | Size (Mb) | Size (B) |
-| - | -: | -: | -: |
-| Restored | ${getCount(listener.cacheEntries, e => e.restoredSize)} | ${getMegaBytes(
-            listener.cacheEntries,
-            e => e.restoredSize
-        )} | ${getBytes(listener.cacheEntries, e => e.restoredSize)} |
-| Saved | ${getCount(listener.cacheEntries, e => e.savedSize)} | ${getMegaBytes(
-            listener.cacheEntries,
-            e => e.savedSize
-        )} | ${getBytes(listener.cacheEntries, e => e.savedSize)} |
-
-`
-    )
-
-    if (listener.isCacheReadOnly) {
-        core.summary.addRaw('- **Cache is read-only**\n')
-    }
-    if (listener.isCacheWriteOnly) {
-        core.summary.addRaw('- **Cache is write-only**\n')
-    }
-
-    core.summary.addDetails(
-        'Cache Entry Details',
-        `
-<pre>
-${entries}
+    core.summary.addRaw(`<pre>
+${entryDetails}
 </pre>
-
-`
-    )
+</details>
+`)
 }
 
 function getRestoredMessage(entry: CacheEntryListener, isCacheWriteOnly: boolean): string {
@@ -189,18 +181,11 @@ function getCount(
     return cacheEntries.filter(e => predicate(e) !== undefined).length
 }
 
-function getBytes(
+function getSize(
     cacheEntries: CacheEntryListener[],
     predicate: (value: CacheEntryListener) => number | undefined
 ): number {
-    return cacheEntries.map(e => predicate(e) ?? 0).reduce((p, v) => p + v, 0)
-}
-
-function getMegaBytes(
-    cacheEntries: CacheEntryListener[],
-    predicate: (value: CacheEntryListener) => number | undefined
-): number {
-    const bytes = getBytes(cacheEntries, predicate)
+    const bytes = cacheEntries.map(e => predicate(e) ?? 0).reduce((p, v) => p + v, 0)
     return Math.round(bytes / (1024 * 1024))
 }
 
