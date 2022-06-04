@@ -31,6 +31,7 @@ jobs:
     - name: Setup Gradle
       uses: ./
       with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
         # Add "enterprise" to main cache entry but omit "notifications"
         gradle-home-cache-includes: |
             caches

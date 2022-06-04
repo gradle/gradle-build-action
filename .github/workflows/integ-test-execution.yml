@@ -36,6 +36,7 @@ jobs:
     - name: Test use defined Gradle version
       uses: ./
       with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
         gradle-version: 6.9
         build-root-directory: .github/workflow-samples/no-wrapper
         arguments: help -DgradleVersionCheck=6.9
@@ -72,6 +73,7 @@ jobs:
       uses: ./
       id: gradle
       with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
         gradle-version: ${{matrix.gradle}}
         build-root-directory: .github/workflow-samples/no-wrapper${{ matrix.build-root-suffix }}
         arguments: help -DgradleVersionCheck=${{matrix.gradle}}
