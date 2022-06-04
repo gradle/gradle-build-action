@@ -12,17 +12,15 @@ interface BuildResult {
 }
 
 export function writeJobSummary(cacheListener: CacheListener): void {
-    core.info('Writing job summary...')
+    core.info('Writing job summary')
 
     const buildResults = loadBuildResults()
     if (buildResults.length === 0) {
         core.debug('No Gradle build results found. Summary table will not be generated.')
     } else {
-        core.info('Writing summary table')
         writeSummaryTable(buildResults)
     }
 
-    core.info('Writing cache report...')
     logCachingReport(cacheListener)
 
     core.summary.write()
@@ -43,28 +41,32 @@ function loadBuildResults(): BuildResult[] {
 }
 
 function writeSummaryTable(results: BuildResult[]): void {
-    core.summary.addRaw('\n')
     core.summary.addHeading('Gradle Builds', 3)
-    core.summary.addRaw('\n| Root Project | Tasks | Gradle Version | Outcome |\n| - | - | - | - |\n')
-    for (const result of results) {
-        const tableRow = `| ${result.rootProject} \
-                          | ${result.requestedTasks} \
-                          | ${result.gradleVersion} \
-                          | ${renderOutcome(result)} \
-                          |\n`
-        core.summary.addRaw(tableRow)
-    }
+    core.summary.addTable([
+        [
+            {data: 'Root Project', header: true},
+            {data: 'Tasks', header: true},
+            {data: 'Gradle Version', header: true},
+            {data: 'Outcome', header: true}
+        ],
+        ...results.map(result => [
+            result.rootProject,
+            result.requestedTasks,
+            result.gradleVersion,
+            renderOutcome(result)
+        ])
+    ])
     core.summary.addRaw('\n')
 }
 
 function renderOutcome(result: BuildResult): string {
-    if (result.buildScanUri) {
-        return `[![Gradle Build](https://img.shields.io/badge/Build%20Scan%E2%84%A2-${
-            result.buildFailed ? 'FAILED-red' : 'SUCCESS-brightgreen'
-        }?logo=Gradle)](${result.buildScanUri})`
-    }
+    const badgeUrl = result.buildFailed
+        ? 'https://img.shields.io/badge/Build%20Scan%E2%84%A2-FAILED-red?logo=Gradle'
+        : 'https://img.shields.io/badge/Build%20Scan%E2%84%A2-SUCCESS-brightgreen?logo=Gradle'
+    const badgeHtml = `<img src="${badgeUrl}" alt="Gradle Build">`
 
-    return `![Gradle Build](https://img.shields.io/badge/${
-        result.buildFailed ? 'FAILED-red' : 'SUCCESS-brightgreen'
-    }?logo=Gradle)`
+    if (result.buildScanUri) {
+        return `<a href="${result.buildScanUri}" rel="nofollow">${badgeHtml}</a>`
+    }
+    return badgeHtml
 }
