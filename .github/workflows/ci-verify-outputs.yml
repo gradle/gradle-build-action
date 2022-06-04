@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Build
       run: |
         npm install
@@ -33,7 +33,7 @@ jobs:
       id: diff
 
     # If index.js was different than expected, upload the expected version as an artifact
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       if: ${{ failure() && steps.diff.conclusion == 'failure' }}
       with:
         name: dist

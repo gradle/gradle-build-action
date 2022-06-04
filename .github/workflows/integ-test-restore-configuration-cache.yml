@@ -27,7 +27,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
@@ -46,7 +46,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
@@ -59,7 +59,7 @@ jobs:
       run: ./gradlew test --configuration-cache
     - name: Check that configuration-cache was used
       if: ${{ steps.execute.outputs.task_configured == 'yes' }}
-      uses: actions/github-script@v5
+      uses: actions/github-script@v6
       with:
         script: |
           core.setFailed('Configuration cache was not used - task was configured unexpectedly')
@@ -75,7 +75,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
     - name: Setup Gradle with no extracted cache entries restored
@@ -97,7 +97,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
@@ -116,7 +116,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
@@ -136,7 +136,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
@@ -149,7 +149,7 @@ jobs:
       run: ./gradlew test --configuration-cache
     - name: Check that configuration-cache was used
       if: ${{ steps.execute.outputs.task_configured == 'yes' }}
-      uses: actions/github-script@v5
+      uses: actions/github-script@v6
       with:
         script: |
           core.setFailed('Configuration cache was not used - task was configured unexpectedly')

@@ -6,7 +6,7 @@ runs:
   steps: 
     - name: Download dist
       if: ${{ env.DOWNLOAD_DIST == 'true' }}
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: dist
         path: dist/

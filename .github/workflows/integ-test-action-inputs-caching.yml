@@ -25,7 +25,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
@@ -51,7 +51,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
@@ -76,7 +76,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
@@ -89,7 +89,7 @@ jobs:
       run: gradle help "-DgradleVersionCheck=${{matrix.gradle}}"
     - name: Check build scan url is captured
       if: ${{ !steps.gradle.outputs.build-scan-url }}
-      uses: actions/github-script@v3
+      uses: actions/github-script@v6
       with:
         script: |
           core.setFailed('No build scan detected')
@@ -99,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
     - name: Create dummy Gradle User Home
@@ -112,7 +112,7 @@ jobs:
       run: gradle help "-DgradleVersionCheck=${{matrix.gradle}}"
     - name: Check build scan url is captured
       if: ${{ !steps.gradle.outputs.build-scan-url }}
-      uses: actions/github-script@v3
+      uses: actions/github-script@v6
       with:
         script: |
           core.setFailed('No build scan detected')
@@ -127,7 +127,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
@@ -148,7 +148,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
     - name: Setup Gradle

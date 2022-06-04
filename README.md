@@ -19,8 +19,8 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-java@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-java@v3
       with:
         distribution: temurin
         java-version: 11
@@ -34,7 +34,7 @@ jobs:
 
 ## Why use the `gradle-build-action`?
 
-It is possible to directly invoke Gradle in your workflow, and the `actions/setup-java@v2` action provides a simple way to cache Gradle dependencies. 
+It is possible to directly invoke Gradle in your workflow, and the `actions/setup-java@v3` action provides a simple way to cache Gradle dependencies. 
 
 However, the `gradle-build-action` offers a number of advantages over this approach:
 
@@ -46,7 +46,7 @@ However, the `gradle-build-action` offers a number of advantages over this appro
 The `gradle-build-action` is designed to provide these benefits with minimal configuration. 
 These features work both when Gradle is executed via the `gradle-build-action` and for any Gradle execution in subsequent steps.
 
-When using `gradle-build-action` we recommend that you _not_ use `actions/cache` or `actions/setup-java@v2` to explicitly cache the Gradle User Home. Doing so may interfere with the caching provided by this action.
+When using `gradle-build-action` we recommend that you _not_ use `actions/cache` or `actions/setup-java@v3` to explicitly cache the Gradle User Home. Doing so may interfere with the caching provided by this action.
 
 ## Use a specific Gradle version
 
@@ -82,8 +82,8 @@ jobs:
   gradle-rc:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-java@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-java@v3
       with:
         java-version: 11
     - uses: gradle/gradle-build-action@v2
@@ -108,8 +108,8 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-java@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-java@v3
       with:
         java-version: 11
     
@@ -302,7 +302,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout project sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v2
     - name: Run build with Gradle wrapper
@@ -331,7 +331,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout project sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v2
     - name: Run build with Gradle wrapper

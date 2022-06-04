@@ -9,7 +9,7 @@ runs:
         npm install
         npm run all
     - name: Upload distribution
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: dist
         path: dist/
