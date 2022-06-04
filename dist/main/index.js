@@ -65342,9 +65342,19 @@ class CacheListener {
         this.cacheEntries = [];
         this.isCacheReadOnly = false;
         this.isCacheWriteOnly = false;
+        this.isCacheDisabled = false;
     }
     get fullyRestored() {
         return this.cacheEntries.every(x => !x.wasRequestedButNotRestored());
+    }
+    get cacheStatus() {
+        if (this.isCacheDisabled)
+            return 'disabled';
+        if (this.isCacheWriteOnly)
+            return 'write-only';
+        if (this.isCacheReadOnly)
+            return 'read-only';
+        return 'enabled';
     }
     entry(name) {
         for (const entry of this.cacheEntries) {
@@ -65407,11 +65417,19 @@ class CacheEntryListener {
 }
 exports.CacheEntryListener = CacheEntryListener;
 function logCachingReport(listener) {
-    if (listener.cacheEntries.length === 0) {
-        return;
-    }
-    core.summary.addHeading('Gradle Home Caching Summary', 3);
-    const entries = listener.cacheEntries
+    const entries = listener.cacheEntries;
+    core.summary.addRaw(`\n<details><summary><h4>Caching for gradle-build-action was ${listener.cacheStatus} - expand for details</h4></summary>\n`);
+    core.summary.addTable([
+        [
+            { data: '', header: true },
+            { data: 'Count', header: true },
+            { data: 'Total Size (Mb)', header: true }
+        ],
+        ['Entries Restored', `${getCount(entries, e => e.restoredSize)}`, `${getSize(entries, e => e.restoredSize)}`],
+        ['Entries Saved', `${getCount(entries, e => e.savedSize)}`, `${getSize(entries, e => e.savedSize)}`]
+    ]);
+    core.summary.addHeading('Cache Entry Details', 5);
+    const entryDetails = listener.cacheEntries
         .map(entry => {
         var _a, _b, _c;
         return `Entry: ${entry.entryName}
@@ -65422,28 +65440,13 @@ function logCachingReport(listener) {
     Saved     Key : ${(_c = entry.savedKey) !== null && _c !== void 0 ? _c : ''}
               Size: ${formatSize(entry.savedSize)}
               ${getSavedMessage(entry, listener.isCacheReadOnly)}
----`;
+`;
     })
-        .join('\n');
-    core.summary.addRaw(`
-
-| | Count | Size (Mb) | Size (B) |
-| - | -: | -: | -: |
-| Restored | ${getCount(listener.cacheEntries, e => e.restoredSize)} | ${getMegaBytes(listener.cacheEntries, e => e.restoredSize)} | ${getBytes(listener.cacheEntries, e => e.restoredSize)} |
-| Saved | ${getCount(listener.cacheEntries, e => e.savedSize)} | ${getMegaBytes(listener.cacheEntries, e => e.savedSize)} | ${getBytes(listener.cacheEntries, e => e.savedSize)} |
-
-`);
-    if (listener.isCacheReadOnly) {
-        core.summary.addRaw('- **Cache is read-only**\n');
-    }
-    if (listener.isCacheWriteOnly) {
-        core.summary.addRaw('- **Cache is write-only**\n');
-    }
-    core.summary.addDetails('Cache Entry Details', `
-<pre>
-${entries}
+        .join('---\n');
+    core.summary.addRaw(`<pre>
+${entryDetails}
 </pre>
-
+</details>
 `);
 }
 exports.logCachingReport = logCachingReport;
@@ -65477,11 +65480,8 @@ function getSavedMessage(entry, isCacheReadOnly) {
 function getCount(cacheEntries, predicate) {
     return cacheEntries.filter(e => predicate(e) !== undefined).length;
 }
-function getBytes(cacheEntries, predicate) {
-    return cacheEntries.map(e => { var _a; return (_a = predicate(e)) !== null && _a !== void 0 ? _a : 0; }).reduce((p, v) => p + v, 0);
-}
-function getMegaBytes(cacheEntries, predicate) {
-    const bytes = getBytes(cacheEntries, predicate);
+function getSize(cacheEntries, predicate) {
+    const bytes = cacheEntries.map(e => { var _a; return (_a = predicate(e)) !== null && _a !== void 0 ? _a : 0; }).reduce((p, v) => p + v, 0);
     return Math.round(bytes / (1024 * 1024));
 }
 function formatSize(bytes) {
@@ -65768,6 +65768,7 @@ function restore(gradleUserHome, cacheListener) {
         if ((0, cache_utils_1.isCacheDisabled)()) {
             core.info('Cache is disabled: will not restore state from previous builds.');
             gradleStateCache.init();
+            cacheListener.isCacheDisabled = true;
             return;
         }
         if (gradleStateCache.cacheOutputExists()) {
@@ -65988,16 +65989,14 @@ const fs_1 = __importDefault(__nccwpck_require__(7147));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const cache_reporting_1 = __nccwpck_require__(6674);
 function writeJobSummary(cacheListener) {
-    core.info('Writing job summary...');
+    core.info('Writing job summary');
     const buildResults = loadBuildResults();
     if (buildResults.length === 0) {
         core.debug('No Gradle build results found. Summary table will not be generated.');
     }
     else {
-        core.info('Writing summary table');
         writeSummaryTable(buildResults);
     }
-    core.info('Writing cache report...');
     (0, cache_reporting_1.logCachingReport)(cacheListener);
     core.summary.write();
 }
@@ -66014,24 +66013,32 @@ function loadBuildResults() {
     });
 }
 function writeSummaryTable(results) {
-    core.summary.addRaw('\n');
     core.summary.addHeading('Gradle Builds', 3);
-    core.summary.addRaw('\n| Root Project | Tasks | Gradle Version | Outcome |\n| - | - | - | - |\n');
-    for (const result of results) {
-        const tableRow = `| ${result.rootProject} \
-                          | ${result.requestedTasks} \
-                          | ${result.gradleVersion} \
-                          | ${renderOutcome(result)} \
-                          |\n`;
-        core.summary.addRaw(tableRow);
-    }
+    core.summary.addTable([
+        [
+            { data: 'Root Project', header: true },
+            { data: 'Tasks', header: true },
+            { data: 'Gradle Version', header: true },
+            { data: 'Outcome', header: true }
+        ],
+        ...results.map(result => [
+            result.rootProject,
+            result.requestedTasks,
+            result.gradleVersion,
+            renderOutcome(result)
+        ])
+    ]);
     core.summary.addRaw('\n');
 }
 function renderOutcome(result) {
+    const badgeUrl = result.buildFailed
+        ? 'https://img.shields.io/badge/Build%20Scan%E2%84%A2-FAILED-red?logo=Gradle'
+        : 'https://img.shields.io/badge/Build%20Scan%E2%84%A2-SUCCESS-brightgreen?logo=Gradle';
+    const badgeHtml = `<img src="${badgeUrl}" alt="Gradle Build">`;
     if (result.buildScanUri) {
-        return `[![Gradle Build](https://img.shields.io/badge/Build%20Scan%E2%84%A2-${result.buildFailed ? 'FAILED-red' : 'SUCCESS-brightgreen'}?logo=Gradle)](${result.buildScanUri})`;
+        return `<a href="${result.buildScanUri}" rel="nofollow">${badgeHtml}</a>`;
     }
-    return `![Gradle Build](https://img.shields.io/badge/${result.buildFailed ? 'FAILED-red' : 'SUCCESS-brightgreen'}?logo=Gradle)`;
+    return badgeHtml;
 }
 
 
