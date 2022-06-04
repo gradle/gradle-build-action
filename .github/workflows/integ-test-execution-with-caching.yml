@@ -31,6 +31,7 @@ jobs:
     - name: Execute Gradle build
       uses: ./
       with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
         build-root-directory: .github/workflow-samples/groovy-dsl
         arguments: test
 

@@ -36,6 +36,7 @@ jobs:
     - name: Setup Gradle with v6.9
       uses: ./
       with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
         gradle-version: 6.9
     - name: Test uses Gradle v6.9
       working-directory: .github/workflow-samples/no-wrapper
@@ -74,6 +75,7 @@ jobs:
     - name: Setup Gradle
       uses: ./
       with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
         gradle-version: ${{ matrix.gradle }}
     - name: Run Gradle build
       id: gradle

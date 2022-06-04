@@ -30,6 +30,8 @@ jobs:
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
+      with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
     - name: Build kotlin-dsl project
       working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew build

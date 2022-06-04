@@ -30,6 +30,8 @@ jobs:
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
+      with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
     - name: Build gradle-plugin project
       working-directory: .github/workflow-samples/gradle-plugin
       run: ./gradlew build

@@ -32,6 +32,8 @@ jobs:
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
+      with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
     - name: Groovy build with configuration-cache enabled
       working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test --configuration-cache
@@ -102,6 +104,8 @@ jobs:
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
+      with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
     - name: Execute 'help' with configuration-cache enabled
       working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew help --configuration-cache
@@ -121,6 +125,8 @@ jobs:
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
+      with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
     - name: Execute 'test' with configuration-cache enabled
       working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew test --configuration-cache

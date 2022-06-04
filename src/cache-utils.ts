@@ -27,7 +27,7 @@ export function isCacheDisabled(): boolean {
 }
 
 export function isCacheReadOnly(): boolean {
-    return core.getBooleanInput(CACHE_READONLY_PARAMETER)
+    return !isCacheWriteOnly() && core.getBooleanInput(CACHE_READONLY_PARAMETER)
 }
 
 export function isCacheWriteOnly(): boolean {

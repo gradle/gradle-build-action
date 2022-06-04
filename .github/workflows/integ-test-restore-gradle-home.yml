@@ -31,6 +31,8 @@ jobs:
       uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
+      with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
     - name: Build using Gradle wrapper
       working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test
