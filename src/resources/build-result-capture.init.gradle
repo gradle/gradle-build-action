@@ -18,9 +18,9 @@ if (isTopLevelBuild) {
         settingsEvaluated { settings ->
             // The `buildScanPublished` hook is the only way to capture the build scan URI.
             if (settings.pluginManager.hasPlugin("com.gradle.enterprise")) {
-                captureUsingBuildScanPublished(settings.extensions["gradleEnterprise"].buildScan, settings.rootProject.name, invocationId)
+                captureUsingBuildScanPublished(settings.extensions["gradleEnterprise"].buildScan, settings.rootProject, invocationId)
             }
-            // We also need to add hooks in case the plugin is applied but no build scan is published 
+            // We also need to add hooks in case the plugin is applied but no build scan is published
             if (useBuildService) {
                 captureUsingBuildService(settings, invocationId)
             } else {
@@ -30,18 +30,21 @@ if (isTopLevelBuild) {
     } else if (atLeastGradle3) {
         projectsEvaluated { gradle ->
             if (gradle.rootProject.pluginManager.hasPlugin("com.gradle.build-scan")) {
-                captureUsingBuildScanPublished(gradle.rootProject.extensions["buildScan"], gradle.rootProject.name, invocationId)
+                captureUsingBuildScanPublished(gradle.rootProject.extensions["buildScan"], gradle.rootProject, invocationId)
             }
-            // We  need to capture in buildFinished in case the plugin is applied but no build scan is published 
+            // We  need to capture in buildFinished in case the plugin is applied but no build scan is published
             captureUsingBuildFinished(gradle, invocationId)
         }
     }
 }
 
-def captureUsingBuildScanPublished(buildScanExtension, rootProjectName, invocationId) {
+def captureUsingBuildScanPublished(buildScanExtension, rootProject, invocationId) {
     buildScanExtension.with {
         def requestedTasks = gradle.startParameter.taskNames.join(" ")
+        def rootProjectName = rootProject.name
+        def rootProjectDir = rootProject.projectDir.absolutePath
         def gradleVersion = GradleVersion.current().version
+        def gradleHomeDir = gradle.gradleHomeDir.absolutePath
         def buildFailed = false
 
         buildFinished { result ->
@@ -52,10 +55,12 @@ def captureUsingBuildScanPublished(buildScanExtension, rootProjectName, invocati
 
             def buildScanUri = buildScan.buildScanUri.toASCIIString()
             def buildResults = [
-                rootProject: rootProjectName, 
+                rootProjectName: rootProjectName,
+                rootProjectDir: rootProjectDir,
                 requestedTasks: requestedTasks,
-                gradleVersion: gradleVersion, 
-                buildFailed: buildFailed, 
+                gradleVersion: gradleVersion,
+                gradleHomeDir: gradleHomeDir,
+                buildFailed: buildFailed,
                 buildScanUri: buildScanUri
             ]
 
@@ -65,7 +70,7 @@ def captureUsingBuildScanPublished(buildScanExtension, rootProjectName, invocati
 
             // Overwrite any contents written by buildFinished or build service, since this result is a superset.
             if (buildResultsFile.exists()) {
-                buildResultsFile.text = groovy.json.JsonOutput.toJson(buildResults) 
+                buildResultsFile.text = groovy.json.JsonOutput.toJson(buildResults)
             } else {
                 buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
             }
@@ -78,9 +83,11 @@ def captureUsingBuildScanPublished(buildScanExtension, rootProjectName, invocati
 def captureUsingBuildFinished(gradle, invocationId) {
     gradle.buildFinished { result ->
         def buildResults = [
-            rootProject: gradle.rootProject.name, 
+            rootProjectName: gradle.rootProject.name,
+            rootProjectDir: gradle.rootProject.rootDir.absolutePath,   
             requestedTasks: gradle.startParameter.taskNames.join(" "),
-            gradleVersion: GradleVersion.current().version, 
+            gradleVersion: GradleVersion.current().version,
+            gradleHomeDir: gradle.gradleHomeDir.absolutePath,
             buildFailed: result.failure != null,
             buildScanUri: null
         ]

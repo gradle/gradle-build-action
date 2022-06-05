@@ -4,9 +4,11 @@ import path from 'path'
 import {logCachingReport, CacheListener} from './cache-reporting'
 
 interface BuildResult {
-    get rootProject(): string
+    get rootProjectName(): string
+    get rootProjectDir(): string
     get requestedTasks(): string
     get gradleVersion(): string
+    get gradleHomeDir(): string
     get buildFailed(): boolean
     get buildScanUri(): string
 }
@@ -50,7 +52,7 @@ function writeSummaryTable(results: BuildResult[]): void {
             {data: 'Outcome', header: true}
         ],
         ...results.map(result => [
-            result.rootProject,
+            result.rootProjectName,
             result.requestedTasks,
             result.gradleVersion,
             renderOutcome(result)
