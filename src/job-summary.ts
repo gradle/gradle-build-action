@@ -13,10 +13,9 @@ export interface BuildResult {
     get buildScanUri(): string
 }
 
-export function writeJobSummary(cacheListener: CacheListener): void {
+export function writeJobSummary(buildResults: BuildResult[], cacheListener: CacheListener): void {
     core.info('Writing job summary')
 
-    const buildResults = loadBuildResults()
     if (buildResults.length === 0) {
         core.debug('No Gradle build results found. Summary table will not be generated.')
     } else {
