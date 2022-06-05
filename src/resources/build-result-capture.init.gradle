@@ -7,25 +7,38 @@ import org.gradle.util.GradleVersion
 def isTopLevelBuild = gradle.getParent() == null
 if (isTopLevelBuild) {
     def version = GradleVersion.current().baseVersion
-    def atLeastGradle4 = version >= GradleVersion.version("4.0")
+
+    def atLeastGradle3 = version >= GradleVersion.version("3.0")
     def atLeastGradle6 = version >= GradleVersion.version("6.0")
 
+    def invocationId = "-${System.currentTimeMillis()}"
+
     if (atLeastGradle6) {
+        def useBuildService = version >= GradleVersion.version("6.6")
         settingsEvaluated { settings ->
+            // The `buildScanPublished` hook is the only way to capture the build scan URI.
             if (settings.pluginManager.hasPlugin("com.gradle.enterprise")) {
-                registerCallbacks(settings.extensions["gradleEnterprise"].buildScan, settings.rootProject.name)
+                captureUsingBuildScanPublished(settings.extensions["gradleEnterprise"].buildScan, settings.rootProject.name, invocationId)
+            }
+            // We also need to add hooks in case the plugin is applied but no build scan is published 
+            if (useBuildService) {
+                captureUsingBuildService(settings, invocationId)
+            } else {
+                captureUsingBuildFinished(gradle, invocationId)
             }
         }
-    } else if (atLeastGradle4) {
+    } else if (atLeastGradle3) {
         projectsEvaluated { gradle ->
             if (gradle.rootProject.pluginManager.hasPlugin("com.gradle.build-scan")) {
-                registerCallbacks(gradle.rootProject.extensions["buildScan"], gradle.rootProject.name)
+                captureUsingBuildScanPublished(gradle.rootProject.extensions["buildScan"], gradle.rootProject.name, invocationId)
             }
+            // We  need to capture in buildFinished in case the plugin is applied but no build scan is published 
+            captureUsingBuildFinished(gradle, invocationId)
         }
     }
 }
 
-def registerCallbacks(buildScanExtension, rootProjectName) {
+def captureUsingBuildScanPublished(buildScanExtension, rootProjectName, invocationId) {
     buildScanExtension.with {
         def requestedTasks = gradle.startParameter.taskNames.join(" ")
         def gradleVersion = GradleVersion.current().version
@@ -36,10 +49,6 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
         }
 
         buildScanPublished { buildScan ->
-            def buildResultsDir = new File(System.getenv("RUNNER_TEMP"), ".build-results")
-            buildResultsDir.mkdirs()
-            
-            def buildResultsFile = new File(buildResultsDir, System.getenv("GITHUB_ACTION") + System.currentTimeMillis() + ".json")
 
             def buildScanUri = buildScan.buildScanUri.toASCIIString()
             def buildResults = [
@@ -49,9 +58,41 @@ def registerCallbacks(buildScanExtension, rootProjectName) {
                 buildFailed: buildFailed, 
                 buildScanUri: buildScanUri
             ]
-            buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
+
+            def buildResultsDir = new File(System.getenv("RUNNER_TEMP"), ".build-results")
+            buildResultsDir.mkdirs()
+            def buildResultsFile = new File(buildResultsDir, System.getenv("GITHUB_ACTION") + invocationId + ".json")
+
+            // Overwrite any contents written by buildFinished or build service, since this result is a superset.
+            if (buildResultsFile.exists()) {
+                buildResultsFile.text = groovy.json.JsonOutput.toJson(buildResults) 
+            } else {
+                buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
+            }
 
             println("::set-output name=build-scan-url::${buildScan.buildScanUri}")
         }
     }
+}
+
+def captureUsingBuildFinished(gradle, invocationId) {
+    gradle.buildFinished { result ->
+        def buildResults = [
+            rootProject: gradle.rootProject.name, 
+            requestedTasks: gradle.startParameter.taskNames.join(" "),
+            gradleVersion: GradleVersion.current().version, 
+            buildFailed: result.failure != null,
+            buildScanUri: null
+        ]
+
+        def buildResultsDir = new File(System.getenv("RUNNER_TEMP"), ".build-results")
+        buildResultsDir.mkdirs()
+        def buildResultsFile = new File(buildResultsDir, System.getenv("GITHUB_ACTION") + invocationId + ".json")
+        buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
+    }
+}
+
+def captureUsingBuildService(settings, invocationId) {
+    gradle.ext.invocationId = invocationId
+    apply from: 'build-result-capture-service.plugin.groovy'
 }

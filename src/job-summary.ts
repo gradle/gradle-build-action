@@ -60,13 +60,10 @@ function writeSummaryTable(results: BuildResult[]): void {
 }
 
 function renderOutcome(result: BuildResult): string {
-    const badgeUrl = result.buildFailed
-        ? 'https://img.shields.io/badge/Build%20Scan%E2%84%A2-FAILED-red?logo=Gradle'
-        : 'https://img.shields.io/badge/Build%20Scan%E2%84%A2-SUCCESS-brightgreen?logo=Gradle'
+    const labelPart = result.buildScanUri ? 'Build%20Scan%E2%84%A2' : 'Build'
+    const outcomePart = result.buildFailed ? 'FAILED-red' : 'SUCCESS-brightgreen'
+    const badgeUrl = `https://img.shields.io/badge/${labelPart}-${outcomePart}?logo=Gradle`
     const badgeHtml = `<img src="${badgeUrl}" alt="Gradle Build">`
-
-    if (result.buildScanUri) {
-        return `<a href="${result.buildScanUri}" rel="nofollow">${badgeHtml}</a>`
-    }
-    return badgeHtml
+    const targetUrl = result.buildScanUri ? result.buildScanUri : '#'
+    return `<a href="${targetUrl}" rel="nofollow">${badgeHtml}</a>`
 }

@@ -172,6 +172,7 @@ export class GradleStateCache {
 
         const initScriptFilenames = [
             'build-result-capture.init.gradle',
+            'build-result-capture-service.plugin.groovy',
             'project-root-capture.init.gradle',
             'project-root-capture.plugin.groovy'
         ]

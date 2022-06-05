@@ -387,7 +387,7 @@ export class ConfigurationCacheEntryExtractor extends AbstractEntryExtractor {
      * set of project roots, to allow saving of configuration-cache entries for each.
      */
     private getProjectRoots(): string[] {
-        const projectList = path.resolve(this.gradleUserHome, PROJECT_ROOTS_FILE)
+        const projectList = path.resolve(process.env['RUNNER_TEMP']!, PROJECT_ROOTS_FILE)
         if (!fs.existsSync(projectList)) {
             core.info(`Missing project list file ${projectList}`)
             return []

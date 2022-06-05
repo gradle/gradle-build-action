@@ -1,0 +1,23 @@
+name: CI-init-script-check
+
+on:
+  push:
+
+jobs:
+  test-init-scripts:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v3
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: temurin
+        java-version: 8
+    - name: Setup Gradle
+      uses: ./
+      with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
+    - name: Run integration tests
+      working-directory: test/test-init-scripts
+      run: ./gradlew check

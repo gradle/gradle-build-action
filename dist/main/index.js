@@ -64967,6 +64967,7 @@ class GradleStateCache {
         fs_1.default.appendFileSync(propertiesFile, 'org.gradle.daemon=false');
         const initScriptFilenames = [
             'build-result-capture.init.gradle',
+            'build-result-capture-service.plugin.groovy',
             'project-root-capture.init.gradle',
             'project-root-capture.plugin.groovy'
         ];
@@ -65291,7 +65292,7 @@ class ConfigurationCacheEntryExtractor extends AbstractEntryExtractor {
         });
     }
     getProjectRoots() {
-        const projectList = path_1.default.resolve(this.gradleUserHome, cache_base_1.PROJECT_ROOTS_FILE);
+        const projectList = path_1.default.resolve(process.env['RUNNER_TEMP'], cache_base_1.PROJECT_ROOTS_FILE);
         if (!fs_1.default.existsSync(projectList)) {
             core.info(`Missing project list file ${projectList}`);
             return [];
@@ -65559,7 +65560,7 @@ function isCacheDisabled() {
 }
 exports.isCacheDisabled = isCacheDisabled;
 function isCacheReadOnly() {
-    return core.getBooleanInput(CACHE_READONLY_PARAMETER);
+    return !isCacheWriteOnly() && core.getBooleanInput(CACHE_READONLY_PARAMETER);
 }
 exports.isCacheReadOnly = isCacheReadOnly;
 function isCacheWriteOnly() {
@@ -66031,14 +66032,12 @@ function writeSummaryTable(results) {
     core.summary.addRaw('\n');
 }
 function renderOutcome(result) {
-    const badgeUrl = result.buildFailed
-        ? 'https://img.shields.io/badge/Build%20Scan%E2%84%A2-FAILED-red?logo=Gradle'
-        : 'https://img.shields.io/badge/Build%20Scan%E2%84%A2-SUCCESS-brightgreen?logo=Gradle';
+    const labelPart = result.buildScanUri ? 'Build%20Scan%E2%84%A2' : 'Build';
+    const outcomePart = result.buildFailed ? 'FAILED-red' : 'SUCCESS-brightgreen';
+    const badgeUrl = `https://img.shields.io/badge/${labelPart}-${outcomePart}?logo=Gradle`;
     const badgeHtml = `<img src="${badgeUrl}" alt="Gradle Build">`;
-    if (result.buildScanUri) {
-        return `<a href="${result.buildScanUri}" rel="nofollow">${badgeHtml}</a>`;
-    }
-    return badgeHtml;
+    const targetUrl = result.buildScanUri ? result.buildScanUri : '#';
+    return `<a href="${targetUrl}" rel="nofollow">${badgeHtml}</a>`;
 }
 
 
