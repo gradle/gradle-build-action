@@ -7,7 +7,7 @@ import org.gradle.util.GradleVersion
 def isTopLevelBuild = gradle.getParent() == null
 if (isTopLevelBuild) {
     def version = GradleVersion.current().baseVersion
-    def atLeastGradle4 = version >= GradleVersion.version("4.0")
+    def atLeastGradle3 = version >= GradleVersion.version("3.0")
     def atLeastGradle6 = version >= GradleVersion.version("6.0")
 
     if (atLeastGradle6) {
@@ -16,7 +16,7 @@ if (isTopLevelBuild) {
                 registerCallbacks(settings.extensions["gradleEnterprise"].buildScan, settings.rootProject.name)
             }
         }
-    } else if (atLeastGradle4) {
+    } else if (atLeastGradle3) {
         projectsEvaluated { gradle ->
             if (gradle.rootProject.pluginManager.hasPlugin("com.gradle.build-scan")) {
                 registerCallbacks(gradle.rootProject.extensions["buildScan"], gradle.rootProject.name)
