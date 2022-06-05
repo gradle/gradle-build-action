@@ -1,0 +1,133 @@
+package com.gradle.gradlebuildaction
+
+import org.gradle.testkit.runner.BuildResult
+import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.internal.DefaultGradleRunner
+import org.gradle.util.GradleVersion
+import spock.lang.Specification
+import spock.lang.TempDir
+
+import java.nio.file.Files
+
+class BaseInitScriptTest extends Specification {
+
+    static final TestGradleVersion GRADLE_3_5 = new TestGradleVersion(GradleVersion.version('3.5.1'), 7, 9)
+    static final TestGradleVersion GRADLE_4_0 = new TestGradleVersion(GradleVersion.version('4.0.2'), 7, 9)
+    static final TestGradleVersion GRADLE_4_10 = new TestGradleVersion(GradleVersion.version('4.10.3'), 7, 10)
+    static final TestGradleVersion GRADLE_5_0 = new TestGradleVersion(GradleVersion.version('5.0'), 8, 11)
+    static final TestGradleVersion GRADLE_5_6 = new TestGradleVersion(GradleVersion.version('5.6.4'), 8, 12)
+    static final TestGradleVersion GRADLE_6_0 = new TestGradleVersion(GradleVersion.version('6.0.1'), 8, 13)
+    static final TestGradleVersion GRADLE_6_7 = new TestGradleVersion(GradleVersion.version('6.7'), 8, 15)
+    static final TestGradleVersion GRADLE_7_0 = new TestGradleVersion(GradleVersion.version('7.0.2'), 8, 16)
+    static final TestGradleVersion GRADLE_7_4 = new TestGradleVersion(GradleVersion.version('7.4.2'), 8, 17)
+
+    static final List<TestGradleVersion> ALL_VERSIONS = [
+        GRADLE_3_5, // First version where TestKit supports environment variables
+        GRADLE_4_0,
+        GRADLE_4_10,
+        GRADLE_5_0,
+        GRADLE_5_6,
+        GRADLE_6_0,
+        GRADLE_6_7,
+        GRADLE_7_0,
+        GRADLE_7_4,
+    ]
+
+    static final List<TestGradleVersion> CONFIGURATION_CACHE_VERSIONS =
+        [GRADLE_7_0, GRADLE_7_4]
+
+    File settingsFile
+    File buildFile
+
+    @TempDir
+    File testProjectDir
+
+    def setup() {
+        settingsFile = new File(testProjectDir, 'settings.gradle')
+        buildFile = new File(testProjectDir, 'build.gradle')
+
+        File srcInitScriptsDir = new File("../../src/resources")
+        File targetInitScriptsDir = new File(testProjectDir, "initScripts")
+        targetInitScriptsDir.mkdirs()
+
+        for (File srcInitScript : srcInitScriptsDir.listFiles()) {
+            File targetInitScript = new File(targetInitScriptsDir, srcInitScript.name)
+            Files.copy(srcInitScript.toPath(), targetInitScript.toPath())
+        }
+        settingsFile << "rootProject.name = 'test-init-script'\n"
+        buildFile << ''
+    }
+
+    def addFailingTaskToBuild() {
+        buildFile << '''
+task expectFailure {
+    doLast {
+        throw new RuntimeException("Expected to fail")
+    }
+}
+'''
+    }
+
+    BuildResult run(List<String> args, String initScript, GradleVersion gradleVersion = GradleVersion.current(), List<String> jvmArgs = [], Map<String, String> envVars = [:]) {
+        createRunner(initScript, args, gradleVersion, jvmArgs, envVars).build()
+    }
+
+    BuildResult runAndFail(List<String> args, String initScript, GradleVersion gradleVersion = GradleVersion.current(), List<String> jvmArgs = [], Map<String, String> envVars = [:]) {
+        createRunner(initScript, args, gradleVersion, jvmArgs, envVars).buildAndFail()
+    }
+
+    GradleRunner createRunner(String initScript, List<String> args, GradleVersion gradleVersion = GradleVersion.current(), List<String> jvmArgs = [], Map<String, String> envVars = [:]) {
+        File initScriptsDir = new File(testProjectDir, "initScripts")
+        args << '-I' << new File(initScriptsDir, initScript).absolutePath
+
+        envVars['RUNNER_TEMP'] = testProjectDir.absolutePath
+        envVars['GITHUB_ACTION'] = 'github-step-id'
+
+        def runner = ((DefaultGradleRunner) GradleRunner.create())
+            .withJvmArguments(jvmArgs)
+            .withGradleVersion(gradleVersion.version)
+            .withProjectDir(testProjectDir)
+            .withArguments(args)
+            .forwardOutput()
+
+        if (envVars) {
+            runner.withEnvironment(envVars)
+        }
+
+        runner
+    }
+
+    static final class TestGradleVersion {
+
+        final GradleVersion gradleVersion
+        private final Integer jdkMin
+        private final Integer jdkMax
+
+        TestGradleVersion(GradleVersion gradleVersion, Integer jdkMin, Integer jdkMax) {
+            this.gradleVersion = gradleVersion
+            this.jdkMin = jdkMin
+            this.jdkMax = jdkMax
+        }
+
+        boolean isCompatibleWithCurrentJvm() {
+            def jvmVersion = getJvmVersion()
+            jdkMin <= jvmVersion && jvmVersion <= jdkMax
+        }
+
+        private static int getJvmVersion() {
+            String version = System.getProperty('java.version')
+            if (version.startsWith('1.')) {
+                Integer.parseInt(version.substring(2, 3))
+            } else {
+                Integer.parseInt(version.substring(0, version.indexOf('.')))
+            }
+        }
+
+        @Override
+        String toString() {
+            return "Gradle " + gradleVersion.version
+        }
+
+    }
+
+}

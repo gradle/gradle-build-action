@@ -1,0 +1,23 @@
+plugins {
+    id 'groovy'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation gradleTestKit()
+    testImplementation 'org.spockframework:spock-core:2.1-groovy-3.0'
+    testImplementation('org.spockframework:spock-junit4:2.1-groovy-3.0')
+}
+
+test {
+    useJUnitPlatform()
+}
