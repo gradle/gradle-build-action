@@ -8,7 +8,6 @@ import static org.junit.Assume.assumeTrue
 class TestBuildResultOutput extends BaseInitScriptTest {
     def initScript = 'build-result-capture.init.gradle'
 
-    @Ignore
     def "produces build results file for build with #testGradleVersion"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
@@ -22,7 +21,6 @@ class TestBuildResultOutput extends BaseInitScriptTest {
         testGradleVersion << ALL_VERSIONS
     }
 
-    @Ignore
     def "produces build results file for failing build with #testGradleVersion"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 

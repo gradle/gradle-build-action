@@ -23,6 +23,9 @@ jobs:
     - name: Build kotlin-dsl project
       working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew assemble
+    - name: Build kotlin-dsl project
+      working-directory: .github/workflow-samples/kotlin-dsl
+      run: ./gradlew check --no-scan
     - name: Build groovy-dsl project
       working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew assemble
