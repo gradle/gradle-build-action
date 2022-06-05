@@ -10,7 +10,7 @@ import org.gradle.tooling.events.*
 
 settingsEvaluated { settings ->
     def rootDir = settings.rootDir.absolutePath
-    def rootListLocation = new File(settings.gradle.gradleUserHomeDir, "project-roots.txt").absolutePath
+    def rootListLocation = new File(System.getenv("RUNNER_TEMP"), "project-roots.txt").absolutePath
 
     def projectTracker = gradle.sharedServices.registerIfAbsent("gradle-build-action-projectRootTracker", ProjectTracker, { spec ->
         spec.getParameters().getRootDir().set(rootDir);
