@@ -68,6 +68,20 @@ class TestBuildResultRecorder extends BaseInitScriptTest {
         testGradleVersion << ALL_VERSIONS
     }
 
+    def "produces build results file for #testGradleVersion with ge-plugin and no build scan published"() {
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
+
+        when:
+        declareGePluginApplication(testGradleVersion.gradleVersion)
+        run(['help', '--no-scan'], initScript, testGradleVersion.gradleVersion)
+
+        then:
+        assertResults('help', testGradleVersion, false, false)
+
+        where:
+        testGradleVersion << ALL_VERSIONS
+    }
+
     def "produces build results file for failing build on #testGradleVersion with build scan published"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
