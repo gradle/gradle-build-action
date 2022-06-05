@@ -6,7 +6,7 @@ class TestProjectRootCapture extends BaseInitScriptTest {
     def initScript = 'project-root-capture.init.gradle'
 
     def "captures project root on #testGradleVersion"() {
-        assumeTrue testGradleVersion.isCompatibleWithCurrentJvm()
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         when:
         run(['help'], initScript, testGradleVersion.gradleVersion)
@@ -19,7 +19,7 @@ class TestProjectRootCapture extends BaseInitScriptTest {
     }
 
     def "captures project root on #testGradleVersion when build fails"() {
-        assumeTrue testGradleVersion.isCompatibleWithCurrentJvm()
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         addFailingTaskToBuild()
 
@@ -34,7 +34,7 @@ class TestProjectRootCapture extends BaseInitScriptTest {
     }
 
     def "captures project root on #testGradleVersion with --configuration-cache"() {
-        assumeTrue testGradleVersion.isCompatibleWithCurrentJvm()
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         when:
         run(['help', '--configuration-cache'], initScript, testGradleVersion.gradleVersion)
@@ -54,7 +54,7 @@ class TestProjectRootCapture extends BaseInitScriptTest {
     }
 
     def "has no effect on #testVersion"() {
-        assumeTrue testVersion.isCompatibleWithCurrentJvm()
+        assumeTrue testVersion.compatibleWithCurrentJvm
 
         when:
         run(['help'], initScript, testVersion.gradleVersion)
