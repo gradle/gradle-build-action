@@ -12,9 +12,12 @@ if (isTopLevelBuild) {
     def atLeastGradle6 = version >= GradleVersion.version("6.0")
 
     if (atLeastGradle6) {
+        def useBuildService = version >= GradleVersion.version("6.6")
         settingsEvaluated { settings ->
             if (settings.pluginManager.hasPlugin("com.gradle.enterprise")) {
                 captureUsingBuildScanPublished(settings.extensions["gradleEnterprise"].buildScan, settings.rootProject.name)
+            } else if (useBuildService) {
+                captureUsingBuildService(settings)
             } else {
                 captureUsingBuildFinished(gradle)
             }
@@ -29,7 +32,6 @@ if (isTopLevelBuild) {
         }
     }
 }
-
 
 def captureUsingBuildScanPublished(buildScanExtension, rootProjectName) {
     buildScanExtension.with {
@@ -77,4 +79,8 @@ def captureUsingBuildFinished(gradle) {
         def buildResultsFile = new File(buildResultsDir, System.getenv("GITHUB_ACTION") + System.currentTimeMillis() + ".json")
         buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
     }
+}
+
+def captureUsingBuildService(settings) {
+    apply from: 'build-result-capture-service.plugin.groovy'
 }

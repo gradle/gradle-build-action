@@ -1,11 +1,10 @@
 package com.gradle.gradlebuildaction
 
 import groovy.json.JsonSlurper
-import spock.lang.Ignore
 
 import static org.junit.Assume.assumeTrue
 
-class TestBuildResultOutput extends BaseInitScriptTest {
+class TestBuildResultRecorder extends BaseInitScriptTest {
     def initScript = 'build-result-capture.init.gradle'
 
     def "produces build results file for build with #testGradleVersion"() {
@@ -35,7 +34,6 @@ class TestBuildResultOutput extends BaseInitScriptTest {
         testGradleVersion << ALL_VERSIONS
     }
 
-    @Ignore
     def "produces build results file for build with --configuration-cache on #testGradleVersion"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
