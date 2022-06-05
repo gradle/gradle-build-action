@@ -63894,7 +63894,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.GradleStateCache = exports.PROJECT_ROOTS_FILE = exports.META_FILE_DIR = void 0;
+exports.GradleStateCache = exports.META_FILE_DIR = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
 const path_1 = __importDefault(__nccwpck_require__(1017));
@@ -63903,7 +63903,6 @@ const cache_utils_1 = __nccwpck_require__(1678);
 const cache_extract_entries_1 = __nccwpck_require__(6161);
 const RESTORED_CACHE_KEY_KEY = 'restored-cache-key';
 exports.META_FILE_DIR = '.gradle-build-action';
-exports.PROJECT_ROOTS_FILE = 'project-roots.txt';
 const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes';
 const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes';
 class GradleStateCache {
@@ -64014,14 +64013,7 @@ class GradleStateCache {
         return path_1.default.resolve(this.gradleUserHome, rawPath);
     }
     initializeGradleUserHome(gradleUserHome, initScriptsDir) {
-        const propertiesFile = path_1.default.resolve(gradleUserHome, 'gradle.properties');
-        fs_1.default.appendFileSync(propertiesFile, 'org.gradle.daemon=false');
-        const initScriptFilenames = [
-            'build-result-capture.init.gradle',
-            'build-result-capture-service.plugin.groovy',
-            'project-root-capture.init.gradle',
-            'project-root-capture.plugin.groovy'
-        ];
+        const initScriptFilenames = ['build-result-capture.init.gradle', 'build-result-capture-service.plugin.groovy'];
         for (const initScriptFilename of initScriptFilenames) {
             const initScriptContent = this.readResourceAsString(initScriptFilename);
             const initScriptPath = path_1.default.resolve(initScriptsDir, initScriptFilename);
@@ -64111,6 +64103,7 @@ const core = __importStar(__nccwpck_require__(2186));
 const glob = __importStar(__nccwpck_require__(8090));
 const cache_base_1 = __nccwpck_require__(7591);
 const cache_utils_1 = __nccwpck_require__(1678);
+const job_summary_1 = __nccwpck_require__(7345);
 const SKIP_RESTORE_VAR = 'GRADLE_BUILD_ACTION_SKIP_RESTORE';
 class ExtractedCacheEntry {
     constructor(artifactType, pattern, cacheKey) {
@@ -64343,14 +64336,9 @@ class ConfigurationCacheEntryExtractor extends AbstractEntryExtractor {
         });
     }
     getProjectRoots() {
-        const projectList = path_1.default.resolve(process.env['RUNNER_TEMP'], cache_base_1.PROJECT_ROOTS_FILE);
-        if (!fs_1.default.existsSync(projectList)) {
-            core.info(`Missing project list file ${projectList}`);
-            return [];
-        }
-        const projectRoots = fs_1.default.readFileSync(projectList, 'utf-8');
-        core.info(`Found project roots '${projectRoots}' in ${projectList}`);
-        return projectRoots.trim().split('\n');
+        const buildResults = (0, job_summary_1.loadBuildResults)();
+        const projectRootDirs = buildResults.map(x => x.rootProjectDir);
+        return [...new Set(projectRootDirs)];
     }
 }
 exports.ConfigurationCacheEntryExtractor = ConfigurationCacheEntryExtractor;
@@ -64904,14 +64892,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.writeJobSummary = void 0;
+exports.loadBuildResults = exports.writeJobSummary = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const cache_reporting_1 = __nccwpck_require__(6674);
-function writeJobSummary(cacheListener) {
+function writeJobSummary(buildResults, cacheListener) {
     core.info('Writing job summary');
-    const buildResults = loadBuildResults();
     if (buildResults.length === 0) {
         core.debug('No Gradle build results found. Summary table will not be generated.');
     }
@@ -64933,6 +64920,7 @@ function loadBuildResults() {
         return JSON.parse(content);
     });
 }
+exports.loadBuildResults = loadBuildResults;
 function writeSummaryTable(results) {
     core.summary.addHeading('Gradle Builds', 3);
     core.summary.addTable([
@@ -64943,7 +64931,7 @@ function writeSummaryTable(results) {
             { data: 'Outcome', header: true }
         ],
         ...results.map(result => [
-            result.rootProject,
+            result.rootProjectName,
             result.requestedTasks,
             result.gradleVersion,
             renderOutcome(result)
@@ -65067,6 +65055,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.complete = exports.setup = void 0;
 const core = __importStar(__nccwpck_require__(2186));
+const exec = __importStar(__nccwpck_require__(1514));
+const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
 const os = __importStar(__nccwpck_require__(2037));
 const caches = __importStar(__nccwpck_require__(3800));
@@ -65098,11 +65088,14 @@ function complete() {
             core.info('Gradle setup post-action only performed for first gradle-build-action step in workflow.');
             return;
         }
+        const buildResults = (0, job_summary_1.loadBuildResults)();
+        core.info('Stopping all Gradle daemons');
+        yield stopAllDaemons(getUniqueGradleHomes(buildResults));
         core.info('In final post-action step, saving state and writing summary');
         const cacheListener = cache_reporting_1.CacheListener.rehydrate(core.getState(CACHE_LISTENER));
         const gradleUserHome = core.getState(GRADLE_USER_HOME);
         yield caches.save(gradleUserHome, cacheListener);
-        (0, job_summary_1.writeJobSummary)(cacheListener);
+        (0, job_summary_1.writeJobSummary)(buildResults, cacheListener);
     });
 }
 exports.complete = complete;
@@ -65112,6 +65105,28 @@ function determineGradleUserHome(rootDir) {
         return path.resolve(rootDir, customGradleUserHome);
     }
     return path.resolve(os.homedir(), '.gradle');
+}
+function getUniqueGradleHomes(buildResults) {
+    const gradleHomes = buildResults.map(buildResult => buildResult.gradleHomeDir);
+    return Array.from(new Set(gradleHomes));
+}
+function stopAllDaemons(gradleHomes) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const executions = [];
+        const args = ['--stop'];
+        for (const gradleHome of gradleHomes) {
+            const executable = path.resolve(gradleHome, 'bin', 'gradle');
+            if (!fs.existsSync(executable)) {
+                core.warning(`Gradle executable not found at ${executable}. Could not stop Gradle daemons.`);
+                continue;
+            }
+            core.info(`Stopping Gradle daemons in ${gradleHome}`);
+            executions.push(exec.exec(executable, args, {
+                ignoreReturnCode: true
+            }));
+        }
+        yield Promise.all(executions);
+    });
 }
 
 
