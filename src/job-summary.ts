@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import {logCachingReport, CacheListener} from './cache-reporting'
 
-interface BuildResult {
+export interface BuildResult {
     get rootProjectName(): string
     get rootProjectDir(): string
     get requestedTasks(): string
@@ -28,7 +28,7 @@ export function writeJobSummary(cacheListener: CacheListener): void {
     core.summary.write()
 }
 
-function loadBuildResults(): BuildResult[] {
+export function loadBuildResults(): BuildResult[] {
     const buildResultsDir = path.resolve(process.env['RUNNER_TEMP']!, '.build-results')
     if (!fs.existsSync(buildResultsDir)) {
         return []
