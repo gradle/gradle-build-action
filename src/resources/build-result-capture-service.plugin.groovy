@@ -6,8 +6,10 @@ import org.gradle.util.GradleVersion
 // But projectsEvaluated is good enough, since the build service won't catch configuration failures anyway
 projectsEvaluated {
     def projectTracker = gradle.sharedServices.registerIfAbsent("gradle-build-action-buildResultsRecorder", BuildResultsRecorder, { spec ->
-        spec.getParameters().getRootProject().set(gradle.rootProject.name)
+        spec.getParameters().getRootProjectName().set(gradle.rootProject.name)
+        spec.getParameters().getRootProjectDir().set(gradle.rootProject.rootDir.absolutePath)
         spec.getParameters().getRequestedTasks().set(gradle.startParameter.taskNames.join(" "))
+        spec.getParameters().getGradleHomeDir().set(gradle.gradleHomeDir.absolutePath)
         spec.getParameters().getInvocationId().set(gradle.ext.invocationId)
     })
 
@@ -17,8 +19,10 @@ projectsEvaluated {
 abstract class BuildResultsRecorder implements BuildService<BuildResultsRecorder.Params>, OperationCompletionListener, AutoCloseable {
     private boolean buildFailed = false
     interface Params extends BuildServiceParameters {
-        Property<String> getRootProject()
+        Property<String> getRootProjectName()
+        Property<String> getRootProjectDir()
         Property<String> getRequestedTasks()
+        Property<String> getGradleHomeDir()
         Property<String> getInvocationId()
     }
 
@@ -31,9 +35,11 @@ abstract class BuildResultsRecorder implements BuildService<BuildResultsRecorder
     @Override
     public void close() {
         def buildResults = [
-            rootProject: getParameters().getRootProject().get(), 
-            requestedTasks: getParameters().getRequestedTasks().get(), 
-            gradleVersion: GradleVersion.current().version, 
+            rootProjectName: getParameters().getRootProjectName().get(),
+            rootProjectDir: getParameters().getRootProjectDir().get(),
+            requestedTasks: getParameters().getRequestedTasks().get(),
+            gradleVersion: GradleVersion.current().version,
+            gradleHomeDir: getParameters().getGradleHomeDir().get(),
             buildFailed: buildFailed,
             buildScanUri: null
         ]

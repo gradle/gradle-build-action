@@ -3,7 +3,7 @@ import fs from 'fs'
 import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 
-import {META_FILE_DIR, PROJECT_ROOTS_FILE} from './cache-base'
+import {META_FILE_DIR} from './cache-base'
 import {CacheEntryListener, CacheListener} from './cache-reporting'
 import {
     cacheDebug,
@@ -14,6 +14,7 @@ import {
     saveCache,
     tryDelete
 } from './cache-utils'
+import {loadBuildResults} from './job-summary'
 
 const SKIP_RESTORE_VAR = 'GRADLE_BUILD_ACTION_SKIP_RESTORE'
 
@@ -387,13 +388,8 @@ export class ConfigurationCacheEntryExtractor extends AbstractEntryExtractor {
      * set of project roots, to allow saving of configuration-cache entries for each.
      */
     private getProjectRoots(): string[] {
-        const projectList = path.resolve(process.env['RUNNER_TEMP']!, PROJECT_ROOTS_FILE)
-        if (!fs.existsSync(projectList)) {
-            core.info(`Missing project list file ${projectList}`)
-            return []
-        }
-        const projectRoots = fs.readFileSync(projectList, 'utf-8')
-        core.info(`Found project roots '${projectRoots}' in ${projectList}`)
-        return projectRoots.trim().split('\n')
+        const buildResults = loadBuildResults()
+        const projectRootDirs = buildResults.map(x => x.rootProjectDir)
+        return [...new Set(projectRootDirs)] // Remove duplicates
     }
 }

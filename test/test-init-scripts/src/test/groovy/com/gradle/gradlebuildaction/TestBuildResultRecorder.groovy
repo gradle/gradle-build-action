@@ -120,9 +120,11 @@ class TestBuildResultRecorder extends BaseInitScriptTest {
 
     void assertResults(String task, TestGradleVersion testGradleVersion, boolean hasFailure, boolean hasBuildScan) {
         def results = new JsonSlurper().parse(buildResultFile)
-        assert results['rootProject'] == ROOT_PROJECT_NAME
+        assert results['rootProjectName'] == ROOT_PROJECT_NAME
+        assert results['rootProjectDir'] == testProjectDir.canonicalPath
         assert results['requestedTasks'] == task
         assert results['gradleVersion'] == testGradleVersion.gradleVersion.version
+        assert results['gradleHomeDir'] != null
         assert results['buildFailed'] == hasFailure
         assert results['buildScanUri'] == (hasBuildScan ? "${mockScansServer.address}s/${PUBLIC_BUILD_SCAN_ID}" : null)
     }

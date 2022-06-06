@@ -9,7 +9,6 @@ import {ConfigurationCacheEntryExtractor, GradleHomeEntryExtractor} from './cach
 const RESTORED_CACHE_KEY_KEY = 'restored-cache-key'
 
 export const META_FILE_DIR = '.gradle-build-action'
-export const PROJECT_ROOTS_FILE = 'project-roots.txt'
 const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes'
 const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes'
 
@@ -167,15 +166,7 @@ export class GradleStateCache {
     }
 
     private initializeGradleUserHome(gradleUserHome: string, initScriptsDir: string): void {
-        const propertiesFile = path.resolve(gradleUserHome, 'gradle.properties')
-        fs.appendFileSync(propertiesFile, 'org.gradle.daemon=false')
-
-        const initScriptFilenames = [
-            'build-result-capture.init.gradle',
-            'build-result-capture-service.plugin.groovy',
-            'project-root-capture.init.gradle',
-            'project-root-capture.plugin.groovy'
-        ]
+        const initScriptFilenames = ['build-result-capture.init.gradle', 'build-result-capture-service.plugin.groovy']
         for (const initScriptFilename of initScriptFilenames) {
             const initScriptContent = this.readResourceAsString(initScriptFilename)
             const initScriptPath = path.resolve(initScriptsDir, initScriptFilename)
