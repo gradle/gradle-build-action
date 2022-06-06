@@ -13,7 +13,7 @@ const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
 const CACHE_LISTENER = 'CACHE_LISTENER'
 const JOB_SUMMARY_ENABLED_PARAMETER = 'generate-job-summary'
 
-function generateJobSummary(): boolean {
+function shouldGenerateJobSummary(): boolean {
     return core.getBooleanInput(JOB_SUMMARY_ENABLED_PARAMETER)
 }
 
@@ -56,7 +56,7 @@ export async function complete(): Promise<void> {
     const gradleUserHome = core.getState(GRADLE_USER_HOME)
     await caches.save(gradleUserHome, cacheListener)
 
-    if (generateJobSummary()) {
+    if (shouldGenerateJobSummary()) {
         writeJobSummary(buildResults, cacheListener)
     }
 }

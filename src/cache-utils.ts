@@ -1,6 +1,8 @@
 import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 import * as github from '@actions/github'
+import * as exec from '@actions/exec'
+
 import * as crypto from 'crypto'
 import * as path from 'path'
 import * as fs from 'fs'
@@ -195,8 +197,9 @@ export function handleCacheFailure(error: unknown, message: string): void {
  * Attempt to delete a file or directory, waiting to allow locks to be released
  */
 export async function tryDelete(file: string): Promise<void> {
+    const maxAttempts = 5
     const stat = fs.lstatSync(file)
-    for (let count = 0; count < 3; count++) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
             if (stat.isDirectory()) {
                 fs.rmdirSync(file, {recursive: true})
@@ -205,10 +208,13 @@ export async function tryDelete(file: string): Promise<void> {
             }
             return
         } catch (error) {
-            if (count === 2) {
+            if (attempt === maxAttempts) {
+                core.warning(`Failed to delete ${file}, which will impact caching. 
+It is likely locked by another process. Output of 'jps -ml':
+${await getJavaProcesses()}`)
                 throw error
             } else {
-                core.warning(String(error))
+                cacheDebug(`Attempt to delete ${file} failed. Will try again.`)
                 await delay(1000)
             }
         }
@@ -217,4 +223,9 @@ export async function tryDelete(file: string): Promise<void> {
 
 async function delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function getJavaProcesses(): Promise<string> {
+    const jpsOutput = await exec.getExecOutput('jps', ['-lm'])
+    return jpsOutput.stdout
 }
