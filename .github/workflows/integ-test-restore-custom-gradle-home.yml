@@ -24,6 +24,10 @@ jobs:
         os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
     steps:
+    - name: Set Gradle User Home
+      run: |
+        mkdir -p $GITHUB_WORKSPACE/gradle-user-home
+        echo "GRADLE_USER_HOME=$GITHUB_WORKSPACE/gradle-user-home" >> $GITHUB_ENV
     - name: Checkout sources
       uses: actions/checkout@v3
     - name: Download distribution if required
@@ -44,6 +48,10 @@ jobs:
         os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
     steps:
+    - name: Set Gradle User Home
+      run: |
+        mkdir -p $GITHUB_WORKSPACE/gradle-user-home
+        echo "GRADLE_USER_HOME=$GITHUB_WORKSPACE/gradle-user-home" >> $GITHUB_ENV
     - name: Checkout sources
       uses: actions/checkout@v3
     - name: Download distribution if required
@@ -64,6 +72,10 @@ jobs:
         os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
     steps:
+    - name: Set Gradle User Home
+      run: |
+        mkdir -p $GITHUB_WORKSPACE/gradle-user-home
+        echo "GRADLE_USER_HOME=$GITHUB_WORKSPACE/gradle-user-home" >> $GITHUB_ENV
     - name: Checkout sources
       uses: actions/checkout@v3
     - name: Download distribution if required
