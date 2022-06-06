@@ -65067,7 +65067,7 @@ const GRADLE_USER_HOME = 'GRADLE_USER_HOME';
 const CACHE_LISTENER = 'CACHE_LISTENER';
 function setup(buildRootDirectory) {
     return __awaiter(this, void 0, void 0, function* () {
-        const gradleUserHome = determineGradleUserHome(buildRootDirectory);
+        const gradleUserHome = yield determineGradleUserHome(buildRootDirectory);
         if (process.env[GRADLE_SETUP_VAR]) {
             core.info('Gradle setup only performed on first gradle-build-action step in workflow.');
             return;
@@ -65100,11 +65100,27 @@ function complete() {
 }
 exports.complete = complete;
 function determineGradleUserHome(rootDir) {
-    const customGradleUserHome = process.env['GRADLE_USER_HOME'];
-    if (customGradleUserHome) {
-        return path.resolve(rootDir, customGradleUserHome);
-    }
-    return path.resolve(os.homedir(), '.gradle');
+    return __awaiter(this, void 0, void 0, function* () {
+        const customGradleUserHome = process.env['GRADLE_USER_HOME'];
+        if (customGradleUserHome) {
+            return path.resolve(rootDir, customGradleUserHome);
+        }
+        return path.resolve(yield determineUserHome(), '.gradle');
+    });
+}
+function determineUserHome() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const output = yield exec.getExecOutput('java', ['-XshowSettings:properties', '-version'], { silent: true });
+        const regex = /user\.home = (\S*)/i;
+        const found = output.stderr.match(regex);
+        if (found == null || found.length <= 1) {
+            core.info('Could not determine user.home from java -version output. Using os.homedir().');
+            return os.homedir();
+        }
+        const userHome = found[1];
+        core.debug(`Determined user.home from java -version output: '${userHome}'`);
+        return userHome;
+    });
 }
 function getUniqueGradleHomes(buildResults) {
     const gradleHomes = buildResults.map(buildResult => buildResult.gradleHomeDir);
