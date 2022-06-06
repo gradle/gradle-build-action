@@ -23,6 +23,8 @@ jobs:
       matrix:
         os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
+    env:
+      GRADLE_USER_HOME: /home/runner/work/gradle-user-home
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -43,6 +45,8 @@ jobs:
       matrix:
         os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
+    env:
+      GRADLE_USER_HOME: /home/runner/work/gradle-user-home
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -63,6 +67,8 @@ jobs:
       matrix:
         os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
+    env:
+      GRADLE_USER_HOME: /home/runner/work/gradle-user-home
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
