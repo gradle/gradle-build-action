@@ -19,8 +19,6 @@ inputs:
       By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
     required: false
     default: ${{ github.ref_name != github.event.repository.default_branch }}
-  # e.g. Use the following setting to only write cache entries from your 'main' branch
-  #     cache-read-only: ${{ github.ref_name != 'main' }}
 
   cache-write-only:
     description: |
@@ -54,6 +52,11 @@ inputs:
   gradle-executable:
     description: Path to the Gradle executable
     required: false
+
+  generate-job-summary:
+    description: When 'false', no Job Summary will be generated for the Job.
+    required: false
+    default: true
 
   # EXPERIMENTAL & INTERNAL ACTION INPUTS
   # The following action properties allow fine-grained tweaking of the action caching behaviour.

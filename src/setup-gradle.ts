@@ -11,6 +11,11 @@ import {BuildResult, loadBuildResults, writeJobSummary} from './job-summary'
 const GRADLE_SETUP_VAR = 'GRADLE_BUILD_ACTION_SETUP_COMPLETED'
 const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
 const CACHE_LISTENER = 'CACHE_LISTENER'
+const JOB_SUMMARY_ENABLED_PARAMETER = 'generate-job-summary'
+
+function generateJobSummary(): boolean {
+    return core.getBooleanInput(JOB_SUMMARY_ENABLED_PARAMETER)
+}
 
 export async function setup(buildRootDirectory: string): Promise<void> {
     const gradleUserHome = await determineGradleUserHome(buildRootDirectory)
@@ -35,7 +40,6 @@ export async function setup(buildRootDirectory: string): Promise<void> {
 }
 
 export async function complete(): Promise<void> {
-    core.info('Inside setupGradle.complete()')
     if (!core.getState(GRADLE_SETUP_VAR)) {
         core.info('Gradle setup post-action only performed for first gradle-build-action step in workflow.')
         return
@@ -52,7 +56,9 @@ export async function complete(): Promise<void> {
     const gradleUserHome = core.getState(GRADLE_USER_HOME)
     await caches.save(gradleUserHome, cacheListener)
 
-    writeJobSummary(buildResults, cacheListener)
+    if (generateJobSummary()) {
+        writeJobSummary(buildResults, cacheListener)
+    }
 }
 
 async function determineGradleUserHome(rootDir: string): Promise<string> {
