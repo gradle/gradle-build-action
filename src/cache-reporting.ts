@@ -64,7 +64,7 @@ export class CacheEntryListener {
     savedKey: string | undefined
     savedSize: number | undefined
 
-    unchanged: string | undefined
+    unsaved: string | undefined
 
     constructor(entryName: string) {
         this.entryName = entryName
@@ -98,8 +98,8 @@ export class CacheEntryListener {
         return this
     }
 
-    markUnchanged(message: string): CacheEntryListener {
-        this.unchanged = message
+    markUnsaved(message: string): CacheEntryListener {
+        this.unsaved = message
         return this
     }
 }
@@ -159,8 +159,8 @@ function getRestoredMessage(entry: CacheEntryListener, isCacheWriteOnly: boolean
 }
 
 function getSavedMessage(entry: CacheEntryListener, isCacheReadOnly: boolean): string {
-    if (entry.unchanged) {
-        return `(Entry not saved: ${entry.unchanged})`
+    if (entry.unsaved) {
+        return `(Entry not saved: ${entry.unsaved})`
     }
     if (entry.savedKey === undefined) {
         if (isCacheReadOnly) {
@@ -190,11 +190,8 @@ function getSize(
 }
 
 function formatSize(bytes: number | undefined): string {
-    if (bytes === undefined) {
+    if (bytes === undefined || bytes === 0) {
         return ''
-    }
-    if (bytes === 0) {
-        return '0 (Entry already exists)'
     }
     return `${Math.round(bytes / (1024 * 1024))} MB (${bytes} B)`
 }

@@ -94,11 +94,18 @@ export class GradleStateCache {
     async save(listener: CacheListener): Promise<void> {
         const cacheKey = generateCacheKey(this.cacheName).key
         const restoredCacheKey = core.getState(RESTORED_CACHE_KEY_KEY)
-        const entryListener = listener.entry(this.cacheDescription)
+        const gradleHomeEntryListener = listener.entry(this.cacheDescription)
 
         if (restoredCacheKey && cacheKey === restoredCacheKey) {
             core.info(`Cache hit occurred on the cache key ${cacheKey}, not saving cache.`)
-            entryListener.markUnchanged('cache key not changed')
+
+            for (const entryListener of listener.cacheEntries) {
+                if (entryListener === gradleHomeEntryListener) {
+                    entryListener.markUnsaved('cache key not changed')
+                } else {
+                    entryListener.markUnsaved(`referencing '${this.cacheDescription}' cache entry not saved`)
+                }
+            }
             return
         }
 
@@ -111,7 +118,7 @@ export class GradleStateCache {
 
         core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKey}`)
         const cachePath = this.getCachePath()
-        await saveCache(cachePath, cacheKey, entryListener)
+        await saveCache(cachePath, cacheKey, gradleHomeEntryListener)
 
         return
     }
