@@ -48,6 +48,11 @@ jobs:
     with:
       cache-key-prefix: ${{github.run_number}}-
 
+  restore-containerized-gradle-home:
+    uses: ./.github/workflows/integ-test-restore-containerized-gradle-home.yml
+    with:
+      cache-key-prefix: ${{github.run_number}}-
+
   restore-gradle-home:
     uses: ./.github/workflows/integ-test-restore-gradle-home.yml
     with:

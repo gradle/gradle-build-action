@@ -55,11 +55,16 @@ jobs:
       runner-os: '["ubuntu-latest"]'
       download-dist: true
 
+  restore-containerized-gradle-home:
+    needs: build-distribution
+    uses: ./.github/workflows/integ-test-restore-containerized-gradle-home.yml
+    with:
+      download-dist: true
+
   restore-custom-gradle-home:
     needs: build-distribution
     uses: ./.github/workflows/integ-test-restore-custom-gradle-home.yml
     with:
-      runner-os: '["ubuntu-latest"]'
       download-dist: true
 
   restore-gradle-home:

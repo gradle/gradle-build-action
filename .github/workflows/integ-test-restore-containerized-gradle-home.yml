@@ -17,61 +17,44 @@ env:
 jobs:
   seed-build:
     runs-on: ubuntu-latest
+    container: fedora:latest
     steps:
-    - name: Set Gradle User Home
-      run: |
-        mkdir -p $GITHUB_WORKSPACE/gradle-user-home
-        echo "GRADLE_USER_HOME=$GITHUB_WORKSPACE/gradle-user-home" >> $GITHUB_ENV
     - name: Checkout sources
       uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        java-version: 11
+        distribution: temurin
     - name: Setup Gradle
       uses: ./
       with:
         cache-read-only: false # For testing, allow writing cache entries on non-default branches
     - name: Build using Gradle wrapper
       working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test --info
+      run: ./gradlew test
 
   # Test that the gradle-user-home cache will cache dependencies, by running build with --offline
   dependencies-cache:
     needs: seed-build
     runs-on: ubuntu-latest
+    container: fedora:latest
     steps:
-    - name: Set Gradle User Home
-      run: |
-        mkdir -p $GITHUB_WORKSPACE/gradle-user-home
-        echo "GRADLE_USER_HOME=$GITHUB_WORKSPACE/gradle-user-home" >> $GITHUB_ENV
     - name: Checkout sources
       uses: actions/checkout@v3
     - name: Download distribution if required
       uses: ./.github/actions/download-dist
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        java-version: 11
+        distribution: temurin
     - name: Setup Gradle
       uses: ./
       with:
         cache-read-only: true
     - name: Execute Gradle build with --offline
       working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test --offline --info
-
-  # Test that the gradle-user-home cache will cache and restore local build-cache
-  build-cache:
-    needs: seed-build
-    runs-on: ubuntu-latest
-    steps:
-    - name: Set Gradle User Home
-      run: |
-        mkdir -p $GITHUB_WORKSPACE/gradle-user-home
-        echo "GRADLE_USER_HOME=$GITHUB_WORKSPACE/gradle-user-home" >> $GITHUB_ENV
-    - name: Checkout sources
-      uses: actions/checkout@v3
-    - name: Download distribution if required
-      uses: ./.github/actions/download-dist
-    - name: Setup Gradle
-      uses: ./
-      with:
-        cache-read-only: true
-    - name: Execute Gradle build and verify tasks from cache
-      working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test -DverifyCachedBuild=true --info
+      run: ./gradlew test --offline

@@ -13,7 +13,7 @@ const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
 const CACHE_LISTENER = 'CACHE_LISTENER'
 
 export async function setup(buildRootDirectory: string): Promise<void> {
-    const gradleUserHome = determineGradleUserHome(buildRootDirectory)
+    const gradleUserHome = await determineGradleUserHome(buildRootDirectory)
 
     // Bypass setup on all but first action step in workflow.
     if (process.env[GRADLE_SETUP_VAR]) {
@@ -55,13 +55,30 @@ export async function complete(): Promise<void> {
     writeJobSummary(buildResults, cacheListener)
 }
 
-function determineGradleUserHome(rootDir: string): string {
+async function determineGradleUserHome(rootDir: string): Promise<string> {
     const customGradleUserHome = process.env['GRADLE_USER_HOME']
     if (customGradleUserHome) {
         return path.resolve(rootDir, customGradleUserHome)
     }
 
-    return path.resolve(os.homedir(), '.gradle')
+    return path.resolve(await determineUserHome(), '.gradle')
+}
+
+/**
+ * Different values can be returned by os.homedir() in Javascript and System.getProperty('user.home') in Java.
+ * In order to determine the correct Gradle User Home, we ask Java for the user home instead of using os.homedir().
+ */
+async function determineUserHome(): Promise<string> {
+    const output = await exec.getExecOutput('java', ['-XshowSettings:properties', '-version'], {silent: true})
+    const regex = /user\.home = (\S*)/i
+    const found = output.stderr.match(regex)
+    if (found == null || found.length <= 1) {
+        core.info('Could not determine user.home from java -version output. Using os.homedir().')
+        return os.homedir()
+    }
+    const userHome = found[1]
+    core.debug(`Determined user.home from java -version output: '${userHome}'`)
+    return userHome
 }
 
 function getUniqueGradleHomes(buildResults: BuildResult[]): string[] {
