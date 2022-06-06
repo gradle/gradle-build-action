@@ -64579,6 +64579,7 @@ exports.tryDelete = exports.handleCacheFailure = exports.cacheDebug = exports.sa
 const core = __importStar(__nccwpck_require__(2186));
 const cache = __importStar(__nccwpck_require__(7799));
 const github = __importStar(__nccwpck_require__(5438));
+const exec = __importStar(__nccwpck_require__(1514));
 const crypto = __importStar(__nccwpck_require__(6113));
 const path = __importStar(__nccwpck_require__(1017));
 const fs = __importStar(__nccwpck_require__(7147));
@@ -64690,7 +64691,7 @@ function saveCache(cachePath, cacheKey, listener) {
             if (error instanceof cache.ReserveCacheError) {
                 listener.markAlreadyExists(cacheKey);
             }
-            handleCacheFailure(error, `Failed to save cache entry ${cacheKey}`);
+            handleCacheFailure(error, `Failed to save cache entry with path '${cachePath}' and key: ${cacheKey}`);
         }
     });
 }
@@ -64721,8 +64722,9 @@ function handleCacheFailure(error, message) {
 exports.handleCacheFailure = handleCacheFailure;
 function tryDelete(file) {
     return __awaiter(this, void 0, void 0, function* () {
+        const maxAttempts = 5;
         const stat = fs.lstatSync(file);
-        for (let count = 0; count < 3; count++) {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 if (stat.isDirectory()) {
                     fs.rmdirSync(file, { recursive: true });
@@ -64733,11 +64735,14 @@ function tryDelete(file) {
                 return;
             }
             catch (error) {
-                if (count === 2) {
+                if (attempt === maxAttempts) {
+                    core.warning(`Failed to delete ${file}, which will impact caching. 
+It is likely locked by another process. Output of 'jps -ml':
+${yield getJavaProcesses()}`);
                     throw error;
                 }
                 else {
-                    core.warning(String(error));
+                    cacheDebug(`Attempt to delete ${file} failed. Will try again.`);
                     yield delay(1000);
                 }
             }
@@ -64748,6 +64753,12 @@ exports.tryDelete = tryDelete;
 function delay(ms) {
     return __awaiter(this, void 0, void 0, function* () {
         return new Promise(resolve => setTimeout(resolve, ms));
+    });
+}
+function getJavaProcesses() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const jpsOutput = yield exec.getExecOutput('jps', ['-lm']);
+        return jpsOutput.stdout;
     });
 }
 
@@ -65065,6 +65076,10 @@ const job_summary_1 = __nccwpck_require__(7345);
 const GRADLE_SETUP_VAR = 'GRADLE_BUILD_ACTION_SETUP_COMPLETED';
 const GRADLE_USER_HOME = 'GRADLE_USER_HOME';
 const CACHE_LISTENER = 'CACHE_LISTENER';
+const JOB_SUMMARY_ENABLED_PARAMETER = 'generate-job-summary';
+function shouldGenerateJobSummary() {
+    return core.getBooleanInput(JOB_SUMMARY_ENABLED_PARAMETER);
+}
 function setup(buildRootDirectory) {
     return __awaiter(this, void 0, void 0, function* () {
         const gradleUserHome = yield determineGradleUserHome(buildRootDirectory);
@@ -65083,7 +65098,6 @@ function setup(buildRootDirectory) {
 exports.setup = setup;
 function complete() {
     return __awaiter(this, void 0, void 0, function* () {
-        core.info('Inside setupGradle.complete()');
         if (!core.getState(GRADLE_SETUP_VAR)) {
             core.info('Gradle setup post-action only performed for first gradle-build-action step in workflow.');
             return;
@@ -65095,7 +65109,9 @@ function complete() {
         const cacheListener = cache_reporting_1.CacheListener.rehydrate(core.getState(CACHE_LISTENER));
         const gradleUserHome = core.getState(GRADLE_USER_HOME);
         yield caches.save(gradleUserHome, cacheListener);
-        (0, job_summary_1.writeJobSummary)(buildResults, cacheListener);
+        if (shouldGenerateJobSummary()) {
+            (0, job_summary_1.writeJobSummary)(buildResults, cacheListener);
+        }
     });
 }
 exports.complete = complete;
