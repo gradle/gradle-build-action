@@ -312,9 +312,9 @@ export class GradleHomeEntryExtractor extends AbstractEntryExtractor {
             followSymbolicLinks: false
         })
 
-        for (const p of await globber.glob()) {
-            cacheDebug(`Deleting wrapper zip: ${p}`)
-            tryDelete(p)
+        for (const wrapperZip of await globber.glob()) {
+            cacheDebug(`Deleting wrapper zip: ${wrapperZip}`)
+            await tryDelete(wrapperZip)
         }
     }
 

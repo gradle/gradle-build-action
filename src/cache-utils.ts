@@ -198,9 +198,12 @@ export function handleCacheFailure(error: unknown, message: string): void {
  */
 export async function tryDelete(file: string): Promise<void> {
     const maxAttempts = 5
-    const stat = fs.lstatSync(file)
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        if (!fs.existsSync(file)) {
+            return
+        }
         try {
+            const stat = fs.lstatSync(file)
             if (stat.isDirectory()) {
                 fs.rmdirSync(file, {recursive: true})
             } else {
