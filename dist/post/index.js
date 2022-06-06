@@ -63960,10 +63960,17 @@ class GradleStateCache {
         return __awaiter(this, void 0, void 0, function* () {
             const cacheKey = (0, cache_utils_1.generateCacheKey)(this.cacheName).key;
             const restoredCacheKey = core.getState(RESTORED_CACHE_KEY_KEY);
-            const entryListener = listener.entry(this.cacheDescription);
+            const gradleHomeEntryListener = listener.entry(this.cacheDescription);
             if (restoredCacheKey && cacheKey === restoredCacheKey) {
                 core.info(`Cache hit occurred on the cache key ${cacheKey}, not saving cache.`);
-                entryListener.markUnchanged('cache key not changed');
+                for (const entryListener of listener.cacheEntries) {
+                    if (entryListener === gradleHomeEntryListener) {
+                        entryListener.markUnsaved('cache key not changed');
+                    }
+                    else {
+                        entryListener.markUnsaved(`referencing '${this.cacheDescription}' cache entry not saved`);
+                    }
+                }
                 return;
             }
             try {
@@ -63975,7 +63982,7 @@ class GradleStateCache {
             }
             core.info(`Caching ${this.cacheDescription} with cache key: ${cacheKey}`);
             const cachePath = this.getCachePath();
-            yield (0, cache_utils_1.saveCache)(cachePath, cacheKey, entryListener);
+            yield (0, cache_utils_1.saveCache)(cachePath, cacheKey, gradleHomeEntryListener);
             return;
         });
     }
@@ -64205,7 +64212,7 @@ class AbstractEntryExtractor {
             const previouslyRestoredKey = (_a = previouslyRestoredEntries.find(x => x.artifactType === artifactType && x.pattern === pattern)) === null || _a === void 0 ? void 0 : _a.cacheKey;
             if (previouslyRestoredKey === cacheKey) {
                 (0, cache_utils_1.cacheDebug)(`No change to previously restored ${artifactType}. Not saving.`);
-                entryListener.markUnchanged('contents unchanged');
+                entryListener.markUnsaved('contents unchanged');
             }
             else {
                 core.info(`Caching ${artifactType} with path '${pattern}' and cache key: ${cacheKey}`);
@@ -64283,9 +64290,9 @@ class GradleHomeEntryExtractor extends AbstractEntryExtractor {
                 implicitDescendants: false,
                 followSymbolicLinks: false
             });
-            for (const p of yield globber.glob()) {
-                (0, cache_utils_1.cacheDebug)(`Deleting wrapper zip: ${p}`);
-                (0, cache_utils_1.tryDelete)(p);
+            for (const wrapperZip of yield globber.glob()) {
+                (0, cache_utils_1.cacheDebug)(`Deleting wrapper zip: ${wrapperZip}`);
+                yield (0, cache_utils_1.tryDelete)(wrapperZip);
             }
         });
     }
@@ -64450,8 +64457,8 @@ class CacheEntryListener {
         this.savedSize = 0;
         return this;
     }
-    markUnchanged(message) {
-        this.unchanged = message;
+    markUnsaved(message) {
+        this.unsaved = message;
         return this;
     }
 }
@@ -64503,8 +64510,8 @@ function getRestoredMessage(entry, isCacheWriteOnly) {
     return '(Entry restored: partial match found)';
 }
 function getSavedMessage(entry, isCacheReadOnly) {
-    if (entry.unchanged) {
-        return `(Entry not saved: ${entry.unchanged})`;
+    if (entry.unsaved) {
+        return `(Entry not saved: ${entry.unsaved})`;
     }
     if (entry.savedKey === undefined) {
         if (isCacheReadOnly) {
@@ -64525,11 +64532,8 @@ function getSize(cacheEntries, predicate) {
     return Math.round(bytes / (1024 * 1024));
 }
 function formatSize(bytes) {
-    if (bytes === undefined) {
+    if (bytes === undefined || bytes === 0) {
         return '';
-    }
-    if (bytes === 0) {
-        return '0 (Entry already exists)';
     }
     return `${Math.round(bytes / (1024 * 1024))} MB (${bytes} B)`;
 }
@@ -64723,9 +64727,12 @@ exports.handleCacheFailure = handleCacheFailure;
 function tryDelete(file) {
     return __awaiter(this, void 0, void 0, function* () {
         const maxAttempts = 5;
-        const stat = fs.lstatSync(file);
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            if (!fs.existsSync(file)) {
+                return;
+            }
             try {
+                const stat = fs.lstatSync(file);
                 if (stat.isDirectory()) {
                     fs.rmdirSync(file, { recursive: true });
                 }
