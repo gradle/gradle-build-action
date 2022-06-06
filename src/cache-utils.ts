@@ -162,7 +162,7 @@ export async function saveCache(cachePath: string[], cacheKey: string, listener:
         if (error instanceof cache.ReserveCacheError) {
             listener.markAlreadyExists(cacheKey)
         }
-        handleCacheFailure(error, `Failed to save cache entry ${cacheKey}`)
+        handleCacheFailure(error, `Failed to save cache entry with path '${cachePath}' and key: ${cacheKey}`)
     }
 }
 
