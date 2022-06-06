@@ -135,6 +135,7 @@ class TestBuildResultRecorder extends BaseInitScriptTest {
         assert buildResultsDir.listFiles().size() == 1
         def resultsFile = buildResultsDir.listFiles()[0]
         assert resultsFile.name.startsWith('github-step-id')
+        assert resultsFile.text.count('rootProjectName') == 1
         return resultsFile
     }
 }
