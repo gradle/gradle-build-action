@@ -218,15 +218,18 @@ For example, this means that all jobs executing a particular version of the Grad
 
 ### Using the caches read-only
 
-In some circumstances, it makes sense for a Gradle invocation to read any existing cache entries but not to write changes back.
-For example, you may want to write cache entries for builds on your `main` branch, but not for any PR build invocations.
+By default, the `gradle-build-action` will only write to the cache from Jobs on the default (`main`/`master`) branch.
+Jobs on other branches will read entries from the cache but will not write updated entries. 
+See [Optimizing cache effectiveness](#optimizing-cache-effectiveness) for a more detailed explanation.
 
-You can enable read-only caching for any of the caches as follows:
+In some circumstances it makes sense to change this default, and to configure a workflow Job to read existing cache entries but not to write changes back.
+
+You can configure read-only caching for the `gradle-build-action` as follows:
 
 ```yaml
-# Only write to the cache for builds on the 'main' branch.
+# Only write to the cache for builds on the 'main' and 'release' branches. (Default is 'main' only.)
 # Builds on other branches will only read existing entries from the cache.
-cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/release' }}
 ```
 
 ### Gradle User Home cache tuning
@@ -272,13 +275,19 @@ Eviction of shared cache entries can reduce cache effectiveness, slowing down yo
 
 There are a number of actions you can take if your cache use is less effective due to entry eviction.
 
-#### Only write to the cache from the default branch
+#### Select branches that should write to the cache
 
 GitHub cache entries are not shared between builds on different branches. This means that identical cache entries will be stored separately for different branches.
-The exception to the is cache entries for the default (`master`/`main`) branch can be read by actions invoked for other branches.
+An exception to this is that cache entries for the default (`master`/`main`) branch can be read by actions invoked for other branches.
 
-An easy way to reduce cache usage when you run builds on many different branches is to only permit your default branch to write to the cache,
-with all other branch builds using `cache-read-only`. See [Using the caches read-only](#using-the-caches-read-only) for more details.
+By default, the `gradle-build-action` will only _write_ to the cache for builds run on the default branch. 
+Jobs run on other branches will only read from the cache. In most cases, this is the desired behaviour, 
+because Jobs run against other branches will benefit from the cache Gradle User Home from `main`, 
+without writing private cache entries that could lead to evicting shared entries.
+
+If you have other long-lived development branches that would benefit from writing to the cache, 
+you can configure these by overriding the `cache-read-only` action parameter. 
+See [Using the caches read-only](#using-the-caches-read-only) for more details.
 
 Similarly, you could use `cache-read-only` for certain jobs in the workflow, and instead have these jobs reuse the cache content from upstream jobs.
 
