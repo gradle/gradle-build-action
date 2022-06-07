@@ -42,7 +42,7 @@
     "@vercel/ncc": "0.34.0",
     "eslint": "8.17.0",
     "eslint-plugin-github": "4.3.6",
-    "eslint-plugin-jest": "26.4.6",
+    "eslint-plugin-jest": "26.5.3",
     "jest": "28.1.0",
     "js-yaml": "4.1.0",
     "patch-package": "6.4.7",
