@@ -8,9 +8,6 @@ on:
   push:
     branches: 
       - main
-    paths:
-      - '.github/workflows/**'
-      - 'dist/**'
 
 jobs:
   check:
