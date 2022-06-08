@@ -86,6 +86,7 @@ jobs:
     - uses: actions/setup-java@v3
       with:
         java-version: 11
+        distribution: temurin
     - uses: gradle/gradle-build-action@v2
       with:
         gradle-version: release-candidate
@@ -112,6 +113,7 @@ jobs:
     - uses: actions/setup-java@v3
       with:
         java-version: 11
+        distribution: temurin
     
     - name: Setup and execute Gradle 'test' task
       uses: gradle/gradle-build-action@v2
