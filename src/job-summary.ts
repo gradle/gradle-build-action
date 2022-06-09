@@ -13,7 +13,7 @@ export interface BuildResult {
     get buildScanUri(): string
 }
 
-export function writeJobSummary(buildResults: BuildResult[], cacheListener: CacheListener): void {
+export async function writeJobSummary(buildResults: BuildResult[], cacheListener: CacheListener): Promise<void> {
     core.info('Writing job summary')
 
     if (buildResults.length === 0) {
@@ -24,7 +24,7 @@ export function writeJobSummary(buildResults: BuildResult[], cacheListener: Cach
 
     logCachingReport(cacheListener)
 
-    core.summary.write()
+    await core.summary.write()
 }
 
 export function loadBuildResults(): BuildResult[] {
