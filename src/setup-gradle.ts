@@ -1,5 +1,6 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
+import {SUMMARY_ENV_VAR} from '@actions/core/lib/summary'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
@@ -14,6 +15,11 @@ const CACHE_LISTENER = 'CACHE_LISTENER'
 const JOB_SUMMARY_ENABLED_PARAMETER = 'generate-job-summary'
 
 function shouldGenerateJobSummary(): boolean {
+    // Check if Job Summary is supported on this platform
+    if (!process.env[SUMMARY_ENV_VAR]) {
+        return false
+    }
+
     return core.getBooleanInput(JOB_SUMMARY_ENABLED_PARAMETER)
 }
 

@@ -64908,6 +64908,15 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -64918,15 +64927,17 @@ const fs_1 = __importDefault(__nccwpck_require__(7147));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const cache_reporting_1 = __nccwpck_require__(6674);
 function writeJobSummary(buildResults, cacheListener) {
-    core.info('Writing job summary');
-    if (buildResults.length === 0) {
-        core.debug('No Gradle build results found. Summary table will not be generated.');
-    }
-    else {
-        writeSummaryTable(buildResults);
-    }
-    (0, cache_reporting_1.logCachingReport)(cacheListener);
-    core.summary.write();
+    return __awaiter(this, void 0, void 0, function* () {
+        core.info('Writing job summary');
+        if (buildResults.length === 0) {
+            core.debug('No Gradle build results found. Summary table will not be generated.');
+        }
+        else {
+            writeSummaryTable(buildResults);
+        }
+        (0, cache_reporting_1.logCachingReport)(cacheListener);
+        yield core.summary.write();
+    });
 }
 exports.writeJobSummary = writeJobSummary;
 function loadBuildResults() {
@@ -65076,6 +65087,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.complete = exports.setup = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
+const summary_1 = __nccwpck_require__(1327);
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
 const os = __importStar(__nccwpck_require__(2037));
@@ -65087,6 +65099,9 @@ const GRADLE_USER_HOME = 'GRADLE_USER_HOME';
 const CACHE_LISTENER = 'CACHE_LISTENER';
 const JOB_SUMMARY_ENABLED_PARAMETER = 'generate-job-summary';
 function shouldGenerateJobSummary() {
+    if (!process.env[summary_1.SUMMARY_ENV_VAR]) {
+        return false;
+    }
     return core.getBooleanInput(JOB_SUMMARY_ENABLED_PARAMETER);
 }
 function setup(buildRootDirectory) {
