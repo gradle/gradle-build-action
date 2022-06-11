@@ -2,6 +2,11 @@ name: CI-init-script-check
 
 on:
   push:
+    paths:
+      - '.github/workflows/**'
+      - 'src/resources/init-scripts/**'
+      - 'test/init-script-check/**'
+  workflow_dispatch:
 
 jobs:
   test-init-scripts:
