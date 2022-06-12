@@ -64024,13 +64024,13 @@ class GradleStateCache {
     initializeGradleUserHome(gradleUserHome, initScriptsDir) {
         const initScriptFilenames = ['build-result-capture.init.gradle', 'build-result-capture-service.plugin.groovy'];
         for (const initScriptFilename of initScriptFilenames) {
-            const initScriptContent = this.readResourceAsString(initScriptFilename);
+            const initScriptContent = this.readInitScriptAsString(initScriptFilename);
             const initScriptPath = path_1.default.resolve(initScriptsDir, initScriptFilename);
             fs_1.default.writeFileSync(initScriptPath, initScriptContent);
         }
     }
-    readResourceAsString(resource) {
-        const absolutePath = path_1.default.resolve(__dirname, '..', '..', 'src', 'resources', resource);
+    readInitScriptAsString(resource) {
+        const absolutePath = path_1.default.resolve(__dirname, '..', '..', 'src', 'resources', 'init-scripts', resource);
         return fs_1.default.readFileSync(absolutePath, 'utf8');
     }
     debugReportGradleUserHomeSize(label) {
