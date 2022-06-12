@@ -16,6 +16,7 @@ const CACHE_DISABLED_PARAMETER = 'cache-disabled'
 const CACHE_READONLY_PARAMETER = 'cache-read-only'
 const CACHE_WRITEONLY_PARAMETER = 'cache-write-only'
 const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match'
+const CACHE_CLEANUP_ENABLED_PARAMETER = 'gradle-home-cache-cleanup'
 const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED'
 
 const CACHE_KEY_PREFIX_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX'
@@ -44,6 +45,10 @@ export function isCacheWriteOnly(): boolean {
 
 export function isCacheDebuggingEnabled(): boolean {
     return process.env[CACHE_DEBUG_VAR] ? true : false
+}
+
+export function isCacheCleanupEnabled(): boolean {
+    return core.getBooleanInput(CACHE_CLEANUP_ENABLED_PARAMETER)
 }
 
 /**

@@ -1,8 +1,9 @@
 import * as core from '@actions/core'
-import {isCacheDisabled, isCacheReadOnly, isCacheWriteOnly} from './cache-utils'
+import {isCacheCleanupEnabled, isCacheDisabled, isCacheReadOnly, isCacheWriteOnly} from './cache-utils'
 import {CacheListener} from './cache-reporting'
 import {DaemonController} from './daemon-controller'
 import {GradleStateCache} from './cache-base'
+import {CacheCleaner} from './cache-cleaner'
 
 const CACHE_RESTORED_VAR = 'GRADLE_BUILD_ACTION_CACHE_RESTORED'
 
@@ -44,6 +45,10 @@ export async function restore(gradleUserHome: string, cacheListener: CacheListen
     await core.group('Restore Gradle state from cache', async () => {
         await gradleStateCache.restore(cacheListener)
     })
+
+    if (isCacheCleanupEnabled() && !isCacheReadOnly()) {
+        new CacheCleaner(gradleUserHome, process.env['RUNNER_TEMP']!).prepare()
+    }
 }
 
 export async function save(
@@ -68,6 +73,10 @@ export async function save(
     }
 
     await daemonController.stopAllDaemons()
+
+    if (isCacheCleanupEnabled()) {
+        new CacheCleaner(gradleUserHome, process.env['RUNNER_TEMP']!).forceCleanup()
+    }
 
     await core.group('Caching Gradle state', async () => {
         return new GradleStateCache(gradleUserHome).save(cacheListener)

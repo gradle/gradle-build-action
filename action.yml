@@ -70,6 +70,10 @@ inputs:
     description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users (INTERNAL).
     required: false
     default: ${{ toJSON(matrix) }}
+  gradle-home-cache-cleanup:
+    description: When 'true', the action will attempt to remove any stale/unused entries from the Gradle User Home prior to saving to the GitHub Actions cache.
+    required: false
+    default: false
 
 outputs:
   build-scan-url:
