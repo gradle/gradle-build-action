@@ -100,7 +100,7 @@ class BaseInitScriptTest extends Specification {
         settingsFile = new File(testProjectDir, 'settings.gradle')
         buildFile = new File(testProjectDir, 'build.gradle')
 
-        File srcInitScriptsDir = new File("../../src/resources")
+        File srcInitScriptsDir = new File("../../src/resources/init-scripts")
         File targetInitScriptsDir = new File(testProjectDir, "initScripts")
         targetInitScriptsDir.mkdirs()
 

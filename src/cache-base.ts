@@ -175,15 +175,15 @@ export class GradleStateCache {
     private initializeGradleUserHome(gradleUserHome: string, initScriptsDir: string): void {
         const initScriptFilenames = ['build-result-capture.init.gradle', 'build-result-capture-service.plugin.groovy']
         for (const initScriptFilename of initScriptFilenames) {
-            const initScriptContent = this.readResourceAsString(initScriptFilename)
+            const initScriptContent = this.readInitScriptAsString(initScriptFilename)
             const initScriptPath = path.resolve(initScriptsDir, initScriptFilename)
             fs.writeFileSync(initScriptPath, initScriptContent)
         }
     }
 
-    private readResourceAsString(resource: string): string {
+    private readInitScriptAsString(resource: string): string {
         // Resolving relative to __dirname will allow node to find the resource at runtime
-        const absolutePath = path.resolve(__dirname, '..', '..', 'src', 'resources', resource)
+        const absolutePath = path.resolve(__dirname, '..', '..', 'src', 'resources', 'init-scripts', resource)
         return fs.readFileSync(absolutePath, 'utf8')
     }
 
