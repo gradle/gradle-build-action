@@ -8,10 +8,11 @@
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
     "lint": "eslint src/**/*.ts",
-    "build": "ncc build src/main.ts --out dist/main --source-map && ncc build src/post.ts --out dist/post --source-map",
+    "compile": "ncc build src/main.ts --out dist/main --source-map && ncc build src/post.ts --out dist/post --source-map",
     "test": "jest",
     "check": "npm run format && npm run lint",
-    "all": "npm run format && npm run lint && npm run build && npm test"
+    "build": "npm run check && npm run compile",
+    "all": "npm run build && npm test"
   },
   "repository": {
     "type": "git",
