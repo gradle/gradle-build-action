@@ -85,6 +85,7 @@ jobs:
     - uses: actions/checkout@v3
     - uses: actions/setup-java@v3
       with:
+        distribution: temurin
         java-version: 11
     - uses: gradle/gradle-build-action@v2
       with:
@@ -111,6 +112,7 @@ jobs:
     - uses: actions/checkout@v3
     - uses: actions/setup-java@v3
       with:
+        distribution: temurin
         java-version: 11
     
     - name: Setup and execute Gradle 'test' task
