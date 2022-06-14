@@ -18,6 +18,12 @@ jobs:
     with:
       cache-key-prefix: ${{github.run_number}}-
 
+  cache-cleanup:
+    needs: build-distribution
+    uses: ./.github/workflows/integ-test-cache-cleanup.yml
+    with:
+      cache-key-prefix: ${{github.run_number}}-
+
   caching-config:
     uses: ./.github/workflows/integ-test-action-inputs-caching.yml
     with:

@@ -20,6 +20,14 @@ jobs:
       runner-os: '["ubuntu-latest"]'
       download-dist: true
 
+  cache-cleanup:
+    needs: build-distribution
+    uses: ./.github/workflows/integ-test-cache-cleanup.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
+      cache-key-prefix: ${{github.run_number}}- # Requires a fresh cache entry each run
+
   caching-config:
     needs: build-distribution
     uses: ./.github/workflows/integ-test-action-inputs-caching.yml
