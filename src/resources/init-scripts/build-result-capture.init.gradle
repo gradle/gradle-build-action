@@ -61,7 +61,8 @@ def captureUsingBuildScanPublished(buildScanExtension, rootProject, invocationId
                 gradleVersion: gradleVersion,
                 gradleHomeDir: gradleHomeDir,
                 buildFailed: buildFailed,
-                buildScanUri: buildScanUri
+                buildScanUri: buildScanUri,
+                buildScanFailed: false
             ]
 
             def buildResultsDir = new File(System.getenv("RUNNER_TEMP"), ".build-results")
@@ -77,6 +78,30 @@ def captureUsingBuildScanPublished(buildScanExtension, rootProject, invocationId
 
             println("::set-output name=build-scan-url::${buildScan.buildScanUri}")
         }
+
+        onError { error ->
+            def buildResults = [
+                rootProjectName: rootProjectName,
+                rootProjectDir: rootProjectDir,
+                requestedTasks: requestedTasks,
+                gradleVersion: gradleVersion,
+                gradleHomeDir: gradleHomeDir,
+                buildFailed: buildFailed,
+                buildScanUri: null,
+                buildScanFailed: true
+            ]
+
+            def buildResultsDir = new File(System.getenv("RUNNER_TEMP"), ".build-results")
+            buildResultsDir.mkdirs()
+            def buildResultsFile = new File(buildResultsDir, System.getenv("GITHUB_ACTION") + invocationId + ".json")
+
+            // Overwrite any contents written by buildFinished or build service, since this result is a superset.
+            if (buildResultsFile.exists()) {
+                buildResultsFile.text = groovy.json.JsonOutput.toJson(buildResults)
+            } else {
+                buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
+            }
+        }
     }
 }
 
@@ -89,7 +114,8 @@ def captureUsingBuildFinished(gradle, invocationId) {
             gradleVersion: GradleVersion.current().version,
             gradleHomeDir: gradle.gradleHomeDir.absolutePath,
             buildFailed: result.failure != null,
-            buildScanUri: null
+            buildScanUri: null,
+            buildScanFailed: false
         ]
 
         def buildResultsDir = new File(System.getenv("RUNNER_TEMP"), ".build-results")
