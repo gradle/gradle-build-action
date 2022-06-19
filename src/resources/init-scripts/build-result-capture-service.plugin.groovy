@@ -41,7 +41,8 @@ abstract class BuildResultsRecorder implements BuildService<BuildResultsRecorder
             gradleVersion: GradleVersion.current().version,
             gradleHomeDir: getParameters().getGradleHomeDir().get(),
             buildFailed: buildFailed,
-            buildScanUri: null
+            buildScanUri: null,
+            buildScanFailed: false
         ]
 
         def buildResultsDir = new File(System.getenv("RUNNER_TEMP"), ".build-results")

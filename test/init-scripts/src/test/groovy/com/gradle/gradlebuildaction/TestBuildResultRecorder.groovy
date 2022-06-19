@@ -118,7 +118,23 @@ class TestBuildResultRecorder extends BaseInitScriptTest {
         testGradleVersion << CONFIGURATION_CACHE_VERSIONS
     }
 
-    void assertResults(String task, TestGradleVersion testGradleVersion, boolean hasFailure, boolean hasBuildScan) {
+    def "produces build results file for failing build on #testGradleVersion when build scan publish fails"() {
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
+
+        when:
+        declareGePluginApplication(testGradleVersion.gradleVersion)
+        addFailingTaskToBuild()
+        failScanUpload = true
+        runAndFail(['expectFailure'], initScript, testGradleVersion.gradleVersion)
+
+        then:
+        assertResults('expectFailure', testGradleVersion, true, false, true)
+
+        where:
+        testGradleVersion << ALL_VERSIONS
+    }
+
+    void assertResults(String task, TestGradleVersion testGradleVersion, boolean hasFailure, boolean hasBuildScan, boolean scanUploadFailed = false) {
         def results = new JsonSlurper().parse(buildResultFile)
         assert results['rootProjectName'] == ROOT_PROJECT_NAME
         assert results['rootProjectDir'] == testProjectDir.canonicalPath
@@ -127,6 +143,7 @@ class TestBuildResultRecorder extends BaseInitScriptTest {
         assert results['gradleHomeDir'] != null
         assert results['buildFailed'] == hasFailure
         assert results['buildScanUri'] == (hasBuildScan ? "${mockScansServer.address}s/${PUBLIC_BUILD_SCAN_ID}" : null)
+        assert results['buildScanFailed'] == scanUploadFailed
     }
 
     private File getBuildResultFile() {

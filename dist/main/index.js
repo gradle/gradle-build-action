@@ -66034,28 +66034,43 @@ function loadBuildResults() {
 exports.loadBuildResults = loadBuildResults;
 function writeSummaryTable(results) {
     core.summary.addHeading('Gradle Builds', 3);
-    core.summary.addTable([
-        [
-            { data: 'Root Project', header: true },
-            { data: 'Tasks', header: true },
-            { data: 'Gradle Version', header: true },
-            { data: 'Outcome', header: true }
-        ],
-        ...results.map(result => [
-            result.rootProjectName,
-            result.requestedTasks,
-            result.gradleVersion,
-            renderOutcome(result)
-        ])
-    ]);
-    core.summary.addRaw('\n');
+    core.summary.addRaw(`
+<table>
+    <tr>
+        <th>Root Project</th>
+        <th>Requested Tasks</th>
+        <th>Gradle Version</th>
+        <th>Build Outcome</th>
+        <th>Build Scan™</th>
+    </tr>${results.map(result => renderBuildResultRow(result)).join('')}
+</table>
+    `);
+}
+function renderBuildResultRow(result) {
+    return `
+    <tr>
+        <td>${result.rootProjectName}</td>
+        <td>${result.requestedTasks}</td>
+        <td align='center'>${result.gradleVersion}</td>
+        <td align='center'>${renderOutcome(result)}</td>
+        <td>${renderBuildScan(result)}</td>
+    </tr>`;
 }
 function renderOutcome(result) {
-    const labelPart = result.buildScanUri ? 'Build%20Scan%E2%84%A2' : 'Build';
-    const outcomePart = result.buildFailed ? 'FAILED-red' : 'SUCCESS-brightgreen';
-    const badgeUrl = `https://img.shields.io/badge/${labelPart}-${outcomePart}?logo=Gradle`;
-    const badgeHtml = `<img src="${badgeUrl}" alt="Gradle Build">`;
-    const targetUrl = result.buildScanUri ? result.buildScanUri : '#';
+    return result.buildFailed ? ':x:' : ':white_check_mark:';
+}
+function renderBuildScan(result) {
+    if (result.buildScanFailed) {
+        return renderBuildScanBadge('PUBLISH_FAILED', 'orange', 'https://docs.gradle.com/enterprise/gradle-plugin/#troubleshooting');
+    }
+    if (result.buildScanUri) {
+        return renderBuildScanBadge('PUBLISHED', '06A0CE', result.buildScanUri);
+    }
+    return renderBuildScanBadge('NOT_PUBLISHED', 'lightgrey', 'https://scans.gradle.com');
+}
+function renderBuildScanBadge(outcomeText, outcomeColor, targetUrl) {
+    const badgeUrl = `https://img.shields.io/badge/Build%20Scan%E2%84%A2-${outcomeText}-${outcomeColor}?logo=Gradle`;
+    const badgeHtml = `<img src="${badgeUrl}" alt="Build Scan ${outcomeText}" />`;
     return `<a href="${targetUrl}" rel="nofollow">${badgeHtml}</a>`;
 }
 

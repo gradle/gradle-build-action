@@ -45,6 +45,7 @@ class BaseInitScriptTest extends Specification {
     static final String PUBLIC_BUILD_SCAN_ID = 'i2wepy2gr7ovw'
     static final String DEFAULT_SCAN_UPLOAD_TOKEN = 'scan-upload-token'
     static final String ROOT_PROJECT_NAME = 'test-init-script'
+    boolean failScanUpload = false
 
     File settingsFile
     File buildFile
@@ -59,6 +60,10 @@ class BaseInitScriptTest extends Specification {
 
         handlers {
             post('in/:gradleVersion/:pluginVersion') {
+                if (failScanUpload) {
+                    context.response.status(401).send()
+                    return
+                }
                 def scanUrlString = "${mockScansServer.address}s/$PUBLIC_BUILD_SCAN_ID"
                 def body = [
                     id     : PUBLIC_BUILD_SCAN_ID,
@@ -72,6 +77,10 @@ class BaseInitScriptTest extends Specification {
             }
             prefix('scans/publish') {
                 post('gradle/:pluginVersion/token') {
+                    if (failScanUpload) {
+                        context.response.status(401).send()
+                        return
+                    }
                     def pluginVersion = context.pathTokens.pluginVersion
                     def scanUrlString = "${mockScansServer.address}s/$PUBLIC_BUILD_SCAN_ID"
                     def body = [
@@ -85,6 +94,10 @@ class BaseInitScriptTest extends Specification {
                         .send(jsonWriter.writeValueAsBytes(body))
                 }
                 post('gradle/:pluginVersion/upload') {
+                    if (failScanUpload) {
+                        context.response.status(401).send()
+                        return
+                    }
                     context.request.getBody(1024 * 1024 * 10).then {
                         context.response
                             .contentType('application/vnd.gradle.scan-upload-ack+json')
