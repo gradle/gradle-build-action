@@ -44,23 +44,29 @@ export function loadBuildResults(): BuildResult[] {
 
 function writeSummaryTable(results: BuildResult[]): void {
     core.summary.addHeading('Gradle Builds', 3)
-    core.summary.addTable([
-        [
-            {data: 'Root Project', header: true},
-            {data: 'Tasks', header: true},
-            {data: 'Gradle Version', header: true},
-            {data: 'Outcome', header: true},
-            {data: 'Build Scan™', header: true}
-        ],
-        ...results.map(result => [
-            result.rootProjectName,
-            result.requestedTasks,
-            result.gradleVersion,
-            renderOutcome(result),
-            renderBuildScan(result)
-        ])
-    ])
-    core.summary.addRaw('\n')
+
+    core.summary.addRaw(`
+<table>
+    <tr>
+        <th>Root Project</th>
+        <th>Requested Tasks</th>
+        <th>Gradle Version</th>
+        <th>Build Outcome</th>
+        <th>Build Scan™</th>
+    </tr>${results.map(result => renderBuildResultRow(result)).join('')}
+</table>
+    `)
+}
+
+function renderBuildResultRow(result: BuildResult): string {
+    return `
+    <tr>
+        <td>${result.rootProjectName}</td>
+        <td>${result.requestedTasks}</td>
+        <td align='center'>${result.gradleVersion}</td>
+        <td align='center'>${renderOutcome(result)}</td>
+        <td>${renderBuildScan(result)}</td>
+    </tr>`
 }
 
 function renderOutcome(result: BuildResult): string {
@@ -70,7 +76,7 @@ function renderOutcome(result: BuildResult): string {
 function renderBuildScan(result: BuildResult): string {
     if (result.buildScanFailed) {
         return renderBuildScanBadge(
-            'PUBLISHED_FAILED',
+            'PUBLISH_FAILED',
             'orange',
             'https://docs.gradle.com/enterprise/gradle-plugin/#troubleshooting'
         )
@@ -78,7 +84,7 @@ function renderBuildScan(result: BuildResult): string {
     if (result.buildScanUri) {
         return renderBuildScanBadge('PUBLISHED', '06A0CE', result.buildScanUri)
     }
-    return renderBuildScanBadge('NOT_PUBLISHED', 'lightgrey', 'https://docs.gradle.com/enterprise/gradle-plugin/')
+    return renderBuildScanBadge('NOT_PUBLISHED', 'lightgrey', 'https://scans.gradle.com')
 }
 
 function renderBuildScanBadge(outcomeText: string, outcomeColor: string, targetUrl: string): string {
