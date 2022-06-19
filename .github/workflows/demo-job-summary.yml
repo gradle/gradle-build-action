@@ -26,6 +26,9 @@ jobs:
     - name: Build kotlin-dsl project without build scan
       working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew check --no-scan
+    - name: Build kotlin-dsl project with build scan publish failure
+      working-directory: .github/workflow-samples/kotlin-dsl
+      run: ./gradlew check -Dgradle.enterprise.url=https://not.valid.server
     - name: Build groovy-dsl project
       working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew assemble
