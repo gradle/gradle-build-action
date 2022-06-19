@@ -11,6 +11,7 @@ export interface BuildResult {
     get gradleHomeDir(): string
     get buildFailed(): boolean
     get buildScanUri(): string
+    get buildScanFailed(): boolean
 }
 
 export async function writeJobSummary(buildResults: BuildResult[], cacheListener: CacheListener): Promise<void> {
@@ -48,23 +49,40 @@ function writeSummaryTable(results: BuildResult[]): void {
             {data: 'Root Project', header: true},
             {data: 'Tasks', header: true},
             {data: 'Gradle Version', header: true},
-            {data: 'Outcome', header: true}
+            {data: 'Outcome', header: true},
+            {data: 'Build Scan™', header: true}
         ],
         ...results.map(result => [
             result.rootProjectName,
             result.requestedTasks,
             result.gradleVersion,
-            renderOutcome(result)
+            renderOutcome(result),
+            renderBuildScan(result)
         ])
     ])
     core.summary.addRaw('\n')
 }
 
 function renderOutcome(result: BuildResult): string {
-    const labelPart = result.buildScanUri ? 'Build%20Scan%E2%84%A2' : 'Build'
-    const outcomePart = result.buildFailed ? 'FAILED-red' : 'SUCCESS-brightgreen'
-    const badgeUrl = `https://img.shields.io/badge/${labelPart}-${outcomePart}?logo=Gradle`
-    const badgeHtml = `<img src="${badgeUrl}" alt="Gradle Build">`
-    const targetUrl = result.buildScanUri ? result.buildScanUri : '#'
+    return result.buildFailed ? ':x:' : ':white_check_mark:'
+}
+
+function renderBuildScan(result: BuildResult): string {
+    if (result.buildScanFailed) {
+        return renderBuildScanBadge(
+            'PUBLISHED_FAILED',
+            'orange',
+            'https://docs.gradle.com/enterprise/gradle-plugin/#troubleshooting'
+        )
+    }
+    if (result.buildScanUri) {
+        return renderBuildScanBadge('PUBLISHED', '06A0CE', result.buildScanUri)
+    }
+    return renderBuildScanBadge('NOT_PUBLISHED', 'lightgrey', 'https://docs.gradle.com/enterprise/gradle-plugin/')
+}
+
+function renderBuildScanBadge(outcomeText: string, outcomeColor: string, targetUrl: string): string {
+    const badgeUrl = `https://img.shields.io/badge/Build%20Scan%E2%84%A2-${outcomeText}-${outcomeColor}?logo=Gradle`
+    const badgeHtml = `<img src="${badgeUrl}" alt="Build Scan ${outcomeText}" />`
     return `<a href="${targetUrl}" rel="nofollow">${badgeHtml}</a>`
 }
