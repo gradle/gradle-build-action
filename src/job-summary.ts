@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import fs from 'fs'
 import path from 'path'
-import {logCachingReport, CacheListener} from './cache-reporting'
+import {writeCachingReport, CacheListener, logCachingReport} from './cache-reporting'
 
 export interface BuildResult {
     get rootProjectName(): string
@@ -23,9 +23,19 @@ export async function writeJobSummary(buildResults: BuildResult[], cacheListener
         writeSummaryTable(buildResults)
     }
 
-    logCachingReport(cacheListener)
+    writeCachingReport(cacheListener)
 
     await core.summary.write()
+}
+
+export async function logJobSummary(buildResults: BuildResult[], cacheListener: CacheListener): Promise<void> {
+    if (buildResults.length === 0) {
+        core.debug('No Gradle build results found. Summary table will not be logged.')
+    } else {
+        logSummaryTable(buildResults)
+    }
+
+    logCachingReport(cacheListener)
 }
 
 export function loadBuildResults(): BuildResult[] {
@@ -91,4 +101,20 @@ function renderBuildScanBadge(outcomeText: string, outcomeColor: string, targetU
     const badgeUrl = `https://img.shields.io/badge/Build%20Scan%E2%84%A2-${outcomeText}-${outcomeColor}?logo=Gradle`
     const badgeHtml = `<img src="${badgeUrl}" alt="Build Scan ${outcomeText}" />`
     return `<a href="${targetUrl}" rel="nofollow">${badgeHtml}</a>`
+}
+
+function logSummaryTable(results: BuildResult[]): void {
+    core.info('============================')
+    core.info('Gradle Builds')
+    core.info('----------------------------')
+    core.info('Root Project | Requested Tasks | Gradle Version | Build Outcome | Build Scan™')
+    core.info('----------------------------')
+    for (const result of results) {
+        core.info(
+            `${result.rootProjectName} | ${result.requestedTasks} | ${result.gradleVersion} | ${
+                result.buildFailed ? 'FAILED' : 'SUCCESS'
+            } | ${result.buildScanFailed ? 'Publish failed' : result.buildScanUri}`
+        )
+    }
+    core.info('============================')
 }

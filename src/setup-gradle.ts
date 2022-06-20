@@ -7,7 +7,7 @@ import * as os from 'os'
 import * as caches from './caches'
 
 import {CacheListener} from './cache-reporting'
-import {BuildResult, loadBuildResults, writeJobSummary} from './job-summary'
+import {BuildResult, loadBuildResults, logJobSummary, writeJobSummary} from './job-summary'
 
 const GRADLE_SETUP_VAR = 'GRADLE_BUILD_ACTION_SETUP_COMPLETED'
 const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
@@ -63,7 +63,9 @@ export async function complete(): Promise<void> {
     await caches.save(gradleUserHome, cacheListener)
 
     if (shouldGenerateJobSummary()) {
-        writeJobSummary(buildResults, cacheListener)
+        await writeJobSummary(buildResults, cacheListener)
+    } else {
+        logJobSummary(buildResults, cacheListener)
     }
 }
 
