@@ -25,6 +25,9 @@ const CACHE_KEY_JOB_INSTANCE_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_INSTANCE'
 const CACHE_KEY_JOB_EXECUTION_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_EXECUTION'
 
 export function isCacheDisabled(): boolean {
+    if (!cache.isFeatureAvailable()) {
+        return true
+    }
     return core.getBooleanInput(CACHE_DISABLED_PARAMETER)
 }
 
