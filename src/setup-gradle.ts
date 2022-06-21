@@ -56,7 +56,7 @@ export async function complete(): Promise<void> {
 
     // Stop gradle daemons
     const shouldStopDaemons = core.getBooleanInput(STOP_DAEMON_PARAMETER)
-    if (shouldStopDaemons){
+    if (shouldStopDaemons) {
         core.info('Stopping all Gradle daemons')
         await stopAllDaemons(getUniqueGradleHomes(buildResults))
     }
