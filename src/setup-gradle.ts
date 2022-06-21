@@ -13,6 +13,7 @@ const GRADLE_SETUP_VAR = 'GRADLE_BUILD_ACTION_SETUP_COMPLETED'
 const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
 const CACHE_LISTENER = 'CACHE_LISTENER'
 const JOB_SUMMARY_ENABLED_PARAMETER = 'generate-job-summary'
+const STOP_DAEMON_PARAMETER = 'stop-daemons'
 
 function shouldGenerateJobSummary(): boolean {
     // Check if Job Summary is supported on this platform
@@ -53,8 +54,12 @@ export async function complete(): Promise<void> {
 
     const buildResults = loadBuildResults()
 
-    core.info('Stopping all Gradle daemons')
-    await stopAllDaemons(getUniqueGradleHomes(buildResults))
+    // Stop gradle daemons
+    const shouldStopDaemons = core.getBooleanInput(STOP_DAEMON_PARAMETER)
+    if (shouldStopDaemons){
+        core.info('Stopping all Gradle daemons')
+        await stopAllDaemons(getUniqueGradleHomes(buildResults))
+    }
 
     core.info('In final post-action step, saving state and writing summary')
     const cacheListener: CacheListener = CacheListener.rehydrate(core.getState(CACHE_LISTENER))

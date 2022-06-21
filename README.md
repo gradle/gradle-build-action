@@ -135,6 +135,44 @@ The initial Action step will perform the Gradle setup.
     arguments: check
 ```
 
+### Stopping gradle daemon
+
+All Gradle daemons will be stopped by default in the post action step.
+It is possible to keep daemons alive between jobs by setting `stop-daemons` to `false`.
+
+Note that this is not recommended and should be used only on non-ephemeral runners.
+
+```yaml
+jobs:
+  test:
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 11
+
+      - name: Setup and execute Gradle 'test' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          stop-daemons: false
+          arguments: test
+          
+  build:
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 11
+
+      - name: Setup and execute Gradle 'build' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          stop-daemons: false
+          arguments: build
+```
+
 ### Gradle command-line arguments
 
 The `arguments` input can be used to pass arbitrary arguments to the `gradle` command line.

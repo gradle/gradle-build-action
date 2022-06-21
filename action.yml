@@ -53,6 +53,11 @@ inputs:
     description: Path to the Gradle executable
     required: false
 
+  stop-daemons:
+    description: When 'true', Gradle daemon will be stopped after the build.
+    required: false
+    default: true
+
   generate-job-summary:
     description: When 'false', no Job Summary will be generated for the Job.
     required: false
