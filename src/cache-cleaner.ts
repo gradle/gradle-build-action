@@ -12,19 +12,26 @@ export class CacheCleaner {
     }
 
     async prepare(): Promise<void> {
+        // Reset the file-access journal so that files appear not to have been used recently
         fs.rmSync(path.resolve(this.gradleUserHome, 'caches/journal-1'), {recursive: true, force: true})
         fs.mkdirSync(path.resolve(this.gradleUserHome, 'caches/journal-1'), {recursive: true})
         fs.writeFileSync(
             path.resolve(this.gradleUserHome, 'caches/journal-1/file-access.properties'),
             'inceptionTimestamp=0'
         )
+
+        // Set the modification time of all files to the past: this timestamp is used when there is no matching entry in the journal
         await this.ageAllFiles()
+
+        // Touch all 'gc' files so that cache cleanup won't run immediately.
         await this.touchAllFiles('gc.properties')
     }
 
     async forceCleanup(): Promise<void> {
+        // Age all 'gc' files so that cache cleanup will run immediately.
         await this.ageAllFiles('gc.properties')
 
+        // Run a dummy Gradle build to trigger cache cleanup
         const cleanupProjectDir = path.resolve(this.tmpDir, 'dummy-cleanup-project')
         fs.mkdirSync(cleanupProjectDir, {recursive: true})
         fs.writeFileSync(
