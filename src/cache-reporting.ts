@@ -1,4 +1,5 @@
 import * as core from '@actions/core'
+import * as cache from '@actions/cache'
 
 /**
  * Collects information on what entries were saved and restored during the action.
@@ -15,6 +16,7 @@ export class CacheListener {
     }
 
     get cacheStatus(): string {
+        if (!cache.isFeatureAvailable()) return 'not available'
         if (this.isCacheDisabled) return 'disabled'
         if (this.isCacheWriteOnly) return 'write-only'
         if (this.isCacheReadOnly) return 'read-only'
@@ -104,7 +106,7 @@ export class CacheEntryListener {
     }
 }
 
-export function logCachingReport(listener: CacheListener): void {
+export function writeCachingReport(listener: CacheListener): void {
     const entries = listener.cacheEntries
 
     core.summary.addRaw(
@@ -123,10 +125,34 @@ export function logCachingReport(listener: CacheListener): void {
 
     core.summary.addHeading('Cache Entry Details', 5)
 
-    const entryDetails = listener.cacheEntries
+    const entryDetails = renderEntryDetails(listener)
+    core.summary.addRaw(`<pre>
+${entryDetails}
+</pre>
+</details>
+`)
+}
+
+export function logCachingReport(listener: CacheListener): void {
+    const entries = listener.cacheEntries
+
+    core.startGroup(`Caching for gradle-build-action was ${listener.cacheStatus} - expand for details`)
+
+    core.info(
+        `Entries Restored: ${getCount(entries, e => e.restoredSize)} (${getSize(entries, e => e.restoredSize)} Mb)`
+    )
+    core.info(`Entries Saved   : ${getCount(entries, e => e.savedSize)} (${getSize(entries, e => e.savedSize)} Mb)`)
+
+    core.info(`Cache Entry Details`)
+    core.info(renderEntryDetails(listener))
+
+    core.endGroup()
+}
+
+function renderEntryDetails(listener: CacheListener): string {
+    return listener.cacheEntries
         .map(
-            entry =>
-                `Entry: ${entry.entryName}
+            entry => `Entry: ${entry.entryName}
     Requested Key : ${entry.requestedKey ?? ''}
     Restored  Key : ${entry.restoredKey ?? ''}
               Size: ${formatSize(entry.restoredSize)}
@@ -137,12 +163,6 @@ export function logCachingReport(listener: CacheListener): void {
 `
         )
         .join('---\n')
-
-    core.summary.addRaw(`<pre>
-${entryDetails}
-</pre>
-</details>
-`)
 }
 
 function getRestoredMessage(entry: CacheEntryListener, isCacheWriteOnly: boolean): string {
