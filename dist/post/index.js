@@ -64456,8 +64456,9 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.logCachingReport = exports.CacheEntryListener = exports.CacheListener = void 0;
+exports.logCachingReport = exports.writeCachingReport = exports.CacheEntryListener = exports.CacheListener = void 0;
 const core = __importStar(__nccwpck_require__(2186));
+const cache = __importStar(__nccwpck_require__(7799));
 class CacheListener {
     constructor() {
         this.cacheEntries = [];
@@ -64469,6 +64470,8 @@ class CacheListener {
         return this.cacheEntries.every(x => !x.wasRequestedButNotRestored());
     }
     get cacheStatus() {
+        if (!cache.isFeatureAvailable())
+            return 'not available';
         if (this.isCacheDisabled)
             return 'disabled';
         if (this.isCacheWriteOnly)
@@ -64537,7 +64540,7 @@ class CacheEntryListener {
     }
 }
 exports.CacheEntryListener = CacheEntryListener;
-function logCachingReport(listener) {
+function writeCachingReport(listener) {
     const entries = listener.cacheEntries;
     core.summary.addRaw(`\n<details><summary><h4>Caching for gradle-build-action was ${listener.cacheStatus} - expand for details</h4></summary>\n`);
     core.summary.addTable([
@@ -64550,7 +64553,26 @@ function logCachingReport(listener) {
         ['Entries Saved', `${getCount(entries, e => e.savedSize)}`, `${getSize(entries, e => e.savedSize)}`]
     ]);
     core.summary.addHeading('Cache Entry Details', 5);
-    const entryDetails = listener.cacheEntries
+    const entryDetails = renderEntryDetails(listener);
+    core.summary.addRaw(`<pre>
+${entryDetails}
+</pre>
+</details>
+`);
+}
+exports.writeCachingReport = writeCachingReport;
+function logCachingReport(listener) {
+    const entries = listener.cacheEntries;
+    core.startGroup(`Caching for gradle-build-action was ${listener.cacheStatus} - expand for details`);
+    core.info(`Entries Restored: ${getCount(entries, e => e.restoredSize)} (${getSize(entries, e => e.restoredSize)} Mb)`);
+    core.info(`Entries Saved   : ${getCount(entries, e => e.savedSize)} (${getSize(entries, e => e.savedSize)} Mb)`);
+    core.info(`Cache Entry Details`);
+    core.info(renderEntryDetails(listener));
+    core.endGroup();
+}
+exports.logCachingReport = logCachingReport;
+function renderEntryDetails(listener) {
+    return listener.cacheEntries
         .map(entry => {
         var _a, _b, _c;
         return `Entry: ${entry.entryName}
@@ -64564,13 +64586,7 @@ function logCachingReport(listener) {
 `;
     })
         .join('---\n');
-    core.summary.addRaw(`<pre>
-${entryDetails}
-</pre>
-</details>
-`);
 }
-exports.logCachingReport = logCachingReport;
 function getRestoredMessage(entry, isCacheWriteOnly) {
     if (isCacheWriteOnly) {
         return '(Entry not restored: cache is write-only)';
@@ -64674,6 +64690,9 @@ const CACHE_KEY_JOB_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB';
 const CACHE_KEY_JOB_INSTANCE_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_INSTANCE';
 const CACHE_KEY_JOB_EXECUTION_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_EXECUTION';
 function isCacheDisabled() {
+    if (!cache.isFeatureAvailable()) {
+        return true;
+    }
     return core.getBooleanInput(CACHE_DISABLED_PARAMETER);
 }
 exports.isCacheDisabled = isCacheDisabled;
@@ -64993,7 +65012,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.loadBuildResults = exports.writeJobSummary = void 0;
+exports.loadBuildResults = exports.logJobSummary = exports.writeJobSummary = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const path_1 = __importDefault(__nccwpck_require__(1017));
@@ -65007,11 +65026,23 @@ function writeJobSummary(buildResults, cacheListener) {
         else {
             writeSummaryTable(buildResults);
         }
-        (0, cache_reporting_1.logCachingReport)(cacheListener);
+        (0, cache_reporting_1.writeCachingReport)(cacheListener);
         yield core.summary.write();
     });
 }
 exports.writeJobSummary = writeJobSummary;
+function logJobSummary(buildResults, cacheListener) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (buildResults.length === 0) {
+            core.debug('No Gradle build results found. Summary table will not be logged.');
+        }
+        else {
+            logSummaryTable(buildResults);
+        }
+        (0, cache_reporting_1.logCachingReport)(cacheListener);
+    });
+}
+exports.logJobSummary = logJobSummary;
 function loadBuildResults() {
     const buildResultsDir = path_1.default.resolve(process.env['RUNNER_TEMP'], '.build-results');
     if (!fs_1.default.existsSync(buildResultsDir)) {
@@ -65064,6 +65095,17 @@ function renderBuildScanBadge(outcomeText, outcomeColor, targetUrl) {
     const badgeUrl = `https://img.shields.io/badge/Build%20Scan%E2%84%A2-${outcomeText}-${outcomeColor}?logo=Gradle`;
     const badgeHtml = `<img src="${badgeUrl}" alt="Build Scan ${outcomeText}" />`;
     return `<a href="${targetUrl}" rel="nofollow">${badgeHtml}</a>`;
+}
+function logSummaryTable(results) {
+    core.info('============================');
+    core.info('Gradle Builds');
+    core.info('----------------------------');
+    core.info('Root Project | Requested Tasks | Gradle Version | Build Outcome | Build Scan™');
+    core.info('----------------------------');
+    for (const result of results) {
+        core.info(`${result.rootProjectName} | ${result.requestedTasks} | ${result.gradleVersion} | ${result.buildFailed ? 'FAILED' : 'SUCCESS'} | ${result.buildScanFailed ? 'Publish failed' : result.buildScanUri}`);
+    }
+    core.info('============================');
 }
 
 
@@ -65221,7 +65263,10 @@ function complete() {
         const gradleUserHome = core.getState(GRADLE_USER_HOME);
         yield caches.save(gradleUserHome, cacheListener);
         if (shouldGenerateJobSummary()) {
-            (0, job_summary_1.writeJobSummary)(buildResults, cacheListener);
+            yield (0, job_summary_1.writeJobSummary)(buildResults, cacheListener);
+        }
+        else {
+            (0, job_summary_1.logJobSummary)(buildResults, cacheListener);
         }
     });
 }
