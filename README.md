@@ -258,7 +258,7 @@ File pattern support is documented at https://docs.github.com/en/actions/learn-g
 
 Gradle User Home state will be restored from the cache during the first `gradle-build-action` step for any workflow job. 
 This state will be saved back to the cache at the end of the job, after all Gradle executions have completed.
-A report of all cache entries restored and saved is printed to the action log when saving the cache entries. 
+A report of all cache entries restored and saved is printed to the Job Summary when saving the cache entries. 
 This report can provide valuable insignt into how much cache space is being used.
 
 It is possible to enable additional debug logging for cache operations. You do via the `GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED` environment variable:
@@ -361,3 +361,9 @@ jobs:
             body: '❌ ${{ github.workflow }} failed: ${{ steps.gradle.outputs.build-scan-url }}'
           })
 ```
+
+## Support for GitHub Enterprise Server (GHES)
+
+You can use the `gradle-build-action` on GitHub Enterprise Server, with some important limitations:
+- Support for GitHub Actions cache was introduced in GHES v3.5. Workflows using `gradle-build-action` on an earlier version of GHES will not benefit from save/restore of Gradle User Home.
+- Support for GitHub Actions Job Summary is not yet available in any version of GHES. Instead of producing a Job Summary, the build-results summary and caching report will be written to the workflow log, as part of the post-action step.
