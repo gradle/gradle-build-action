@@ -8,12 +8,13 @@ import * as caches from './caches'
 
 import {CacheListener} from './cache-reporting'
 import {BuildResult, loadBuildResults, logJobSummary, writeJobSummary} from './job-summary'
+import {shouldSaveCaches} from "./caches";
+import {isCacheReadOnly} from "./cache-utils";
 
 const GRADLE_SETUP_VAR = 'GRADLE_BUILD_ACTION_SETUP_COMPLETED'
 const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
 const CACHE_LISTENER = 'CACHE_LISTENER'
 const JOB_SUMMARY_ENABLED_PARAMETER = 'generate-job-summary'
-const STOP_DAEMON_PARAMETER = 'stop-daemons'
 
 function shouldGenerateJobSummary(): boolean {
     // Check if Job Summary is supported on this platform
@@ -54,10 +55,9 @@ export async function complete(): Promise<void> {
 
     const buildResults = loadBuildResults()
 
-    // Stop gradle daemons
-    const shouldStopDaemons = core.getBooleanInput(STOP_DAEMON_PARAMETER)
-    if (shouldStopDaemons) {
-        core.info('Stopping all Gradle daemons')
+    // Stop gradle daemons only if the state of GRADLE_HOME is going to be cached
+    if (shouldSaveCaches() && !isCacheReadOnly()) {
+        core.info('Cache is going to be saved - Stopping all Gradle daemons')
         await stopAllDaemons(getUniqueGradleHomes(buildResults))
     }
 

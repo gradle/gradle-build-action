@@ -61,7 +61,7 @@ export async function save(gradleUserHome: string, cacheListener: CacheListener)
     })
 }
 
-function shouldSaveCaches(): boolean {
+export function shouldSaveCaches(): boolean {
     if (isCacheDisabled()) {
         core.info('Cache is disabled: will not save state for later builds.')
         return false
