@@ -59,8 +59,7 @@ export async function complete(): Promise<void> {
     const cacheListener: CacheListener = CacheListener.rehydrate(core.getState(CACHE_LISTENER))
     const daemonController = new DaemonController(buildResults)
 
-    await daemonController.stopAllDaemons()
-    await caches.save(gradleUserHome, cacheListener)
+    await caches.save(gradleUserHome, cacheListener, daemonController)
 
     if (shouldGenerateJobSummary()) {
         await writeJobSummary(buildResults, cacheListener)

@@ -13,7 +13,7 @@ export class DaemonController {
     }
 
     async stopAllDaemons(): Promise<void> {
-        core.info('Stopping all Gradle daemons')
+        core.info('Stopping all Gradle daemons before saving Gradle User Home state')
 
         const executions: Promise<number>[] = []
         const args = ['--stop']

@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 import {isCacheDisabled, isCacheReadOnly, isCacheWriteOnly} from './cache-utils'
 import {CacheListener} from './cache-reporting'
+import {DaemonController} from './daemon-controller'
 import {GradleStateCache} from './cache-base'
 
 const CACHE_RESTORED_VAR = 'GRADLE_BUILD_ACTION_CACHE_RESTORED'
@@ -45,7 +46,11 @@ export async function restore(gradleUserHome: string, cacheListener: CacheListen
     })
 }
 
-export async function save(gradleUserHome: string, cacheListener: CacheListener): Promise<void> {
+export async function save(
+    gradleUserHome: string,
+    cacheListener: CacheListener,
+    daemonController: DaemonController
+): Promise<void> {
     if (isCacheDisabled()) {
         core.info('Cache is disabled: will not save state for later builds.')
         return
@@ -61,6 +66,8 @@ export async function save(gradleUserHome: string, cacheListener: CacheListener)
         cacheListener.cacheReadOnly = true
         return
     }
+
+    await daemonController.stopAllDaemons()
 
     await core.group('Caching Gradle state', async () => {
         return new GradleStateCache(gradleUserHome).save(cacheListener)
