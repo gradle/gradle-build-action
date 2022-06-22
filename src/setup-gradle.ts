@@ -1,13 +1,14 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import {SUMMARY_ENV_VAR} from '@actions/core/lib/summary'
-import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 import * as caches from './caches'
 
+import {logJobSummary, writeJobSummary} from './job-summary'
+import {loadBuildResults} from './build-results'
 import {CacheListener} from './cache-reporting'
-import {BuildResult, loadBuildResults, logJobSummary, writeJobSummary} from './job-summary'
+import {DaemonController} from './daemon-controller'
 
 const GRADLE_SETUP_VAR = 'GRADLE_BUILD_ACTION_SETUP_COMPLETED'
 const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
@@ -50,16 +51,15 @@ export async function complete(): Promise<void> {
         core.info('Gradle setup post-action only performed for first gradle-build-action step in workflow.')
         return
     }
+    core.info('In final post-action step, saving state and writing summary')
 
     const buildResults = loadBuildResults()
 
-    core.info('Stopping all Gradle daemons')
-    await stopAllDaemons(getUniqueGradleHomes(buildResults))
-
-    core.info('In final post-action step, saving state and writing summary')
-    const cacheListener: CacheListener = CacheListener.rehydrate(core.getState(CACHE_LISTENER))
-
     const gradleUserHome = core.getState(GRADLE_USER_HOME)
+    const cacheListener: CacheListener = CacheListener.rehydrate(core.getState(CACHE_LISTENER))
+    const daemonController = new DaemonController(buildResults)
+
+    await daemonController.stopAllDaemons()
     await caches.save(gradleUserHome, cacheListener)
 
     if (shouldGenerateJobSummary()) {
@@ -93,29 +93,4 @@ async function determineUserHome(): Promise<string> {
     const userHome = found[1]
     core.debug(`Determined user.home from java -version output: '${userHome}'`)
     return userHome
-}
-
-function getUniqueGradleHomes(buildResults: BuildResult[]): string[] {
-    const gradleHomes = buildResults.map(buildResult => buildResult.gradleHomeDir)
-    return Array.from(new Set(gradleHomes))
-}
-
-async function stopAllDaemons(gradleHomes: string[]): Promise<void> {
-    const executions: Promise<number>[] = []
-    const args = ['--stop']
-
-    for (const gradleHome of gradleHomes) {
-        const executable = path.resolve(gradleHome, 'bin', 'gradle')
-        if (!fs.existsSync(executable)) {
-            core.warning(`Gradle executable not found at ${executable}. Could not stop Gradle daemons.`)
-            continue
-        }
-        core.info(`Stopping Gradle daemons in ${gradleHome}`)
-        executions.push(
-            exec.exec(executable, args, {
-                ignoreReturnCode: true
-            })
-        )
-    }
-    await Promise.all(executions)
 }

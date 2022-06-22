@@ -14,7 +14,7 @@ import {
     saveCache,
     tryDelete
 } from './cache-utils'
-import {loadBuildResults} from './job-summary'
+import {loadBuildResults} from './build-results'
 
 const SKIP_RESTORE_VAR = 'GRADLE_BUILD_ACTION_SKIP_RESTORE'
 

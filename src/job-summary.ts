@@ -1,18 +1,6 @@
 import * as core from '@actions/core'
-import fs from 'fs'
-import path from 'path'
+import {BuildResult} from './build-results'
 import {writeCachingReport, CacheListener, logCachingReport} from './cache-reporting'
-
-export interface BuildResult {
-    get rootProjectName(): string
-    get rootProjectDir(): string
-    get requestedTasks(): string
-    get gradleVersion(): string
-    get gradleHomeDir(): string
-    get buildFailed(): boolean
-    get buildScanUri(): string
-    get buildScanFailed(): boolean
-}
 
 export async function writeJobSummary(buildResults: BuildResult[], cacheListener: CacheListener): Promise<void> {
     core.info('Writing job summary')
@@ -36,20 +24,6 @@ export async function logJobSummary(buildResults: BuildResult[], cacheListener: 
     }
 
     logCachingReport(cacheListener)
-}
-
-export function loadBuildResults(): BuildResult[] {
-    const buildResultsDir = path.resolve(process.env['RUNNER_TEMP']!, '.build-results')
-    if (!fs.existsSync(buildResultsDir)) {
-        return []
-    }
-
-    return fs.readdirSync(buildResultsDir).map(file => {
-        // Every file in the .build-results dir should be a BuildResults JSON
-        const filePath = path.join(buildResultsDir, file)
-        const content = fs.readFileSync(filePath, 'utf8')
-        return JSON.parse(content) as BuildResult
-    })
 }
 
 function writeSummaryTable(results: BuildResult[]): void {
