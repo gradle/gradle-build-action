@@ -205,7 +205,6 @@ Caching is enabled by default. You can disable caching for the action as follows
 ```yaml
 cache-disabled: true
 ```
-
 ### Cache keys
 
 Distributions downloaded to satisfy a `gradle-version` parameter are stored outside of Gradle User Home and cached separately. The cache key is unique to the downloaded distribution and will not change over time.
@@ -233,6 +232,13 @@ You can configure read-only caching for the `gradle-build-action` as follows:
 # Builds on other branches will only read existing entries from the cache.
 cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/release' }}
 ```
+
+### Stopping the Gradle daemon
+
+By default, the action will stop all running Gradle daemons in the post-action step, prior to saving the Gradle User Home state. 
+This allows for any Gradle User Home cleanup to occur, and avoid file-locking issues on Windows.
+
+If caching is unavailable or the cache is in read-only mode, the daemon will not be stopped and will continue running after the job is completed.
 
 ### Gradle User Home cache tuning
 

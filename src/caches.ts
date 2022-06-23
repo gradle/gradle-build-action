@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 import {isCacheDisabled, isCacheReadOnly, isCacheWriteOnly} from './cache-utils'
 import {CacheListener} from './cache-reporting'
+import {DaemonController} from './daemon-controller'
 import {GradleStateCache} from './cache-base'
 
 const CACHE_RESTORED_VAR = 'GRADLE_BUILD_ACTION_CACHE_RESTORED'
@@ -19,7 +20,7 @@ export async function restore(gradleUserHome: string, cacheListener: CacheListen
         core.info('Cache is disabled: will not restore state from previous builds.')
         // Initialize the Gradle User Home even when caching is disabled.
         gradleStateCache.init()
-        cacheListener.isCacheDisabled = true
+        cacheListener.cacheDisabled = true
         return
     }
 
@@ -36,7 +37,7 @@ export async function restore(gradleUserHome: string, cacheListener: CacheListen
 
     if (isCacheWriteOnly()) {
         core.info('Cache is write-only: will not restore from cache.')
-        cacheListener.isCacheWriteOnly = true
+        cacheListener.cacheWriteOnly = true
         return
     }
 
@@ -45,32 +46,30 @@ export async function restore(gradleUserHome: string, cacheListener: CacheListen
     })
 }
 
-export async function save(gradleUserHome: string, cacheListener: CacheListener): Promise<void> {
-    if (!shouldSaveCaches()) {
+export async function save(
+    gradleUserHome: string,
+    cacheListener: CacheListener,
+    daemonController: DaemonController
+): Promise<void> {
+    if (isCacheDisabled()) {
+        core.info('Cache is disabled: will not save state for later builds.')
+        return
+    }
+
+    if (!core.getState(CACHE_RESTORED_VAR)) {
+        core.info('Cache will not be saved: not restored in main action step.')
         return
     }
 
     if (isCacheReadOnly()) {
         core.info('Cache is read-only: will not save state for use in subsequent builds.')
-        cacheListener.isCacheReadOnly = true
+        cacheListener.cacheReadOnly = true
         return
     }
+
+    await daemonController.stopAllDaemons()
 
     await core.group('Caching Gradle state', async () => {
         return new GradleStateCache(gradleUserHome).save(cacheListener)
     })
-}
-
-function shouldSaveCaches(): boolean {
-    if (isCacheDisabled()) {
-        core.info('Cache is disabled: will not save state for later builds.')
-        return false
-    }
-
-    if (!core.getState(CACHE_RESTORED_VAR)) {
-        core.info('Cache will not be saved: not restored in main action step.')
-        return false
-    }
-
-    return true
 }

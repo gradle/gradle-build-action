@@ -7,9 +7,9 @@ import * as cache from '@actions/cache'
  */
 export class CacheListener {
     cacheEntries: CacheEntryListener[] = []
-    isCacheReadOnly = false
-    isCacheWriteOnly = false
-    isCacheDisabled = false
+    cacheReadOnly = false
+    cacheWriteOnly = false
+    cacheDisabled = false
 
     get fullyRestored(): boolean {
         return this.cacheEntries.every(x => !x.wasRequestedButNotRestored())
@@ -17,9 +17,9 @@ export class CacheListener {
 
     get cacheStatus(): string {
         if (!cache.isFeatureAvailable()) return 'not available'
-        if (this.isCacheDisabled) return 'disabled'
-        if (this.isCacheWriteOnly) return 'write-only'
-        if (this.isCacheReadOnly) return 'read-only'
+        if (this.cacheDisabled) return 'disabled'
+        if (this.cacheWriteOnly) return 'write-only'
+        if (this.cacheReadOnly) return 'read-only'
         return 'enabled'
     }
 
@@ -156,17 +156,17 @@ function renderEntryDetails(listener: CacheListener): string {
     Requested Key : ${entry.requestedKey ?? ''}
     Restored  Key : ${entry.restoredKey ?? ''}
               Size: ${formatSize(entry.restoredSize)}
-              ${getRestoredMessage(entry, listener.isCacheWriteOnly)}
+              ${getRestoredMessage(entry, listener.cacheWriteOnly)}
     Saved     Key : ${entry.savedKey ?? ''}
               Size: ${formatSize(entry.savedSize)}
-              ${getSavedMessage(entry, listener.isCacheReadOnly)}
+              ${getSavedMessage(entry, listener.cacheReadOnly)}
 `
         )
         .join('---\n')
 }
 
-function getRestoredMessage(entry: CacheEntryListener, isCacheWriteOnly: boolean): string {
-    if (isCacheWriteOnly) {
+function getRestoredMessage(entry: CacheEntryListener, cacheWriteOnly: boolean): string {
+    if (cacheWriteOnly) {
         return '(Entry not restored: cache is write-only)'
     }
     if (entry.restoredKey === undefined) {
@@ -178,12 +178,12 @@ function getRestoredMessage(entry: CacheEntryListener, isCacheWriteOnly: boolean
     return '(Entry restored: partial match found)'
 }
 
-function getSavedMessage(entry: CacheEntryListener, isCacheReadOnly: boolean): string {
+function getSavedMessage(entry: CacheEntryListener, cacheReadOnly: boolean): string {
     if (entry.unsaved) {
         return `(Entry not saved: ${entry.unsaved})`
     }
     if (entry.savedKey === undefined) {
-        if (isCacheReadOnly) {
+        if (cacheReadOnly) {
             return '(Entry not saved: cache is read-only)'
         }
         return '(Entry not saved: reason unknown)'
