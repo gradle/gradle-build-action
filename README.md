@@ -278,7 +278,7 @@ Note that this setting will also prevent certain cache operations from running i
 
 ### Optimizing cache effectiveness
 
-Cache storage space for GitHub actions is limited, and writing new cache entries can trigger the deletion of exising entries.
+Cache storage space for GitHub actions is limited, and writing new cache entries can trigger the deletion of existing entries.
 Eviction of shared cache entries can reduce cache effectiveness, slowing down your `gradle-build-action` steps.
 
 There are a number of actions you can take if your cache use is less effective due to entry eviction.
