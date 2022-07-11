@@ -285,10 +285,11 @@ There are a number of actions you can take if your cache use is less effective d
 
 #### Select branches that should write to the cache
 
-GitHub cache entries are not shared between builds on different branches. This means that identical cache entries will be stored separately for different branches.
-An exception to this is that cache entries for the default (`master`/`main`) branch can be read by actions invoked for other branches.
+GitHub cache entries are not shared between builds on different branches. 
+This means that each PR branch will have it's own Gradle User Home cache, and will not benefit from cache entries written by other PR branches.
+An exception to this is that cache entries written in parent and upstream branches are visible to child branches, and cache entries for the default (`master`/`main`) branch can be read by actions invoked for any other branch.
 
-By default, the `gradle-build-action` will only _write_ to the cache for builds run on the default branch. 
+By default, the `gradle-build-action` will only _write_ to the cache for builds run on the default (`master`/`main`) branch. 
 Jobs run on other branches will only read from the cache. In most cases, this is the desired behaviour, 
 because Jobs run against other branches will benefit from the cache Gradle User Home from `main`, 
 without writing private cache entries that could lead to evicting shared entries.
