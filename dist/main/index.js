@@ -90,18 +90,19 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
             checkKey(key);
         }
         const compressionMethod = yield utils.getCompressionMethod();
-        // path are needed to compute version
-        const cacheEntry = yield cacheHttpClient.getCacheEntry(keys, paths, {
-            compressionMethod
-        });
-        if (!(cacheEntry === null || cacheEntry === void 0 ? void 0 : cacheEntry.archiveLocation)) {
-            // Cache not found
-            return undefined;
-        }
-        const archivePath = path.join(yield utils.createTempDirectory(), utils.getCacheFileName(compressionMethod));
-        core.debug(`Archive Path: ${archivePath}`);
-        const restoredEntry = new CacheEntry(cacheEntry.cacheKey);
+        let archivePath = '';
         try {
+            // path are needed to compute version
+            const cacheEntry = yield cacheHttpClient.getCacheEntry(keys, paths, {
+                compressionMethod
+            });
+            if (!(cacheEntry === null || cacheEntry === void 0 ? void 0 : cacheEntry.archiveLocation)) {
+                // Cache not found
+                return undefined;
+            }
+            archivePath = path.join(yield utils.createTempDirectory(), utils.getCacheFileName(compressionMethod));
+            core.debug(`Archive Path: ${archivePath}`);
+            const restoredEntry = new CacheEntry(cacheEntry.cacheKey);
             // Download the cache from the cache entry
             yield cacheHttpClient.downloadCache(cacheEntry.archiveLocation, archivePath, options);
             if (core.isDebug()) {
@@ -112,6 +113,17 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
             core.info(`Cache Size: ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B)`);
             yield tar_1.extractTar(archivePath, compressionMethod);
             core.info('Cache restored successfully');
+            return restoredEntry;
+        }
+        catch (error) {
+            const typedError = error;
+            if (typedError.name === ValidationError.name) {
+                throw error;
+            }
+            else {
+                // Supress all non-validation cache related errors because caching should be optional
+                core.warning(`Failed to restore: ${error.message}`);
+            }
         }
         finally {
             // Try to delete the archive to save space
@@ -122,7 +134,7 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
                 core.debug(`Failed to delete archive: ${error}`);
             }
         }
-        return restoredEntry;
+        return undefined;
     });
 }
 exports.restoreCache = restoreCache;
@@ -140,7 +152,7 @@ function saveCache(paths, key, options) {
         checkPaths(paths);
         checkKey(key);
         const compressionMethod = yield utils.getCompressionMethod();
-        let cacheId = null;
+        let cacheId = -1;
         const cachePaths = yield utils.resolvePaths(paths);
         core.debug('Cache Paths:');
         core.debug(`${JSON.stringify(cachePaths)}`);
@@ -180,6 +192,18 @@ function saveCache(paths, key, options) {
             }
             core.debug(`Saving Cache (ID: ${cacheId})`);
             yield cacheHttpClient.saveCache(cacheId, archivePath, options);
+        }
+        catch (error) {
+            const typedError = error;
+            if (typedError.name === ValidationError.name) {
+                throw error;
+            }
+            else if (typedError.name === ReserveCacheError.name) {
+                core.info(`Failed to save: ${typedError.message}`);
+            }
+            else {
+                core.warning(`Failed to save: ${typedError.message}`);
+            }
         }
         finally {
             // Try to delete the archive to save space
