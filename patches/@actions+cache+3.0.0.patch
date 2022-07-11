@@ -26,18 +26,17 @@ index 16b20f7..aea77ba 100644
 +    constructor(key: string, size?: number);
 +}
 diff --git a/node_modules/@actions/cache/lib/cache.js b/node_modules/@actions/cache/lib/cache.js
-index 2dd645a..a392352 100644
+index 4dc5e88..2141dd5 100644
 --- a/node_modules/@actions/cache/lib/cache.js
 +++ b/node_modules/@actions/cache/lib/cache.js
-@@ -93,6 +93,7 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
-         }
-         const archivePath = path.join(yield utils.createTempDirectory(), utils.getCacheFileName(compressionMethod));
-         core.debug(`Archive Path: ${archivePath}`);
-+        const restoredEntry = new CacheEntry(cacheEntry.cacheKey);
-         try {
+@@ -95,16 +95,18 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
+             }
+             archivePath = path.join(yield utils.createTempDirectory(), utils.getCacheFileName(compressionMethod));
+             core.debug(`Archive Path: ${archivePath}`);
++            const restoredEntry = new CacheEntry(cacheEntry.cacheKey);
              // Download the cache from the cache entry
              yield cacheHttpClient.downloadCache(cacheEntry.archiveLocation, archivePath, options);
-@@ -100,6 +101,7 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
+             if (core.isDebug()) {
                  yield tar_1.listTar(archivePath, compressionMethod);
              }
              const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath);
@@ -45,16 +44,12 @@ index 2dd645a..a392352 100644
              core.info(`Cache Size: ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B)`);
              yield tar_1.extractTar(archivePath, compressionMethod);
              core.info('Cache restored successfully');
-@@ -113,7 +115,7 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
-                 core.debug(`Failed to delete archive: ${error}`);
-             }
+-            return cacheEntry.cacheKey;
++            return restoredEntry;
          }
--        return cacheEntry.cacheKey;
-+        return restoredEntry;
-     });
- }
- exports.restoreCache = restoreCache;
-@@ -141,6 +143,7 @@ function saveCache(paths, key, options) {
+         catch (error) {
+             const typedError = error;
+@@ -153,6 +155,7 @@ function saveCache(paths, key, options) {
          const archiveFolder = yield utils.createTempDirectory();
          const archivePath = path.join(archiveFolder, utils.getCacheFileName(compressionMethod));
          core.debug(`Archive Path: ${archivePath}`);
@@ -62,7 +57,7 @@ index 2dd645a..a392352 100644
          try {
              yield tar_1.createTar(archiveFolder, cachePaths, compressionMethod);
              if (core.isDebug()) {
-@@ -148,6 +151,7 @@ function saveCache(paths, key, options) {
+@@ -160,6 +163,7 @@ function saveCache(paths, key, options) {
              }
              const fileSizeLimit = 10 * 1024 * 1024 * 1024; // 10GB per repo limit
              const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath);
@@ -70,7 +65,7 @@ index 2dd645a..a392352 100644
              core.debug(`File Size: ${archiveFileSize}`);
              // For GHES, this check will take place in ReserveCache API with enterprise file size limit
              if (archiveFileSize > fileSizeLimit && !utils.isGhes()) {
-@@ -179,8 +183,15 @@ function saveCache(paths, key, options) {
+@@ -203,8 +207,15 @@ function saveCache(paths, key, options) {
                  core.debug(`Failed to delete archive: ${error}`);
              }
          }
