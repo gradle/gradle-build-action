@@ -106,9 +106,15 @@ class BuildResults {
     }
 
     def writeToResultsFile(boolean overwrite) {
-        def buildResultsDir = new File(System.getenv("RUNNER_TEMP"), ".build-results")
+        def runnerTempDir = System.getenv("RUNNER_TEMP")
+        def githubActionStep = System.getenv("GITHUB_ACTION")
+        if (!runnerTempDir || !githubActionStep) {
+            return
+        }
+        
+        def buildResultsDir = new File(runnerTempDir, ".build-results")
         buildResultsDir.mkdirs()
-        def buildResultsFile = new File(buildResultsDir, System.getenv("GITHUB_ACTION") + invocationId + ".json")
+        def buildResultsFile = new File(buildResultsDir, githubActionStep + invocationId + ".json")
 
         // Overwrite any contents written by buildFinished or build service, since this result is a superset.
         if (buildResultsFile.exists()) {

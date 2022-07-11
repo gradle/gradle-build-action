@@ -45,9 +45,15 @@ abstract class BuildResultsRecorder implements BuildService<BuildResultsRecorder
             buildScanFailed: false
         ]
 
-        def buildResultsDir = new File(System.getenv("RUNNER_TEMP"), ".build-results")
+        def runnerTempDir = System.getenv("RUNNER_TEMP")
+        def githubActionStep = System.getenv("GITHUB_ACTION")
+        if (!runnerTempDir || !githubActionStep) {
+            return
+        }
+        
+        def buildResultsDir = new File(runnerTempDir, ".build-results")
         buildResultsDir.mkdirs()
-        def buildResultsFile = new File(buildResultsDir, System.getenv("GITHUB_ACTION") + getParameters().getInvocationId().get() + ".json")
+        def buildResultsFile = new File(buildResultsDir, githubActionStep + getParameters().getInvocationId().get() + ".json")
         buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
     }
 }

@@ -134,6 +134,20 @@ class TestBuildResultRecorder extends BaseInitScriptTest {
         testGradleVersion << ALL_VERSIONS
     }
 
+    def "produces no build results file when GitHub env vars not set with #testGradleVersion"() {
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
+
+        when:
+        run(['help'], initScript, testGradleVersion.gradleVersion, [], [RUNNER_TEMP: '', GITHUB_ACTION: ''])
+
+        then:
+        def buildResultsDir = new File(testProjectDir, '.build-results')
+        assert !buildResultsDir.exists()
+
+        where:
+        testGradleVersion << ALL_VERSIONS
+    }
+
     void assertResults(String task, TestGradleVersion testGradleVersion, boolean hasFailure, boolean hasBuildScan, boolean scanUploadFailed = false) {
         def results = new JsonSlurper().parse(buildResultFile)
         assert results['rootProjectName'] == ROOT_PROJECT_NAME

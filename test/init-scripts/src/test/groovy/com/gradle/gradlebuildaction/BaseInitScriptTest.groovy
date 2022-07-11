@@ -200,19 +200,16 @@ task expectFailure {
         File initScriptsDir = new File(testProjectDir, "initScripts")
         args << '-I' << new File(initScriptsDir, initScript).absolutePath
 
-        envVars['RUNNER_TEMP'] = testProjectDir.absolutePath
-        envVars['GITHUB_ACTION'] = 'github-step-id'
+        envVars.putIfAbsent('RUNNER_TEMP', testProjectDir.absolutePath)
+        envVars.putIfAbsent('GITHUB_ACTION', 'github-step-id')
 
         def runner = ((DefaultGradleRunner) GradleRunner.create())
             .withJvmArguments(jvmArgs)
             .withGradleVersion(gradleVersion.version)
             .withProjectDir(testProjectDir)
             .withArguments(args)
+            .withEnvironment(envVars)
             .forwardOutput()
-
-        if (envVars) {
-            runner.withEnvironment(envVars)
-        }
 
         runner
     }
