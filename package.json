@@ -40,7 +40,7 @@
     "@types/unzipper": "0.10.5",
     "@typescript-eslint/parser": "5.30.6",
     "@vercel/ncc": "0.34.0",
-    "eslint": "8.19.0",
+    "eslint": "8.20.0",
     "eslint-plugin-github": "4.3.6",
     "eslint-plugin-jest": "26.5.3",
     "jest": "28.1.2",
