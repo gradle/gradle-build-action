@@ -371,6 +371,8 @@ jobs:
 
 ## Support for GitHub Enterprise Server (GHES)
 
-You can use the `gradle-build-action` on GitHub Enterprise Server, with some important limitations:
-- Support for GitHub Actions cache was introduced in GHES v3.5. Workflows using `gradle-build-action` on an earlier version of GHES will not benefit from save/restore of Gradle User Home.
+You can use the `gradle-build-action` on GitHub Enterprise Server, and benefit from the improved integration with Gradle. Depending on the version of GHES you are running, certain features may be limited:
+- Build scan links are captured and displayed in the GitHub Actions UI
+- Easily run your build with different versions of Gradle
+- Save/restore of Gradle User Home (requires GHES v3.5+ : GitHub Actions cache was introduced in GHES 3.5)
 - Support for GitHub Actions Job Summary is not yet available in any version of GHES. Instead of producing a Job Summary, the build-results summary and caching report will be written to the workflow log, as part of the post-action step.
