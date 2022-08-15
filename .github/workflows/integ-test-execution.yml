@@ -51,12 +51,12 @@ jobs:
       with:
         gradle-executable: .github/workflow-samples/groovy-dsl/gradlew${{ matrix.script-suffix }}
         build-root-directory: .github/workflow-samples/no-wrapper
-        arguments: help -DgradleVersionCheck=7.5
+        arguments: help
 
   gradle-versions:
     strategy:
       matrix:
-        gradle: [7.3, 6.9, 5.6.4, 4.10.3, 3.5.1]
+        gradle: [7.5.1, 6.9.2, 5.6.4, 4.10.3, 3.5.1]
         os: ${{fromJSON(inputs.runner-os)}}
         include:
           - gradle: 5.6.4
