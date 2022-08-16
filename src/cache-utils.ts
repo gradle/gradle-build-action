@@ -15,6 +15,7 @@ const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
 const CACHE_DISABLED_PARAMETER = 'cache-disabled'
 const CACHE_READONLY_PARAMETER = 'cache-read-only'
 const CACHE_WRITEONLY_PARAMETER = 'cache-write-only'
+const CACHE_TIMEOUT_PARAMETER = 'cache-read-timeout'
 const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match'
 const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED'
 
@@ -41,6 +42,10 @@ export function isCacheWriteOnly(): boolean {
 
 export function isCacheDebuggingEnabled(): boolean {
     return process.env[CACHE_DEBUG_VAR] ? true : false
+}
+
+function getCacheReadTimeoutMs(): number {
+    return parseInt(core.getInput(CACHE_TIMEOUT_PARAMETER)) * 1000
 }
 
 /**
@@ -148,7 +153,9 @@ export async function restoreCache(
 ): Promise<cache.CacheEntry | undefined> {
     listener.markRequested(cacheKey, cacheRestoreKeys)
     try {
-        const restoredEntry = await cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys)
+        const restoredEntry = await cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys, {
+            segmentTimeoutInMs: getCacheReadTimeoutMs()
+        })
         if (restoredEntry !== undefined) {
             listener.markRestored(restoredEntry.key, restoredEntry.size)
         }
