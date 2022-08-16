@@ -115,16 +115,17 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
             core.info('Cache restored successfully');
             return restoredEntry;
         }
-        catch (error) {
-            const typedError = error;
-            if (typedError.name === ValidationError.name) {
-                throw error;
-            }
-            else {
-                // Supress all non-validation cache related errors because caching should be optional
-                core.warning(`Failed to restore: ${error.message}`);
-            }
-        }
+        // PATCH: Error handling is done in action code, allowing us to provide better reporting
+            // catch (error) {
+        //     const typedError = error;
+        //     if (typedError.name === ValidationError.name) {
+        //         throw error;
+        //     }
+        //     else {
+        //         // Supress all non-validation cache related errors because caching should be optional
+        //         core.warning(`Failed to restore: ${error.message}`);
+        //     }
+        // }
         finally {
             // Try to delete the archive to save space
             try {
@@ -193,18 +194,19 @@ function saveCache(paths, key, options) {
             core.debug(`Saving Cache (ID: ${cacheId})`);
             yield cacheHttpClient.saveCache(cacheId, archivePath, options);
         }
-        catch (error) {
-            const typedError = error;
-            if (typedError.name === ValidationError.name) {
-                throw error;
-            }
-            else if (typedError.name === ReserveCacheError.name) {
-                core.info(`Failed to save: ${typedError.message}`);
-            }
-            else {
-                core.warning(`Failed to save: ${typedError.message}`);
-            }
-        }
+        // PATCH: Error handling is done in action code, allowing us to provide better reporting
+        // catch (error) {
+        //     const typedError = error;
+        //     if (typedError.name === ValidationError.name) {
+        //         throw error;
+        //     }
+        //     else if (typedError.name === ReserveCacheError.name) {
+        //         core.info(`Failed to save: ${typedError.message}`);
+        //     }
+        //     else {
+        //         core.warning(`Failed to save: ${typedError.message}`);
+        //     }
+        // }
         finally {
             // Try to delete the archive to save space
             try {
@@ -65745,10 +65747,10 @@ class GradleStateCache {
                 core.info(`Cache hit occurred on the cache key ${cacheKey}, not saving cache.`);
                 for (const entryListener of listener.cacheEntries) {
                     if (entryListener === gradleHomeEntryListener) {
-                        entryListener.markUnsaved('cache key not changed');
+                        entryListener.markNotSaved('cache key not changed');
                     }
                     else {
-                        entryListener.markUnsaved(`referencing '${this.cacheDescription}' cache entry not saved`);
+                        entryListener.markNotSaved(`referencing '${this.cacheDescription}' cache entry not saved`);
                     }
                 }
                 return;
@@ -65992,7 +65994,7 @@ class AbstractEntryExtractor {
             const previouslyRestoredKey = (_a = previouslyRestoredEntries.find(x => x.artifactType === artifactType && x.pattern === pattern)) === null || _a === void 0 ? void 0 : _a.cacheKey;
             if (previouslyRestoredKey === cacheKey) {
                 (0, cache_utils_1.cacheDebug)(`No change to previously restored ${artifactType}. Not saving.`);
-                entryListener.markUnsaved('contents unchanged');
+                entryListener.markNotSaved('contents unchanged');
             }
             else {
                 core.info(`Caching ${artifactType} with path '${pattern}' and cache key: ${cacheKey}`);
@@ -66230,6 +66232,10 @@ class CacheEntryListener {
         this.restoredSize = size;
         return this;
     }
+    markNotRestored(message) {
+        this.notRestored = message;
+        return this;
+    }
     markSaved(key, size) {
         this.savedKey = key;
         this.savedSize = size;
@@ -66240,8 +66246,8 @@ class CacheEntryListener {
         this.savedSize = 0;
         return this;
     }
-    markUnsaved(message) {
-        this.unsaved = message;
+    markNotSaved(message) {
+        this.notSaved = message;
         return this;
     }
 }
@@ -66294,8 +66300,14 @@ function renderEntryDetails(listener) {
         .join('---\n');
 }
 function getRestoredMessage(entry, cacheWriteOnly) {
+    if (entry.notRestored) {
+        return `(Entry not restored: ${entry.notRestored})`;
+    }
     if (cacheWriteOnly) {
         return '(Entry not restored: cache is write-only)';
+    }
+    if (entry.requestedKey === undefined) {
+        return '(Entry not restored: not requested)';
     }
     if (entry.restoredKey === undefined) {
         return '(Entry not restored: no match found)';
@@ -66306,8 +66318,8 @@ function getRestoredMessage(entry, cacheWriteOnly) {
     return '(Entry restored: partial match found)';
 }
 function getSavedMessage(entry, cacheReadOnly) {
-    if (entry.unsaved) {
-        return `(Entry not saved: ${entry.unsaved})`;
+    if (entry.notSaved) {
+        return `(Entry not saved: ${entry.notSaved})`;
     }
     if (entry.savedKey === undefined) {
         if (cacheReadOnly) {
@@ -66321,7 +66333,7 @@ function getSavedMessage(entry, cacheReadOnly) {
     return '(Entry saved)';
 }
 function getCount(cacheEntries, predicate) {
-    return cacheEntries.filter(e => predicate(e) !== undefined).length;
+    return cacheEntries.filter(e => predicate(e)).length;
 }
 function getSize(cacheEntries, predicate) {
     const bytes = cacheEntries.map(e => { var _a; return (_a = predicate(e)) !== null && _a !== void 0 ? _a : 0; }).reduce((p, v) => p + v, 0);
@@ -66478,6 +66490,7 @@ function restoreCache(cachePath, cacheKey, cacheRestoreKeys, listener) {
             return restoredEntry;
         }
         catch (error) {
+            listener.markNotRestored(error.message);
             handleCacheFailure(error, `Failed to restore ${cacheKey}`);
             return undefined;
         }
@@ -66493,6 +66506,9 @@ function saveCache(cachePath, cacheKey, listener) {
         catch (error) {
             if (error instanceof cache.ReserveCacheError) {
                 listener.markAlreadyExists(cacheKey);
+            }
+            else {
+                listener.markNotSaved(error.message);
             }
             handleCacheFailure(error, `Failed to save cache entry with path '${cachePath}' and key: ${cacheKey}`);
         }
