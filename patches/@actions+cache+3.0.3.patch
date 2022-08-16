@@ -26,10 +26,10 @@ index 16b20f7..aea77ba 100644
 +    constructor(key: string, size?: number);
 +}
 diff --git a/node_modules/@actions/cache/lib/cache.js b/node_modules/@actions/cache/lib/cache.js
-index 4dc5e88..2141dd5 100644
+index 4dc5e88..9cb8123 100644
 --- a/node_modules/@actions/cache/lib/cache.js
 +++ b/node_modules/@actions/cache/lib/cache.js
-@@ -95,16 +95,18 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
+@@ -95,27 +95,30 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
              }
              archivePath = path.join(yield utils.createTempDirectory(), utils.getCacheFileName(compressionMethod));
              core.debug(`Archive Path: ${archivePath}`);
@@ -45,11 +45,33 @@ index 4dc5e88..2141dd5 100644
              yield tar_1.extractTar(archivePath, compressionMethod);
              core.info('Cache restored successfully');
 -            return cacheEntry.cacheKey;
+-        }
+-        catch (error) {
+-            const typedError = error;
+-            if (typedError.name === ValidationError.name) {
+-                throw error;
+-            }
+-            else {
+-                // Supress all non-validation cache related errors because caching should be optional
+-                core.warning(`Failed to restore: ${error.message}`);
+-            }
 +            return restoredEntry;
          }
-         catch (error) {
-             const typedError = error;
-@@ -153,6 +155,7 @@ function saveCache(paths, key, options) {
++        // PATCH: Error handling is done in action code, allowing us to provide better reporting
++        // catch (error) {
++        //     const typedError = error;
++        //     if (typedError.name === ValidationError.name) {
++        //         throw error;
++        //     }
++        //     else {
++        //         // Supress all non-validation cache related errors because caching should be optional
++        //         core.warning(`Failed to restore: ${error.message}`);
++        //     }
++        // }
+         finally {
+             // Try to delete the archive to save space
+             try {
+@@ -153,6 +156,7 @@ function saveCache(paths, key, options) {
          const archiveFolder = yield utils.createTempDirectory();
          const archivePath = path.join(archiveFolder, utils.getCacheFileName(compressionMethod));
          core.debug(`Archive Path: ${archivePath}`);
@@ -57,7 +79,7 @@ index 4dc5e88..2141dd5 100644
          try {
              yield tar_1.createTar(archiveFolder, cachePaths, compressionMethod);
              if (core.isDebug()) {
-@@ -160,6 +163,7 @@ function saveCache(paths, key, options) {
+@@ -160,6 +164,7 @@ function saveCache(paths, key, options) {
              }
              const fileSizeLimit = 10 * 1024 * 1024 * 1024; // 10GB per repo limit
              const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath);
@@ -65,7 +87,39 @@ index 4dc5e88..2141dd5 100644
              core.debug(`File Size: ${archiveFileSize}`);
              // For GHES, this check will take place in ReserveCache API with enterprise file size limit
              if (archiveFileSize > fileSizeLimit && !utils.isGhes()) {
-@@ -203,8 +207,15 @@ function saveCache(paths, key, options) {
+@@ -182,18 +187,19 @@ function saveCache(paths, key, options) {
+             core.debug(`Saving Cache (ID: ${cacheId})`);
+             yield cacheHttpClient.saveCache(cacheId, archivePath, options);
+         }
+-        catch (error) {
+-            const typedError = error;
+-            if (typedError.name === ValidationError.name) {
+-                throw error;
+-            }
+-            else if (typedError.name === ReserveCacheError.name) {
+-                core.info(`Failed to save: ${typedError.message}`);
+-            }
+-            else {
+-                core.warning(`Failed to save: ${typedError.message}`);
+-            }
+-        }
++        // PATCH: Error handling is done in action code, allowing us to provide better reporting
++        // catch (error) {
++        //     const typedError = error;
++        //     if (typedError.name === ValidationError.name) {
++        //         throw error;
++        //     }
++        //     else if (typedError.name === ReserveCacheError.name) {
++        //         core.info(`Failed to save: ${typedError.message}`);
++        //     }
++        //     else {
++        //         core.warning(`Failed to save: ${typedError.message}`);
++        //     }
++        // }
+         finally {
+             // Try to delete the archive to save space
+             try {
+@@ -203,8 +209,15 @@ function saveCache(paths, key, options) {
                  core.debug(`Failed to delete archive: ${error}`);
              }
          }
