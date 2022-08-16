@@ -213,7 +213,7 @@ abstract class AbstractEntryExtractor {
 
         if (previouslyRestoredKey === cacheKey) {
             cacheDebug(`No change to previously restored ${artifactType}. Not saving.`)
-            entryListener.markUnsaved('contents unchanged')
+            entryListener.markNotSaved('contents unchanged')
         } else {
             core.info(`Caching ${artifactType} with path '${pattern}' and cache key: ${cacheKey}`)
             await saveCache([pattern], cacheKey, entryListener)

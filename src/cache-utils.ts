@@ -154,6 +154,7 @@ export async function restoreCache(
         }
         return restoredEntry
     } catch (error) {
+        listener.markNotRestored((error as Error).message)
         handleCacheFailure(error, `Failed to restore ${cacheKey}`)
         return undefined
     }
@@ -166,6 +167,8 @@ export async function saveCache(cachePath: string[], cacheKey: string, listener:
     } catch (error) {
         if (error instanceof cache.ReserveCacheError) {
             listener.markAlreadyExists(cacheKey)
+        } else {
+            listener.markNotSaved((error as Error).message)
         }
         handleCacheFailure(error, `Failed to save cache entry with path '${cachePath}' and key: ${cacheKey}`)
     }

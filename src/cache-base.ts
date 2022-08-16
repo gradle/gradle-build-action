@@ -101,9 +101,9 @@ export class GradleStateCache {
 
             for (const entryListener of listener.cacheEntries) {
                 if (entryListener === gradleHomeEntryListener) {
-                    entryListener.markUnsaved('cache key not changed')
+                    entryListener.markNotSaved('cache key not changed')
                 } else {
-                    entryListener.markUnsaved(`referencing '${this.cacheDescription}' cache entry not saved`)
+                    entryListener.markNotSaved(`referencing '${this.cacheDescription}' cache entry not saved`)
                 }
             }
             return
