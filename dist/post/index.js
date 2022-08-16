@@ -65427,6 +65427,7 @@ const JOB_CONTEXT_PARAMETER = 'workflow-job-context';
 const CACHE_DISABLED_PARAMETER = 'cache-disabled';
 const CACHE_READONLY_PARAMETER = 'cache-read-only';
 const CACHE_WRITEONLY_PARAMETER = 'cache-write-only';
+const CACHE_TIMEOUT_PARAMETER = 'cache-read-timeout';
 const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match';
 const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED';
 const CACHE_KEY_PREFIX_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX';
@@ -65453,6 +65454,9 @@ function isCacheDebuggingEnabled() {
     return process.env[CACHE_DEBUG_VAR] ? true : false;
 }
 exports.isCacheDebuggingEnabled = isCacheDebuggingEnabled;
+function getCacheReadTimeoutMs() {
+    return parseInt(core.getInput(CACHE_TIMEOUT_PARAMETER)) * 1000;
+}
 class CacheKey {
     constructor(key, restoreKeys) {
         this.key = key;
@@ -65510,7 +65514,9 @@ function restoreCache(cachePath, cacheKey, cacheRestoreKeys, listener) {
     return __awaiter(this, void 0, void 0, function* () {
         listener.markRequested(cacheKey, cacheRestoreKeys);
         try {
-            const restoredEntry = yield cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys);
+            const restoredEntry = yield cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys, {
+                segmentTimeoutInMs: getCacheReadTimeoutMs()
+            });
             if (restoredEntry !== undefined) {
                 listener.markRestored(restoredEntry.key, restoredEntry.size);
             }
