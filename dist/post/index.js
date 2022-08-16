@@ -115,17 +115,6 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
             core.info('Cache restored successfully');
             return restoredEntry;
         }
-        // PATCH: Error handling is done in action code, allowing us to provide better reporting
-            // catch (error) {
-        //     const typedError = error;
-        //     if (typedError.name === ValidationError.name) {
-        //         throw error;
-        //     }
-        //     else {
-        //         // Supress all non-validation cache related errors because caching should be optional
-        //         core.warning(`Failed to restore: ${error.message}`);
-        //     }
-        // }
         finally {
             // Try to delete the archive to save space
             try {
@@ -194,19 +183,6 @@ function saveCache(paths, key, options) {
             core.debug(`Saving Cache (ID: ${cacheId})`);
             yield cacheHttpClient.saveCache(cacheId, archivePath, options);
         }
-        // PATCH: Error handling is done in action code, allowing us to provide better reporting
-        // catch (error) {
-        //     const typedError = error;
-        //     if (typedError.name === ValidationError.name) {
-        //         throw error;
-        //     }
-        //     else if (typedError.name === ReserveCacheError.name) {
-        //         core.info(`Failed to save: ${typedError.message}`);
-        //     }
-        //     else {
-        //         core.warning(`Failed to save: ${typedError.message}`);
-        //     }
-        // }
         finally {
             // Try to delete the archive to save space
             try {
