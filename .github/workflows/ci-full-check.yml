@@ -9,7 +9,7 @@ on:
     branches: 
       - main
     paths:
-      - '.github/workflows/**'
+      - '.github/**'
       - 'dist/**'
 
 jobs:
