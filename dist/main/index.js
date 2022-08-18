@@ -65941,8 +65941,7 @@ class AbstractEntryExtractor {
                 const artifactType = cacheEntryDefinition.artifactType;
                 const pattern = cacheEntryDefinition.pattern;
                 const globber = yield glob.create(pattern, {
-                    implicitDescendants: false,
-                    followSymbolicLinks: false
+                    implicitDescendants: false
                 });
                 const matchingFiles = yield globber.glob();
                 if (matchingFiles.length === 0) {
@@ -66045,8 +66044,7 @@ class GradleHomeEntryExtractor extends AbstractEntryExtractor {
         return __awaiter(this, void 0, void 0, function* () {
             const wrapperZips = path_1.default.resolve(this.gradleUserHome, 'wrapper/dists/*/*/*.zip');
             const globber = yield glob.create(wrapperZips, {
-                implicitDescendants: false,
-                followSymbolicLinks: false
+                implicitDescendants: false
             });
             for (const wrapperZip of yield globber.glob()) {
                 (0, cache_utils_1.cacheDebug)(`Deleting wrapper zip: ${wrapperZip}`);
