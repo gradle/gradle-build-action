@@ -150,8 +150,7 @@ abstract class AbstractEntryExtractor {
 
             // Find all matching files for this cache entry definition
             const globber = await glob.create(pattern, {
-                implicitDescendants: false,
-                followSymbolicLinks: false
+                implicitDescendants: false
             })
             const matchingFiles = await globber.glob()
 
@@ -308,8 +307,7 @@ export class GradleHomeEntryExtractor extends AbstractEntryExtractor {
     private async deleteWrapperZips(): Promise<void> {
         const wrapperZips = path.resolve(this.gradleUserHome, 'wrapper/dists/*/*/*.zip')
         const globber = await glob.create(wrapperZips, {
-            implicitDescendants: false,
-            followSymbolicLinks: false
+            implicitDescendants: false
         })
 
         for (const wrapperZip of await globber.glob()) {
