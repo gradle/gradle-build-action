@@ -15,7 +15,6 @@ const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
 const CACHE_DISABLED_PARAMETER = 'cache-disabled'
 const CACHE_READONLY_PARAMETER = 'cache-read-only'
 const CACHE_WRITEONLY_PARAMETER = 'cache-write-only'
-const CACHE_TIMEOUT_PARAMETER = 'cache-read-timeout'
 const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match'
 const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED'
 
@@ -24,6 +23,8 @@ const CACHE_KEY_OS_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_ENVIRONMENT'
 const CACHE_KEY_JOB_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB'
 const CACHE_KEY_JOB_INSTANCE_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_INSTANCE'
 const CACHE_KEY_JOB_EXECUTION_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_EXECUTION'
+
+const SEGMENT_DOWNLOAD_TIMEOUT_DEFAULT = 10 * 60 * 1000 // 10 minutes
 
 export function isCacheDisabled(): boolean {
     if (!cache.isFeatureAvailable()) {
@@ -42,10 +43,6 @@ export function isCacheWriteOnly(): boolean {
 
 export function isCacheDebuggingEnabled(): boolean {
     return process.env[CACHE_DEBUG_VAR] ? true : false
-}
-
-function getCacheReadTimeoutMs(): number {
-    return parseInt(core.getInput(CACHE_TIMEOUT_PARAMETER)) * 1000
 }
 
 /**
@@ -153,9 +150,11 @@ export async function restoreCache(
 ): Promise<cache.CacheEntry | undefined> {
     listener.markRequested(cacheKey, cacheRestoreKeys)
     try {
-        const restoredEntry = await cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys, {
-            segmentTimeoutInMs: getCacheReadTimeoutMs()
-        })
+        // Only override the read timeout if the SEGMENT_DOWNLOAD_TIMEOUT_MINS env var has NOT been set
+        const cacheRestoreOptions = process.env['SEGMENT_DOWNLOAD_TIMEOUT_MINS']
+            ? {}
+            : {segmentTimeoutInMs: SEGMENT_DOWNLOAD_TIMEOUT_DEFAULT}
+        const restoredEntry = await cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys, cacheRestoreOptions)
         if (restoredEntry !== undefined) {
             listener.markRestored(restoredEntry.key, restoredEntry.size)
         }
