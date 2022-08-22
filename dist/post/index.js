@@ -64874,6 +64874,93 @@ exports.GradleStateCache = GradleStateCache;
 
 /***/ }),
 
+/***/ 57:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CacheCleaner = void 0;
+const exec = __importStar(__nccwpck_require__(1514));
+const fs_1 = __importDefault(__nccwpck_require__(7147));
+const path_1 = __importDefault(__nccwpck_require__(1017));
+class CacheCleaner {
+    constructor(gradleUserHome, tmpDir) {
+        this.gradleUserHome = gradleUserHome;
+        this.tmpDir = tmpDir;
+    }
+    prepare() {
+        return __awaiter(this, void 0, void 0, function* () {
+            fs_1.default.rmSync(path_1.default.resolve(this.gradleUserHome, 'caches/journal-1'), { recursive: true, force: true });
+            fs_1.default.mkdirSync(path_1.default.resolve(this.gradleUserHome, 'caches/journal-1'), { recursive: true });
+            fs_1.default.writeFileSync(path_1.default.resolve(this.gradleUserHome, 'caches/journal-1/file-access.properties'), 'inceptionTimestamp=0');
+            yield this.ageAllFiles();
+            yield this.touchAllFiles('gc.properties');
+        });
+    }
+    forceCleanup() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.ageAllFiles('gc.properties');
+            const cleanupProjectDir = path_1.default.resolve(this.tmpDir, 'dummy-cleanup-project');
+            fs_1.default.mkdirSync(cleanupProjectDir, { recursive: true });
+            fs_1.default.writeFileSync(path_1.default.resolve(cleanupProjectDir, 'settings.gradle'), 'rootProject.name = "dummy-cleanup-project"');
+            fs_1.default.writeFileSync(path_1.default.resolve(cleanupProjectDir, 'build.gradle'), 'task("noop") {}');
+            yield exec.exec(`gradle -g ${this.gradleUserHome} --no-daemon --build-cache --no-scan --quiet noop`, [], {
+                cwd: cleanupProjectDir
+            });
+        });
+    }
+    ageAllFiles(fileName = '*') {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield exec.exec('find', [this.gradleUserHome, '-name', fileName, '-exec', 'touch', '-m', '-d', '1970-01-01', '{}', '+'], {});
+        });
+    }
+    touchAllFiles(fileName = '*') {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield exec.exec('find', [this.gradleUserHome, '-name', fileName, '-exec', 'touch', '-m', '{}', '+'], {});
+        });
+    }
+}
+exports.CacheCleaner = CacheCleaner;
+
+
+/***/ }),
+
 /***/ 6161:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -65415,7 +65502,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.tryDelete = exports.handleCacheFailure = exports.cacheDebug = exports.saveCache = exports.restoreCache = exports.hashStrings = exports.hashFileNames = exports.getCacheKeyPrefix = exports.generateCacheKey = exports.CacheKey = exports.isCacheDebuggingEnabled = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
+exports.tryDelete = exports.handleCacheFailure = exports.cacheDebug = exports.saveCache = exports.restoreCache = exports.hashStrings = exports.hashFileNames = exports.getCacheKeyPrefix = exports.generateCacheKey = exports.CacheKey = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const cache = __importStar(__nccwpck_require__(7799));
 const github = __importStar(__nccwpck_require__(5438));
@@ -65429,6 +65516,7 @@ const CACHE_DISABLED_PARAMETER = 'cache-disabled';
 const CACHE_READONLY_PARAMETER = 'cache-read-only';
 const CACHE_WRITEONLY_PARAMETER = 'cache-write-only';
 const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match';
+const CACHE_CLEANUP_ENABLED_PARAMETER = 'gradle-home-cache-cleanup';
 const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED';
 const CACHE_KEY_PREFIX_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX';
 const CACHE_KEY_OS_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_ENVIRONMENT';
@@ -65456,6 +65544,10 @@ function isCacheDebuggingEnabled() {
     return process.env[CACHE_DEBUG_VAR] ? true : false;
 }
 exports.isCacheDebuggingEnabled = isCacheDebuggingEnabled;
+function isCacheCleanupEnabled() {
+    return core.getBooleanInput(CACHE_CLEANUP_ENABLED_PARAMETER);
+}
+exports.isCacheCleanupEnabled = isCacheCleanupEnabled;
 class CacheKey {
     constructor(key, restoreKeys) {
         this.key = key;
@@ -65662,6 +65754,7 @@ exports.save = exports.restore = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const cache_utils_1 = __nccwpck_require__(1678);
 const cache_base_1 = __nccwpck_require__(7591);
+const cache_cleaner_1 = __nccwpck_require__(57);
 const CACHE_RESTORED_VAR = 'GRADLE_BUILD_ACTION_CACHE_RESTORED';
 function restore(gradleUserHome, cacheListener) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -65692,6 +65785,11 @@ function restore(gradleUserHome, cacheListener) {
         yield core.group('Restore Gradle state from cache', () => __awaiter(this, void 0, void 0, function* () {
             yield gradleStateCache.restore(cacheListener);
         }));
+        if ((0, cache_utils_1.isCacheCleanupEnabled)() && !(0, cache_utils_1.isCacheReadOnly)()) {
+            core.info('Preparing cache for cleanup.');
+            const cacheCleaner = new cache_cleaner_1.CacheCleaner(gradleUserHome, process.env['RUNNER_TEMP']);
+            yield cacheCleaner.prepare();
+        }
     });
 }
 exports.restore = restore;
@@ -65711,6 +65809,11 @@ function save(gradleUserHome, cacheListener, daemonController) {
             return;
         }
         yield daemonController.stopAllDaemons();
+        if ((0, cache_utils_1.isCacheCleanupEnabled)()) {
+            core.info('Forcing cache cleanup.');
+            const cacheCleaner = new cache_cleaner_1.CacheCleaner(gradleUserHome, process.env['RUNNER_TEMP']);
+            yield cacheCleaner.forceCleanup();
+        }
         yield core.group('Caching Gradle state', () => __awaiter(this, void 0, void 0, function* () {
             return new cache_base_1.GradleStateCache(gradleUserHome).save(cacheListener);
         }));

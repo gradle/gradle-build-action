@@ -1,6 +1,7 @@
 name: CI-full-check
 
 on:
+  workflow_dispatch:
   pull_request:
     types:
       - assigned
@@ -15,6 +16,12 @@ on:
 jobs:
   action-inputs:
     uses: ./.github/workflows/integ-test-action-inputs.yml
+    with:
+      cache-key-prefix: ${{github.run_number}}-
+
+  cache-cleanup:
+    needs: build-distribution
+    uses: ./.github/workflows/integ-test-cache-cleanup.yml
     with:
       cache-key-prefix: ${{github.run_number}}-
 

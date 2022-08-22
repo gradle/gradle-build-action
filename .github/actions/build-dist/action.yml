@@ -7,7 +7,7 @@ runs:
       shell: bash
       run: |
         npm install
-        npm run all
+        npm run build
     - name: Upload distribution
       uses: actions/upload-artifact@v3
       with:
