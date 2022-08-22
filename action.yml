@@ -66,10 +66,6 @@ inputs:
     description: When 'true', the action will not attempt to restore the Gradle User Home entries from other Jobs.
     required: false
     default: false
-  cache-read-timeout:
-    description: A timeout value in seconds for cache reads. Requests taking longer that this will be aborted.
-    required: true
-    default: 600
   workflow-job-context:
     description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users (INTERNAL).
     required: false
