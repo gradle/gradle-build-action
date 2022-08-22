@@ -1059,6 +1059,7 @@ const fs_1 = __nccwpck_require__(7147);
 const path = __importStar(__nccwpck_require__(1017));
 const utils = __importStar(__nccwpck_require__(1518));
 const constants_1 = __nccwpck_require__(8840);
+const IS_WINDOWS = process.platform === 'win32';
 function getTarPath(args, compressionMethod) {
     return __awaiter(this, void 0, void 0, function* () {
         switch (process.platform) {
@@ -1106,26 +1107,43 @@ function getWorkingDirectory() {
     var _a;
     return (_a = process.env['GITHUB_WORKSPACE']) !== null && _a !== void 0 ? _a : process.cwd();
 }
+// Common function for extractTar and listTar to get the compression method
+function getCompressionProgram(compressionMethod) {
+    // -d: Decompress.
+    // unzstd is equivalent to 'zstd -d'
+    // --long=#: Enables long distance matching with # bits. Maximum is 30 (1GB) on 32-bit OS and 31 (2GB) on 64-bit.
+    // Using 30 here because we also support 32-bit self-hosted runners.
+    switch (compressionMethod) {
+        case constants_1.CompressionMethod.Zstd:
+            return [
+                '--use-compress-program',
+                IS_WINDOWS ? 'zstd -d --long=30' : 'unzstd --long=30'
+            ];
+        case constants_1.CompressionMethod.ZstdWithoutLong:
+            return ['--use-compress-program', IS_WINDOWS ? 'zstd -d' : 'unzstd'];
+        default:
+            return ['-z'];
+    }
+}
+function listTar(archivePath, compressionMethod) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const args = [
+            ...getCompressionProgram(compressionMethod),
+            '-tf',
+            archivePath.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
+            '-P'
+        ];
+        yield execTar(args, compressionMethod);
+    });
+}
+exports.listTar = listTar;
 function extractTar(archivePath, compressionMethod) {
     return __awaiter(this, void 0, void 0, function* () {
         // Create directory to extract tar into
         const workingDirectory = getWorkingDirectory();
         yield io.mkdirP(workingDirectory);
-        // --d: Decompress.
-        // --long=#: Enables long distance matching with # bits. Maximum is 30 (1GB) on 32-bit OS and 31 (2GB) on 64-bit.
-        // Using 30 here because we also support 32-bit self-hosted runners.
-        function getCompressionProgram() {
-            switch (compressionMethod) {
-                case constants_1.CompressionMethod.Zstd:
-                    return ['--use-compress-program', 'unzstd --long=30'];
-                case constants_1.CompressionMethod.ZstdWithoutLong:
-                    return ['--use-compress-program', 'unzstd'];
-                default:
-                    return ['-z'];
-            }
-        }
         const args = [
-            ...getCompressionProgram(),
+            ...getCompressionProgram(compressionMethod),
             '-xf',
             archivePath.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
             '-P',
@@ -1144,15 +1162,19 @@ function createTar(archiveFolder, sourceDirectories, compressionMethod) {
         fs_1.writeFileSync(path.join(archiveFolder, manifestFilename), sourceDirectories.join('\n'));
         const workingDirectory = getWorkingDirectory();
         // -T#: Compress using # working thread. If # is 0, attempt to detect and use the number of physical CPU cores.
+        // zstdmt is equivalent to 'zstd -T0'
         // --long=#: Enables long distance matching with # bits. Maximum is 30 (1GB) on 32-bit OS and 31 (2GB) on 64-bit.
         // Using 30 here because we also support 32-bit self-hosted runners.
         // Long range mode is added to zstd in v1.3.2 release, so we will not use --long in older version of zstd.
         function getCompressionProgram() {
             switch (compressionMethod) {
                 case constants_1.CompressionMethod.Zstd:
-                    return ['--use-compress-program', 'zstdmt --long=30'];
+                    return [
+                        '--use-compress-program',
+                        IS_WINDOWS ? 'zstd -T0 --long=30' : 'zstdmt --long=30'
+                    ];
                 case constants_1.CompressionMethod.ZstdWithoutLong:
-                    return ['--use-compress-program', 'zstdmt'];
+                    return ['--use-compress-program', IS_WINDOWS ? 'zstd -T0' : 'zstdmt'];
                 default:
                     return ['-z'];
             }
@@ -1174,32 +1196,6 @@ function createTar(archiveFolder, sourceDirectories, compressionMethod) {
     });
 }
 exports.createTar = createTar;
-function listTar(archivePath, compressionMethod) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // --d: Decompress.
-        // --long=#: Enables long distance matching with # bits.
-        // Maximum is 30 (1GB) on 32-bit OS and 31 (2GB) on 64-bit.
-        // Using 30 here because we also support 32-bit self-hosted runners.
-        function getCompressionProgram() {
-            switch (compressionMethod) {
-                case constants_1.CompressionMethod.Zstd:
-                    return ['--use-compress-program', 'unzstd --long=30'];
-                case constants_1.CompressionMethod.ZstdWithoutLong:
-                    return ['--use-compress-program', 'unzstd'];
-                default:
-                    return ['-z'];
-            }
-        }
-        const args = [
-            ...getCompressionProgram(),
-            '-tf',
-            archivePath.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
-            '-P'
-        ];
-        yield execTar(args, compressionMethod);
-    });
-}
-exports.listTar = listTar;
 //# sourceMappingURL=tar.js.map
 
 /***/ }),
@@ -1267,9 +1263,16 @@ function getDownloadOptions(copy) {
             result.segmentTimeoutInMs = copy.segmentTimeoutInMs;
         }
     }
+    const segmentDownloadTimeoutMins = process.env['SEGMENT_DOWNLOAD_TIMEOUT_MINS'];
+    if (segmentDownloadTimeoutMins &&
+        !isNaN(Number(segmentDownloadTimeoutMins)) &&
+        isFinite(Number(segmentDownloadTimeoutMins))) {
+        result.segmentTimeoutInMs = Number(segmentDownloadTimeoutMins) * 60 * 1000;
+    }
     core.debug(`Use Azure SDK: ${result.useAzureSdk}`);
     core.debug(`Download concurrency: ${result.downloadConcurrency}`);
     core.debug(`Request timeout (ms): ${result.timeoutInMs}`);
+    core.debug(`Cache segment download timeout mins env var: ${process.env['SEGMENT_DOWNLOAD_TIMEOUT_MINS']}`);
     core.debug(`Segment download timeout (ms): ${result.segmentTimeoutInMs}`);
     return result;
 }
@@ -65425,7 +65428,6 @@ const JOB_CONTEXT_PARAMETER = 'workflow-job-context';
 const CACHE_DISABLED_PARAMETER = 'cache-disabled';
 const CACHE_READONLY_PARAMETER = 'cache-read-only';
 const CACHE_WRITEONLY_PARAMETER = 'cache-write-only';
-const CACHE_TIMEOUT_PARAMETER = 'cache-read-timeout';
 const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match';
 const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED';
 const CACHE_KEY_PREFIX_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX';
@@ -65433,6 +65435,8 @@ const CACHE_KEY_OS_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_ENVIRONMENT';
 const CACHE_KEY_JOB_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB';
 const CACHE_KEY_JOB_INSTANCE_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_INSTANCE';
 const CACHE_KEY_JOB_EXECUTION_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_EXECUTION';
+const SEGMENT_DOWNLOAD_TIMEOUT_VAR = 'SEGMENT_DOWNLOAD_TIMEOUT_MINS';
+const SEGMENT_DOWNLOAD_TIMEOUT_DEFAULT = 10 * 60 * 1000;
 function isCacheDisabled() {
     if (!cache.isFeatureAvailable()) {
         return true;
@@ -65452,9 +65456,6 @@ function isCacheDebuggingEnabled() {
     return process.env[CACHE_DEBUG_VAR] ? true : false;
 }
 exports.isCacheDebuggingEnabled = isCacheDebuggingEnabled;
-function getCacheReadTimeoutMs() {
-    return parseInt(core.getInput(CACHE_TIMEOUT_PARAMETER)) * 1000;
-}
 class CacheKey {
     constructor(key, restoreKeys) {
         this.key = key;
@@ -65512,9 +65513,10 @@ function restoreCache(cachePath, cacheKey, cacheRestoreKeys, listener) {
     return __awaiter(this, void 0, void 0, function* () {
         listener.markRequested(cacheKey, cacheRestoreKeys);
         try {
-            const restoredEntry = yield cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys, {
-                segmentTimeoutInMs: getCacheReadTimeoutMs()
-            });
+            const cacheRestoreOptions = process.env[SEGMENT_DOWNLOAD_TIMEOUT_VAR]
+                ? {}
+                : { segmentTimeoutInMs: SEGMENT_DOWNLOAD_TIMEOUT_DEFAULT };
+            const restoredEntry = yield cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys, cacheRestoreOptions);
             if (restoredEntry !== undefined) {
                 listener.markRestored(restoredEntry.key, restoredEntry.size);
             }
