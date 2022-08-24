@@ -63,17 +63,17 @@ test('will cleanup unused gradle versions', async () => {
 })
 
 async function runGradleBuild(projectRoot: string, args: string, version: string = '3.1'): Promise<void> {
-    const status31 = await exec.exec(`gradle -g HOME --no-daemon --build-cache -Dcommons-math3.version=${version} ${args}`, [], {
+    const status31 = await exec.exec(`gradle -g HOME --no-daemon --build-cache -Dcommons_math3_version=${version} ${args}`, [], {
         cwd: projectRoot
     })
-    console.log(`Gradle User Home initialized with commons-math3.version=${version} ${args}`)
+    console.log(`Gradle User Home initialized with commons_math3_version=${version} ${args}`)
 }
 
 async function runGradleWrapperBuild(projectRoot: string, args: string, version: string = '3.1'): Promise<void> {
-    const status31 = await exec.exec(`./gradlew -g HOME --no-daemon --build-cache -Dcommons-math3.version=${version} ${args}`, [], {
+    const status31 = await exec.exec(`./gradlew -g HOME --no-daemon --build-cache -Dcommons_math3_version=${version} ${args}`, [], {
         cwd: projectRoot
     })
-    console.log(`Gradle User Home initialized with commons-math3.version=${version} ${args}`)
+    console.log(`Gradle User Home initialized with commons_math3_version=${version} ${args}`)
 }
 
 function prepareTestProject(): string {
