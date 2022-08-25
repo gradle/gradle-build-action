@@ -48,7 +48,7 @@ export class CacheCleaner {
     private async ageAllFiles(fileName = '*'): Promise<void> {
         await exec.exec(
             'find',
-            [this.gradleUserHome, '-name', fileName, '-exec', 'touch', '-m', '-d', '1970-01-01', '{}', '+'],
+            [this.gradleUserHome, '-name', fileName, '-exec', 'touch', '-m', '-t', '197001010000', '{}', '+'],
             {}
         )
     }
