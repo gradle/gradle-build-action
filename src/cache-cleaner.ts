@@ -1,4 +1,6 @@
+import * as core from '@actions/core'
 import * as exec from '@actions/exec'
+import * as glob from '@actions/glob'
 import fs from 'fs'
 import path from 'path'
 
@@ -46,14 +48,21 @@ export class CacheCleaner {
     }
 
     private async ageAllFiles(fileName = '*'): Promise<void> {
-        await exec.exec(
-            'find',
-            [this.gradleUserHome, '-name', fileName, '-exec', 'touch', '-m', '-t', '197001010000', '{}', '+'],
-            {}
-        )
+        core.debug(`Aging all files in Gradle User Homee with name ${fileName}`)
+        await this.setUtimes(`${this.gradleUserHome}/**/${fileName}`, new Date(0))
     }
 
     private async touchAllFiles(fileName = '*'): Promise<void> {
-        await exec.exec('find', [this.gradleUserHome, '-name', fileName, '-exec', 'touch', '-m', '{}', '+'], {})
+        core.debug(`Touching all files in Gradle User Home with name ${fileName}`)
+        await this.setUtimes(`${this.gradleUserHome}/**/${fileName}`, new Date())
+    }
+
+    private async setUtimes(pattern: string, timestamp: Date): Promise<void> {
+        const globber = await glob.create(pattern, {
+            implicitDescendants: false
+        })
+        for await (const file of globber.globGenerator()) {
+            fs.utimesSync(file, timestamp, timestamp)
+        }
     }
 }
