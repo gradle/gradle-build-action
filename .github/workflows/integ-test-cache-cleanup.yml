@@ -7,7 +7,7 @@ on:
         type: string
       runner-os:
         type: string
-        default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
+        default: '["ubuntu-latest", "macos-latest"]' # Windows is not yet supported
       download-dist:
         type: boolean
         default: false
@@ -34,7 +34,7 @@ jobs:
         cache-read-only: false # For testing, allow writing cache entries on non-default branches
     - name: Build with 3.1
       working-directory: test/jest/resources/cache-cleanup
-      run: gradle --no-daemon --build-cache -Dcommons_math3_version=3.1 build
+      run: gradle --no-daemon --build-cache -Dcommons_math3_version="3.1" build
 
   # Second build will use the cache from the first build, but cleanup should remove unused artifacts
   assemble-build:
@@ -55,7 +55,7 @@ jobs:
         gradle-home-cache-cleanup: true
     - name: Build with 3.1.1
       working-directory: test/jest/resources/cache-cleanup
-      run: gradle --no-daemon --build-cache -Dcommons_math3_version=3.1.1 build
+      run: gradle --no-daemon --build-cache -Dcommons_math3_version="3.1.1" build
 
   check-clean-cache:
     needs: assemble-build
@@ -75,6 +75,7 @@ jobs:
     - name: Report Gradle User Home
       run: du -hc ~/.gradle/caches/modules-2
     - name: Verify cleaned cache
+      shell: bash
       run: |
         if [ ! -e ~/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-math3/3.1.1 ]; then
           echo "::error ::Should find commons-math3 3.1.1 in cache"
