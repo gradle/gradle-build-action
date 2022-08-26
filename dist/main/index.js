@@ -65896,7 +65896,7 @@ class CacheCleaner {
     }
     ageAllFiles(fileName = '*') {
         return __awaiter(this, void 0, void 0, function* () {
-            yield exec.exec('find', [this.gradleUserHome, '-name', fileName, '-exec', 'touch', '-m', '-d', '1970-01-01', '{}', '+'], {});
+            yield exec.exec('find', [this.gradleUserHome, '-name', fileName, '-exec', 'touch', '-m', '-t', '197001010000', '{}', '+'], {});
         });
     }
     touchAllFiles(fileName = '*') {
@@ -66494,7 +66494,12 @@ function isCacheDebuggingEnabled() {
 }
 exports.isCacheDebuggingEnabled = isCacheDebuggingEnabled;
 function isCacheCleanupEnabled() {
-    return core.getBooleanInput(CACHE_CLEANUP_ENABLED_PARAMETER);
+    const userEnabled = core.getBooleanInput(CACHE_CLEANUP_ENABLED_PARAMETER);
+    if (userEnabled && process.platform === 'win32') {
+        core.warning('Cache cleanup is not yet supported on Windows');
+        return false;
+    }
+    return userEnabled;
 }
 exports.isCacheCleanupEnabled = isCacheCleanupEnabled;
 class CacheKey {
