@@ -64911,12 +64911,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __asyncValues = (this && this.__asyncValues) || function (o) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var m = o[Symbol.asyncIterator], i;
+    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
+    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
+    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CacheCleaner = void 0;
+const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
+const glob = __importStar(__nccwpck_require__(8090));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 class CacheCleaner {
@@ -64947,12 +64956,35 @@ class CacheCleaner {
     }
     ageAllFiles(fileName = '*') {
         return __awaiter(this, void 0, void 0, function* () {
-            yield exec.exec('find', [this.gradleUserHome, '-name', fileName, '-exec', 'touch', '-m', '-t', '197001010000', '{}', '+'], {});
+            core.debug(`Aging all files in Gradle User Homee with name ${fileName}`);
+            yield this.setUtimes(`${this.gradleUserHome}/**/${fileName}`, new Date(0));
         });
     }
     touchAllFiles(fileName = '*') {
         return __awaiter(this, void 0, void 0, function* () {
-            yield exec.exec('find', [this.gradleUserHome, '-name', fileName, '-exec', 'touch', '-m', '{}', '+'], {});
+            core.debug(`Touching all files in Gradle User Home with name ${fileName}`);
+            yield this.setUtimes(`${this.gradleUserHome}/**/${fileName}`, new Date());
+        });
+    }
+    setUtimes(pattern, timestamp) {
+        var e_1, _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            const globber = yield glob.create(pattern, {
+                implicitDescendants: false
+            });
+            try {
+                for (var _b = __asyncValues(globber.globGenerator()), _c; _c = yield _b.next(), !_c.done;) {
+                    const file = _c.value;
+                    fs_1.default.utimesSync(file, timestamp, timestamp);
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) yield _a.call(_b);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
         });
     }
 }
@@ -65545,12 +65577,7 @@ function isCacheDebuggingEnabled() {
 }
 exports.isCacheDebuggingEnabled = isCacheDebuggingEnabled;
 function isCacheCleanupEnabled() {
-    const userEnabled = core.getBooleanInput(CACHE_CLEANUP_ENABLED_PARAMETER);
-    if (userEnabled && process.platform === 'win32') {
-        core.warning('Cache cleanup is not yet supported on Windows');
-        return false;
-    }
-    return userEnabled;
+    return core.getBooleanInput(CACHE_CLEANUP_ENABLED_PARAMETER);
 }
 exports.isCacheCleanupEnabled = isCacheCleanupEnabled;
 class CacheKey {
