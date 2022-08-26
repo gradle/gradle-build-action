@@ -48,14 +48,7 @@ export function isCacheDebuggingEnabled(): boolean {
 }
 
 export function isCacheCleanupEnabled(): boolean {
-    const userEnabled = core.getBooleanInput(CACHE_CLEANUP_ENABLED_PARAMETER)
-
-    if (userEnabled && process.platform === 'win32') {
-        core.warning('Cache cleanup is not yet supported on Windows')
-        return false
-    }
-
-    return userEnabled
+    return core.getBooleanInput(CACHE_CLEANUP_ENABLED_PARAMETER)
 }
 
 /**
