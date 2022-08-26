@@ -32,7 +32,8 @@ if (isTopLevelBuild) {
             if (gradle.rootProject.pluginManager.hasPlugin("com.gradle.build-scan")) {
                 captureUsingBuildScanPublished(gradle.rootProject.extensions["buildScan"], gradle.rootProject, invocationId)
             }
-            // We  need to capture in buildFinished in case the plugin is applied but no build scan is published
+            // Always attempt to capture in buildFinished in case the plugin is applied but no build scan is published
+            // The `buildScanPublished` results will NOT be overwritten by this call
             captureUsingBuildFinished(gradle, invocationId)
         }
     }
