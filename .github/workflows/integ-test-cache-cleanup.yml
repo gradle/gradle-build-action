@@ -7,7 +7,7 @@ on:
         type: string
       runner-os:
         type: string
-        default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
+        default: '["ubuntu-latest", "macos-latest"]' # Windows is not yet supported
       download-dist:
         type: boolean
         default: false
