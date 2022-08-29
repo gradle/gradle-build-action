@@ -306,6 +306,21 @@ Each build is different, and some builds produce more Gradle User Home content t
 [Cache debugging ](#cache-debugging-and-analysis) can provide insight into which cache entries are the largest,
 and you can selectively [exclude content using `gradle-home-cache-exclude`](#gradle-user-home-cache-tuning).
 
+#### Removing unused files from Gradle User Home before saving to cache
+
+The Gradle User Home directory has a tendency to grow over time. When you switch to a new Gradle wrapper version or upgrade a dependency version
+the old files are not automatically and immediately removed. While this can make sense in a local environment, in a GitHub Actions environment
+it can lead to ever-larger Gradle User Home cache entries being saved and restored.
+
+In order to avoid this situation, the `gradle-build-action` supports the `gradle-home-cache-cleanup` parameter. 
+When enabled, this feature will attempt to delete any files in the Gradle User Home that were not used by Gradle during the GitHub Actions workflow, 
+prior to saving the Gradle User Home to the GitHub Actions cache.
+
+Gradle Home cache cleanup is disabled by default.  You can enable this feature for the action as follows:
+```yaml
+gradle-home-cache-cleanup: true
+```
+
 ## Saving build outputs
 
 By default, a GitHub Actions workflow using `gradle-build-action` will record the log output and any Build Scan links for your build,
