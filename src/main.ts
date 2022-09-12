@@ -6,6 +6,8 @@ import * as setupGradle from './setup-gradle'
 import * as execution from './execution'
 import * as provision from './provision'
 
+const GRADLE_VERSION = 'GRADLE_VERSION'
+
 /**
  * The main entry point for the action, called by Github Actions for the step.
  */
@@ -39,6 +41,10 @@ run()
 
 async function provisionGradle(workspaceDirectory: string): Promise<string | undefined> {
     const gradleVersion = core.getInput('gradle-version')
+
+    // Save the Gradle version for use in the post-action step.
+    core.saveState(GRADLE_VERSION, gradleVersion)
+
     if (gradleVersion !== '' && gradleVersion !== 'wrapper') {
         return path.resolve(await provision.gradleVersion(gradleVersion))
     }

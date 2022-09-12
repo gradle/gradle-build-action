@@ -62,6 +62,36 @@ test('will cleanup unused gradle versions', async () => {
     expect(fs.existsSync(gradleCurrent)).toBe(true)
 })
 
+test('will use Gradle Wrapper for cleanup if specified', async () => {
+    const projectRoot = prepareTestProject()
+    const gradleUserHome = path.resolve(projectRoot, 'HOME')
+    const tmpDir = path.resolve(projectRoot, 'tmp')
+    const cacheCleaner = new CacheCleaner(gradleUserHome, tmpDir, 'wrapper')
+
+    // Initialize HOME with 2 different Gradle versions
+    await runGradleWrapperBuild(projectRoot, 'build')
+    await runGradleBuild(projectRoot, 'build')
+    
+    await cacheCleaner.prepare()
+
+    // Run with only one of these versions
+    await runGradleBuild(projectRoot, 'build')
+
+    const gradle733 = path.resolve(gradleUserHome, "caches/7.3.3")
+    const wrapper733 = path.resolve(gradleUserHome, "wrapper/dists/gradle-7.3.3-bin")
+    const gradleCurrent = path.resolve(gradleUserHome, "caches/7.5.1")
+
+    expect(fs.existsSync(gradle733)).toBe(true)
+    expect(fs.existsSync(wrapper733)).toBe(true)
+    expect(fs.existsSync(gradleCurrent)).toBe(true)
+
+    await cacheCleaner.forceCleanup()
+
+    expect(fs.existsSync(gradle733)).toBe(false)
+    expect(fs.existsSync(wrapper733)).toBe(false)
+    expect(fs.existsSync(gradleCurrent)).toBe(true)
+})
+
 async function runGradleBuild(projectRoot: string, args: string, version: string = '3.1'): Promise<void> {
     const status31 = await exec.exec(`gradle -g HOME --no-daemon --build-cache -Dcommons_math3_version="${version}" ${args}`, [], {
         cwd: projectRoot

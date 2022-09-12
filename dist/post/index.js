@@ -64929,9 +64929,10 @@ const glob = __importStar(__nccwpck_require__(8090));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 class CacheCleaner {
-    constructor(gradleUserHome, tmpDir) {
+    constructor(gradleUserHome, tmpDir, gradleVersion) {
         this.gradleUserHome = gradleUserHome;
         this.tmpDir = tmpDir;
+        this.gradleVersion = gradleVersion;
     }
     prepare() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -64949,7 +64950,8 @@ class CacheCleaner {
             fs_1.default.mkdirSync(cleanupProjectDir, { recursive: true });
             fs_1.default.writeFileSync(path_1.default.resolve(cleanupProjectDir, 'settings.gradle'), 'rootProject.name = "dummy-cleanup-project"');
             fs_1.default.writeFileSync(path_1.default.resolve(cleanupProjectDir, 'build.gradle'), 'task("noop") {}');
-            yield exec.exec(`gradle -g ${this.gradleUserHome} --no-daemon --build-cache --no-scan --quiet noop`, [], {
+            const gradleExecutable = this.gradleVersion === 'wrapper' ? './gradlew' : 'gradle';
+            yield exec.exec(`${gradleExecutable} -g ${this.gradleUserHome} --no-daemon --build-cache --no-scan --quiet noop`, [], {
                 cwd: cleanupProjectDir
             });
         });
@@ -65788,6 +65790,7 @@ const cache_utils_1 = __nccwpck_require__(1678);
 const cache_base_1 = __nccwpck_require__(7591);
 const cache_cleaner_1 = __nccwpck_require__(57);
 const CACHE_RESTORED_VAR = 'GRADLE_BUILD_ACTION_CACHE_RESTORED';
+const GRADLE_VERSION = 'GRADLE_VERSION';
 function restore(gradleUserHome, cacheListener) {
     return __awaiter(this, void 0, void 0, function* () {
         if (process.env[CACHE_RESTORED_VAR]) {
@@ -65819,7 +65822,8 @@ function restore(gradleUserHome, cacheListener) {
         }));
         if ((0, cache_utils_1.isCacheCleanupEnabled)() && !(0, cache_utils_1.isCacheReadOnly)()) {
             core.info('Preparing cache for cleanup.');
-            const cacheCleaner = new cache_cleaner_1.CacheCleaner(gradleUserHome, process.env['RUNNER_TEMP']);
+            const gradleVersion = core.getState(GRADLE_VERSION);
+            const cacheCleaner = new cache_cleaner_1.CacheCleaner(gradleUserHome, process.env['RUNNER_TEMP'], gradleVersion);
             yield cacheCleaner.prepare();
         }
     });
@@ -65843,7 +65847,8 @@ function save(gradleUserHome, cacheListener, daemonController) {
         yield daemonController.stopAllDaemons();
         if ((0, cache_utils_1.isCacheCleanupEnabled)()) {
             core.info('Forcing cache cleanup.');
-            const cacheCleaner = new cache_cleaner_1.CacheCleaner(gradleUserHome, process.env['RUNNER_TEMP']);
+            const gradleVersion = core.getState(GRADLE_VERSION);
+            const cacheCleaner = new cache_cleaner_1.CacheCleaner(gradleUserHome, process.env['RUNNER_TEMP'], gradleVersion);
             yield cacheCleaner.forceCleanup();
         }
         yield core.group('Caching Gradle state', () => __awaiter(this, void 0, void 0, function* () {
