@@ -7,6 +7,7 @@ import {CacheCleaner} from './cache-cleaner'
 
 const CACHE_RESTORED_VAR = 'GRADLE_BUILD_ACTION_CACHE_RESTORED'
 const GRADLE_VERSION = 'GRADLE_VERSION'
+const GRADLE_EXECUTABLE = 'GRADLE_EXECUTABLE'
 
 export async function restore(gradleUserHome: string, cacheListener: CacheListener): Promise<void> {
     // Bypass restore cache on all but first action step in workflow.
@@ -50,7 +51,13 @@ export async function restore(gradleUserHome: string, cacheListener: CacheListen
     if (isCacheCleanupEnabled() && !isCacheReadOnly()) {
         core.info('Preparing cache for cleanup.')
         const gradleVersion = core.getState(GRADLE_VERSION)
-        const cacheCleaner = new CacheCleaner(gradleUserHome, process.env['RUNNER_TEMP']!, gradleVersion)
+        const gradleExecutable = core.getState(GRADLE_EXECUTABLE)
+        const cacheCleaner = new CacheCleaner(
+            gradleUserHome,
+            process.env['RUNNER_TEMP']!,
+            gradleVersion,
+            gradleExecutable
+        )
         await cacheCleaner.prepare()
     }
 }
@@ -81,7 +88,13 @@ export async function save(
     if (isCacheCleanupEnabled()) {
         core.info('Forcing cache cleanup.')
         const gradleVersion = core.getState(GRADLE_VERSION)
-        const cacheCleaner = new CacheCleaner(gradleUserHome, process.env['RUNNER_TEMP']!, gradleVersion)
+        const gradleExecutable = core.getState(GRADLE_EXECUTABLE)
+        const cacheCleaner = new CacheCleaner(
+            gradleUserHome,
+            process.env['RUNNER_TEMP']!,
+            gradleVersion,
+            gradleExecutable
+        )
         await cacheCleaner.forceCleanup()
     }
 

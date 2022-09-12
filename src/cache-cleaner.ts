@@ -8,11 +8,13 @@ export class CacheCleaner {
     private readonly gradleUserHome: string
     private readonly tmpDir: string
     private readonly gradleVersion?: string
+    private readonly gradleExecutable?: string
 
-    constructor(gradleUserHome: string, tmpDir: string, gradleVersion?: string) {
+    constructor(gradleUserHome: string, tmpDir: string, gradleVersion?: string, gradleExecutable?: string) {
         this.gradleUserHome = gradleUserHome
         this.tmpDir = tmpDir
         this.gradleVersion = gradleVersion
+        this.gradleExecutable = gradleExecutable
     }
 
     async prepare(): Promise<void> {
@@ -44,7 +46,7 @@ export class CacheCleaner {
         )
         fs.writeFileSync(path.resolve(cleanupProjectDir, 'build.gradle'), 'task("noop") {}')
 
-        const gradleExecutable = this.gradleVersion === 'wrapper' ? './gradlew' : 'gradle'
+        const gradleExecutable = this.determineGradleExecutable(this.gradleExecutable, this.gradleVersion)
 
         await exec.exec(
             `${gradleExecutable} -g ${this.gradleUserHome} --no-daemon --build-cache --no-scan --quiet noop`,
@@ -53,6 +55,13 @@ export class CacheCleaner {
                 cwd: cleanupProjectDir
             }
         )
+    }
+
+    private determineGradleExecutable(gradleExecutable?: string, gradleVersion?: string): string {
+        if (gradleExecutable) return gradleExecutable
+        if (gradleVersion === 'wrapper') return './gradlew'
+
+        return 'gradle'
     }
 
     private async ageAllFiles(fileName = '*'): Promise<void> {
