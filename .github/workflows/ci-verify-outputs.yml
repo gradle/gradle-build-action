@@ -19,7 +19,7 @@ jobs:
     - name: Build
       run: |
         npm install
-        npm run all
+        npm run build
 
     - name: Compare the expected and actual dist/ directories
       run: |
