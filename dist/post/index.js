@@ -18925,7 +18925,7 @@ if (logLevelFromEnv) {
         setLogLevel(logLevelFromEnv);
     }
     else {
-        console.error(`AZURE_LOG_LEVEL set to unknown log level '${logLevelFromEnv}'; logging is not enabled. Acceptable values: ${AZURE_LOG_LEVELS.join(", ")}.`);
+        console.error(`AZURE_LOG_LEVEL set to unknown log level; logging is not enabled. Acceptable values: ${AZURE_LOG_LEVELS.join(", ")}.`);
     }
 }
 /**
