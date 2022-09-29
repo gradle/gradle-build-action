@@ -54,6 +54,8 @@ abstract class BuildResultsRecorder implements BuildService<BuildResultsRecorder
         def buildResultsDir = new File(runnerTempDir, ".build-results")
         buildResultsDir.mkdirs()
         def buildResultsFile = new File(buildResultsDir, githubActionStep + getParameters().getInvocationId().get() + ".json")
-        buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
+        if (!buildResultsFile.exists()) {
+            buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
+        }
     }
 }
