@@ -60,11 +60,13 @@ jobs:
       working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test --configuration-cache
     - name: Check that configuration-cache was used
-      if: ${{ steps.execute.outputs.task_configured == 'yes' }}
       uses: actions/github-script@v6
       with:
         script: |
-          core.setFailed('Configuration cache was not used - task was configured unexpectedly')
+          const fs = require('fs')
+          if (fs.existsSync('.github/workflow-samples/groovy-dsl/task-configured.txt')) {
+            core.setFailed('Configuration cache was not used - task was configured unexpectedly')
+          }
 
   # Check that the build can run when no extracted cache entries are restored
   gradle-user-home-not-fully-restored:
@@ -154,9 +156,11 @@ jobs:
       working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew test --configuration-cache
     - name: Check that configuration-cache was used
-      if: ${{ steps.execute.outputs.task_configured == 'yes' }}
       uses: actions/github-script@v6
       with:
         script: |
-          core.setFailed('Configuration cache was not used - task was configured unexpectedly')
+          const fs = require('fs')
+          if (fs.existsSync('.github/workflow-samples/kotlin-dsl/task-configured.txt')) {
+            core.setFailed('Configuration cache was not used - task was configured unexpectedly')
+          }
 
