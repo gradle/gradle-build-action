@@ -51,7 +51,10 @@ def captureUsingBuildScanPublished(buildScanExtension, rootProject, invocationId
             buildResults.setBuildScanUri(buildScan.buildScanUri.toASCIIString())
             buildResults.writeToResultsFile(true)
 
-            println("::set-output name=build-scan-url::${buildScan.buildScanUri}")
+            def githubOutput = System.getenv("GITHUB_OUTPUT")
+            if (githubOutput) {
+                new File(githubOutput) << "build-scan-url=${buildScan.buildScanUri}\n"
+            }
         }
 
         onError { error ->

@@ -18,8 +18,8 @@ tasks.test {
 }
 
 tasks.named("test").configure {
-    // Echo an output value so we can detect configuration-cache usage
-    println("::set-output name=task_configured::yes")
+    // Write marker file so we can detect if task was configured
+    file("task-configured.txt").writeText("true")
 
     doLast {
         if (System.getProperties().containsKey("verifyCachedBuild")) {
