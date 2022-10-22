@@ -54,6 +54,9 @@ def captureUsingBuildScanPublished(buildScanExtension, rootProject, invocationId
             def githubOutput = System.getenv("GITHUB_OUTPUT")
             if (githubOutput) {
                 new File(githubOutput) << "build-scan-url=${buildScan.buildScanUri}\n"
+            } else {
+                // Retained for compatibility with older GitHub Enterprise versions
+                println("::set-output name=build-scan-url::${buildScan.buildScanUri}")
             }
         }
 
