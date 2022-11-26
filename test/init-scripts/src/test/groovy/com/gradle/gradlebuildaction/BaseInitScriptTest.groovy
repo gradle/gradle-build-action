@@ -17,30 +17,37 @@ import java.util.zip.GZIPOutputStream
 
 class BaseInitScriptTest extends Specification {
 
-    static final TestGradleVersion GRADLE_3_5 = new TestGradleVersion(GradleVersion.version('3.5.1'), 7, 9)
-    static final TestGradleVersion GRADLE_4_0 = new TestGradleVersion(GradleVersion.version('4.0.2'), 7, 9)
-    static final TestGradleVersion GRADLE_4_10 = new TestGradleVersion(GradleVersion.version('4.10.3'), 7, 10)
+    // Sourced from https://docs.gradle.org/current/userguide/compatibility.html#java
+    static final TestGradleVersion GRADLE_3_5 = new TestGradleVersion(GradleVersion.version('3.5.1'), 7, 8)
+    static final TestGradleVersion GRADLE_4_3 = new TestGradleVersion(GradleVersion.version('4.3.1'), 7, 9)
+    static final TestGradleVersion GRADLE_4_7 = new TestGradleVersion(GradleVersion.version('4.7'), 7, 10)
     static final TestGradleVersion GRADLE_5_0 = new TestGradleVersion(GradleVersion.version('5.0'), 8, 11)
-    static final TestGradleVersion GRADLE_5_6 = new TestGradleVersion(GradleVersion.version('5.6.4'), 8, 12)
+    static final TestGradleVersion GRADLE_5_4 = new TestGradleVersion(GradleVersion.version('5.4.1'), 8, 12)
     static final TestGradleVersion GRADLE_6_0 = new TestGradleVersion(GradleVersion.version('6.0.1'), 8, 13)
+    static final TestGradleVersion GRADLE_6_3 = new TestGradleVersion(GradleVersion.version('6.3'), 8, 14)
     static final TestGradleVersion GRADLE_6_7 = new TestGradleVersion(GradleVersion.version('6.7'), 8, 15)
     static final TestGradleVersion GRADLE_7_0 = new TestGradleVersion(GradleVersion.version('7.0.2'), 8, 16)
-    static final TestGradleVersion GRADLE_7_4 = new TestGradleVersion(GradleVersion.version('7.4.2'), 8, 17)
+    static final TestGradleVersion GRADLE_7_3 = new TestGradleVersion(GradleVersion.version('7.3.3'), 8, 17)
+    static final TestGradleVersion GRADLE_7_5 = new TestGradleVersion(GradleVersion.version('7.5.1'), 8, 18)
+    static final TestGradleVersion GRADLE_7_6 = new TestGradleVersion(GradleVersion.version('7.6'), 8, 19)
 
     static final List<TestGradleVersion> ALL_VERSIONS = [
         GRADLE_3_5, // First version where TestKit supports environment variables
-        GRADLE_4_0,
-        GRADLE_4_10,
+        GRADLE_4_3,
+        GRADLE_4_7,
         GRADLE_5_0,
-        GRADLE_5_6,
+        GRADLE_5_4,
         GRADLE_6_0,
+        GRADLE_6_3,
         GRADLE_6_7,
         GRADLE_7_0,
-        GRADLE_7_4,
+        GRADLE_7_3,
+        GRADLE_7_5,
+        GRADLE_7_6,
     ]
 
     static final List<TestGradleVersion> CONFIGURATION_CACHE_VERSIONS =
-        [GRADLE_7_0, GRADLE_7_4]
+        [GRADLE_7_0, GRADLE_7_3, GRADLE_7_5, GRADLE_7_6]
 
     static final String PUBLIC_BUILD_SCAN_ID = 'i2wepy2gr7ovw'
     static final String DEFAULT_SCAN_UPLOAD_TOKEN = 'scan-upload-token'
