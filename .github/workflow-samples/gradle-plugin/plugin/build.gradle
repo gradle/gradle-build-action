@@ -29,7 +29,7 @@ testing {
         functionalTest(JvmTestSuite) {
             dependencies {
                 // functionalTest test suite depends on the production code in tests
-                implementation project
+                implementation(project(':plugin'))
             }
 
             targets {
