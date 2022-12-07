@@ -102,5 +102,3 @@ __tests__/runner/*
 .idea/
 *.iml
 
-# ASDF tool configuration
-.tool-versions
