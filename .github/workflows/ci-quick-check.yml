@@ -19,6 +19,10 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
+    - name: Configure Gradle as default for unit test
+      uses: ./
+      with:
+        gradle-version: 7.5.1
     - name: Run tests
       run: |
         npm install
