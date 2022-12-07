@@ -49,7 +49,7 @@ test('will cleanup unused gradle versions', async () => {
 
     const gradle733 = path.resolve(gradleUserHome, "caches/7.3.3")
     const wrapper733 = path.resolve(gradleUserHome, "wrapper/dists/gradle-7.3.3-bin")
-    const gradleCurrent = path.resolve(gradleUserHome, "caches/7.5.1")
+    const gradleCurrent = path.resolve(gradleUserHome, "caches/7.6")
 
     expect(fs.existsSync(gradle733)).toBe(true)
     expect(fs.existsSync(wrapper733)).toBe(true)
