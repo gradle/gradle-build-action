@@ -338,8 +338,8 @@ export class GradleHomeEntryExtractor extends AbstractEntryExtractor {
 
         return [
             entryDefinition('generated-gradle-jars', ['caches/*/generated-gradle-jars/*.jar'], false),
-            entryDefinition('wrapper-zips', ['wrapper/dists/*/*/'], false), // Entire wrapper directory cached together
-            entryDefinition('java-toolchains', ['jdks/*.zip', 'jdks/*.tar.gz'], false),
+            entryDefinition('wrapper-zips', ['wrapper/dists/*/*/'], false), // Each wrapper directory cached separately
+            entryDefinition('java-toolchains', ['jdks/*/'], false), // Each extracted JDK cached separately
             entryDefinition('dependencies', ['caches/modules-*/files-*/*/*/*/*'], true),
             entryDefinition('instrumented-jars', ['caches/jars-*/*'], true),
             entryDefinition('kotlin-dsl', ['caches/*/kotlin-dsl/*/*'], true)
