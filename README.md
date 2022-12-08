@@ -38,7 +38,7 @@ It is possible to directly invoke Gradle in your workflow, and the `actions/setu
 
 However, the `gradle-build-action` offers a number of advantages over this approach:
 
-- Easily [run the build with different versions of Gradle](#download-install-and-use-a-specific-gradle-version) using the `gradle-version` parameter. Gradle distributions are automatically downloaded and cached. 
+- Easily [run the build with different versions of Gradle](#use-a-specific-gradle-version) using the `gradle-version` parameter. Gradle distributions are automatically downloaded and cached. 
 - More sophisticated and more efficient caching of Gradle User Home between invocations, compared to `setup-java` and most custom configurations using `actions/cache`. [More details below](#caching).
 - Detailed reporting of cache usage and cache configuration options allow you to [optimize the use of the GitHub actions cache](#optimizing-cache-effectiveness).
 - [Automatic capture of build scan links](#build-scans) from the build, making these easier to locate for workflow run.
