@@ -138,7 +138,7 @@ class BaseInitScriptTest extends Specification {
         } else {
             """
               plugins {
-                id 'com.gradle.enterprise' version '3.4.1'
+                id 'com.gradle.enterprise' version '3.12.2'
               }
               gradleEnterprise {
                 server = '$mockScansServer.address'
