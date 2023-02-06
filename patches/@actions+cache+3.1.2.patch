@@ -1,22 +1,22 @@
 diff --git a/node_modules/@actions/cache/lib/cache.d.ts b/node_modules/@actions/cache/lib/cache.d.ts
-index 16b20f7..aea77ba 100644
+index 4658366..b796e58 100644
 --- a/node_modules/@actions/cache/lib/cache.d.ts
 +++ b/node_modules/@actions/cache/lib/cache.d.ts
-@@ -20,7 +20,7 @@ export declare function isFeatureAvailable(): boolean;
-  * @param downloadOptions cache download options
+@@ -21,7 +21,7 @@ export declare function isFeatureAvailable(): boolean;
+  * @param enableCrossOsArchive an optional boolean enabled to restore on windows any cache created on any platform
   * @returns string returns the key for the cache hit, otherwise returns undefined
   */
--export declare function restoreCache(paths: string[], primaryKey: string, restoreKeys?: string[], options?: DownloadOptions): Promise<string | undefined>;
-+export declare function restoreCache(paths: string[], primaryKey: string, restoreKeys?: string[], options?: DownloadOptions): Promise<CacheEntry | undefined>;
+-export declare function restoreCache(paths: string[], primaryKey: string, restoreKeys?: string[], options?: DownloadOptions, enableCrossOsArchive?: boolean): Promise<string | undefined>;
++export declare function restoreCache(paths: string[], primaryKey: string, restoreKeys?: string[], options?: DownloadOptions, enableCrossOsArchive?: boolean): Promise<CacheEntry | undefined>;
  /**
   * Saves a list of files with the specified key
   *
-@@ -29,4 +29,12 @@ export declare function restoreCache(paths: string[], primaryKey: string, restor
+@@ -31,4 +31,12 @@ export declare function restoreCache(paths: string[], primaryKey: string, restor
   * @param options cache upload options
   * @returns number returns cacheId if the cache was saved successfully and throws an error if save fails
   */
--export declare function saveCache(paths: string[], key: string, options?: UploadOptions): Promise<number>;
-+export declare function saveCache(paths: string[], key: string, options?: UploadOptions): Promise<CacheEntry>;
+-export declare function saveCache(paths: string[], key: string, options?: UploadOptions, enableCrossOsArchive?: boolean): Promise<number>;
++export declare function saveCache(paths: string[], key: string, options?: UploadOptions, enableCrossOsArchive?: boolean): Promise<CacheEntry>;
 +
 +// PATCHED: Add `CacheEntry` as return type for save/restore functions
 +// This allows us to track and report on cache entry sizes.
@@ -26,10 +26,10 @@ index 16b20f7..aea77ba 100644
 +    constructor(key: string, size?: number);
 +}
 diff --git a/node_modules/@actions/cache/lib/cache.js b/node_modules/@actions/cache/lib/cache.js
-index 4dc5e88..92d99d5 100644
+index 0fa9df3..5f0b173 100644
 --- a/node_modules/@actions/cache/lib/cache.js
 +++ b/node_modules/@actions/cache/lib/cache.js
-@@ -95,26 +95,18 @@ function restoreCache(paths, primaryKey, restoreKeys, options) {
+@@ -97,26 +97,18 @@ function restoreCache(paths, primaryKey, restoreKeys, options, enableCrossOsArch
              }
              archivePath = path.join(yield utils.createTempDirectory(), utils.getCacheFileName(compressionMethod));
              core.debug(`Archive Path: ${archivePath}`);
@@ -59,7 +59,7 @@ index 4dc5e88..92d99d5 100644
          }
          finally {
              // Try to delete the archive to save space
-@@ -153,6 +145,7 @@ function saveCache(paths, key, options) {
+@@ -156,6 +148,7 @@ function saveCache(paths, key, options, enableCrossOsArchive = false) {
          const archiveFolder = yield utils.createTempDirectory();
          const archivePath = path.join(archiveFolder, utils.getCacheFileName(compressionMethod));
          core.debug(`Archive Path: ${archivePath}`);
@@ -67,7 +67,7 @@ index 4dc5e88..92d99d5 100644
          try {
              yield tar_1.createTar(archiveFolder, cachePaths, compressionMethod);
              if (core.isDebug()) {
-@@ -160,6 +153,7 @@ function saveCache(paths, key, options) {
+@@ -163,6 +156,7 @@ function saveCache(paths, key, options, enableCrossOsArchive = false) {
              }
              const fileSizeLimit = 10 * 1024 * 1024 * 1024; // 10GB per repo limit
              const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath);
@@ -75,7 +75,7 @@ index 4dc5e88..92d99d5 100644
              core.debug(`File Size: ${archiveFileSize}`);
              // For GHES, this check will take place in ReserveCache API with enterprise file size limit
              if (archiveFileSize > fileSizeLimit && !utils.isGhes()) {
-@@ -182,18 +176,6 @@ function saveCache(paths, key, options) {
+@@ -186,18 +180,6 @@ function saveCache(paths, key, options, enableCrossOsArchive = false) {
              core.debug(`Saving Cache (ID: ${cacheId})`);
              yield cacheHttpClient.saveCache(cacheId, archivePath, options);
          }
@@ -94,7 +94,7 @@ index 4dc5e88..92d99d5 100644
          finally {
              // Try to delete the archive to save space
              try {
-@@ -203,8 +185,15 @@ function saveCache(paths, key, options) {
+@@ -207,8 +189,15 @@ function saveCache(paths, key, options, enableCrossOsArchive = false) {
                  core.debug(`Failed to delete archive: ${error}`);
              }
          }
