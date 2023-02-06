@@ -384,6 +384,13 @@ jobs:
           })
 ```
 
+Note that the build scan capturing utilizes the [Initialization Script](https://docs.gradle.org/current/userguide/init_scripts.html#sec:using_an_init_script)
+in the `USER_HOME/.gradle/init.d/` directory, with the file named `build-result-capture.init.gradle`.
+So, if you are using the init scripts for the [Gradle Enterprise Gradle Plugin](https://plugins.gradle.org/plugin/com.gradle.enterprise) like
+[`scans-init.gradle` or `gradle-enterprise-init.gradle`](https://docs.gradle.com/enterprise/gradle-plugin/#scans_gradle_com),
+make sure that its file names have earlier alphabetical order to the `build-result-capture.init.gradle`,
+since configuring capture requires Gradle Enterprise Gradle Plugin to be applied already.
+
 ## Support for GitHub Enterprise Server (GHES)
 
 You can use the `gradle-build-action` on GitHub Enterprise Server, and benefit from the improved integration with Gradle. Depending on the version of GHES you are running, certain features may be limited:
