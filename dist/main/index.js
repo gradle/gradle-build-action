@@ -4968,16 +4968,18 @@ exports.create = create;
  * Computes the sha256 hash of a glob
  *
  * @param patterns  Patterns separated by newlines
+ * @param currentWorkspace  Workspace used when matching files
  * @param options   Glob options
+ * @param verbose   Enables verbose logging
  */
-function hashFiles(patterns, options, verbose = false) {
+function hashFiles(patterns, currentWorkspace = '', options, verbose = false) {
     return __awaiter(this, void 0, void 0, function* () {
         let followSymbolicLinks = true;
         if (options && typeof options.followSymbolicLinks === 'boolean') {
             followSymbolicLinks = options.followSymbolicLinks;
         }
         const globber = yield create(patterns, { followSymbolicLinks });
-        return internal_hash_files_1.hashFiles(globber, verbose);
+        return internal_hash_files_1.hashFiles(globber, currentWorkspace, verbose);
     });
 }
 exports.hashFiles = hashFiles;
@@ -5337,13 +5339,15 @@ const fs = __importStar(__nccwpck_require__(7147));
 const stream = __importStar(__nccwpck_require__(2781));
 const util = __importStar(__nccwpck_require__(3837));
 const path = __importStar(__nccwpck_require__(1017));
-function hashFiles(globber, verbose = false) {
+function hashFiles(globber, currentWorkspace, verbose = false) {
     var e_1, _a;
     var _b;
     return __awaiter(this, void 0, void 0, function* () {
         const writeDelegate = verbose ? core.info : core.debug;
         let hasMatch = false;
-        const githubWorkspace = (_b = process.env['GITHUB_WORKSPACE']) !== null && _b !== void 0 ? _b : process.cwd();
+        const githubWorkspace = currentWorkspace
+            ? currentWorkspace
+            : (_b = process.env['GITHUB_WORKSPACE']) !== null && _b !== void 0 ? _b : process.cwd();
         const result = crypto.createHash('sha256');
         let count = 0;
         try {
