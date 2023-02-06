@@ -223,7 +223,7 @@ export async function tryDelete(file: string): Promise<void> {
         try {
             const stat = fs.lstatSync(file)
             if (stat.isDirectory()) {
-                fs.rmdirSync(file, {recursive: true})
+                fs.rmSync(file, {recursive: true})
             } else {
                 fs.unlinkSync(file)
             }
