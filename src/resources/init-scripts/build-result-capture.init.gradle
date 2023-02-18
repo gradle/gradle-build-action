@@ -21,6 +21,7 @@ if (isTopLevelBuild) {
                 captureUsingBuildScanPublished(settings.extensions["gradleEnterprise"].buildScan, settings.rootProject, invocationId)
             }
             // We also need to add hooks in case the plugin is applied but no build scan is published
+            // The `buildScanPublished` results will NOT be overwritten by these calls
             if (useBuildService) {
                 captureUsingBuildService(settings, invocationId)
             } else {
@@ -71,9 +72,7 @@ def captureUsingBuildFinished(gradle, invocationId) {
     gradle.buildFinished { result ->
         def buildResults = new BuildResults(invocationId, gradle, gradle.rootProject)
         buildResults.setBuildResult(result)
-
         buildResults.writeToResultsFile(false)
-
     }
 }
 
