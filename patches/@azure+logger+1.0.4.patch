@@ -1,8 +1,5 @@
-# Patch removes logging of the AZURE_LOG_LEVEL env var value
-# This logging triggers a high severity Warning from CodeQL, which can prevent organizational users from adopting the action.
-
 diff --git a/node_modules/@azure/logger/dist-esm/src/index.js b/node_modules/@azure/logger/dist-esm/src/index.js
-index 116b59e..cf87f3c 100644
+index cc25720..2925db5 100644
 --- a/node_modules/@azure/logger/dist-esm/src/index.js
 +++ b/node_modules/@azure/logger/dist-esm/src/index.js
 @@ -20,7 +20,7 @@ if (logLevelFromEnv) {
@@ -15,10 +12,10 @@ index 116b59e..cf87f3c 100644
  }
  /**
 diff --git a/node_modules/@azure/logger/dist/index.js b/node_modules/@azure/logger/dist/index.js
-index 327fbdb..4432d73 100644
+index 81e97c3..a0e14d8 100644
 --- a/node_modules/@azure/logger/dist/index.js
 +++ b/node_modules/@azure/logger/dist/index.js
-@@ -122,7 +122,7 @@ if (logLevelFromEnv) {
+@@ -125,7 +125,7 @@ if (logLevelFromEnv) {
          setLogLevel(logLevelFromEnv);
      }
      else {
