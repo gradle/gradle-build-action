@@ -26,23 +26,12 @@ index 4658366..b796e58 100644
 +    constructor(key: string, size?: number);
 +}
 diff --git a/node_modules/@actions/cache/lib/cache.js b/node_modules/@actions/cache/lib/cache.js
-index 0fa9df3..5f0b173 100644
+index 9d636aa..a176bd7 100644
 --- a/node_modules/@actions/cache/lib/cache.js
 +++ b/node_modules/@actions/cache/lib/cache.js
-@@ -97,26 +97,18 @@ function restoreCache(paths, primaryKey, restoreKeys, options, enableCrossOsArch
-             }
-             archivePath = path.join(yield utils.createTempDirectory(), utils.getCacheFileName(compressionMethod));
-             core.debug(`Archive Path: ${archivePath}`);
-+            const restoredEntry = new CacheEntry(cacheEntry.cacheKey);
-             // Download the cache from the cache entry
-             yield cacheHttpClient.downloadCache(cacheEntry.archiveLocation, archivePath, options);
-             if (core.isDebug()) {
-                 yield tar_1.listTar(archivePath, compressionMethod);
-             }
-             const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath);
-+            restoredEntry.size = archiveFileSize;
+@@ -127,18 +127,21 @@ function restoreCache(paths, primaryKey, restoreKeys, options, enableCrossOsArch
              core.info(`Cache Size: ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B)`);
-             yield tar_1.extractTar(archivePath, compressionMethod);
+             yield (0, tar_1.extractTar)(archivePath, compressionMethod);
              core.info('Cache restored successfully');
 -            return cacheEntry.cacheKey;
 -        }
@@ -55,29 +44,31 @@ index 0fa9df3..5f0b173 100644
 -                // Supress all non-validation cache related errors because caching should be optional
 -                core.warning(`Failed to restore: ${error.message}`);
 -            }
-+            return restoredEntry;
++
++            // PATCHED - Return more inforamtion about restored entry
++            return new CacheEntry(cacheEntry.cacheKey, archiveFileSize);;
          }
++        // PATCHED - propagate errors
++        // catch (error) {
++        //     const typedError = error;
++        //     if (typedError.name === ValidationError.name) {
++        //         throw error;
++        //     }
++        //     else {
++        //         // Supress all non-validation cache related errors because caching should be optional
++        //         core.warning(`Failed to restore: ${error.message}`);
++        //     }
++        // }
          finally {
              // Try to delete the archive to save space
-@@ -156,6 +148,7 @@ function saveCache(paths, key, options, enableCrossOsArchive = false) {
-         const archiveFolder = yield utils.createTempDirectory();
-         const archivePath = path.join(archiveFolder, utils.getCacheFileName(compressionMethod));
-         core.debug(`Archive Path: ${archivePath}`);
-+        const savedEntry = new CacheEntry(key);
-         try {
-             yield tar_1.createTar(archiveFolder, cachePaths, compressionMethod);
-             if (core.isDebug()) {
-@@ -163,6 +156,7 @@ function saveCache(paths, key, options, enableCrossOsArchive = false) {
+             try {
+@@ -206,19 +209,23 @@ function saveCache(paths, key, options, enableCrossOsArchive = false) {
              }
-             const fileSizeLimit = 10 * 1024 * 1024 * 1024; // 10GB per repo limit
-             const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath);
-+            savedEntry.size = archiveFileSize;
-             core.debug(`File Size: ${archiveFileSize}`);
-             // For GHES, this check will take place in ReserveCache API with enterprise file size limit
-             if (archiveFileSize > fileSizeLimit && !utils.isGhes()) {
-@@ -186,18 +180,6 @@ function saveCache(paths, key, options, enableCrossOsArchive = false) {
              core.debug(`Saving Cache (ID: ${cacheId})`);
              yield cacheHttpClient.saveCache(cacheId, archivePath, options);
++
++            // PATCHED - Return more inforamtion about saved entry
++            return new CacheEntry(key, archiveFileSize);
          }
 -        catch (error) {
 -            const typedError = error;
@@ -91,15 +82,23 @@ index 0fa9df3..5f0b173 100644
 -                core.warning(`Failed to save: ${typedError.message}`);
 -            }
 -        }
++        // PATCHED - propagate errors
++        // catch (error) {
++        //     const typedError = error;
++        //     if (typedError.name === ValidationError.name) {
++        //         throw error;
++        //     }
++        //     else if (typedError.name === ReserveCacheError.name) {
++        //         core.info(`Failed to save: ${typedError.message}`);
++        //     }
++        //     else {
++        //         core.warning(`Failed to save: ${typedError.message}`);
++        //     }
++        // }
          finally {
              // Try to delete the archive to save space
              try {
-@@ -207,8 +189,15 @@ function saveCache(paths, key, options, enableCrossOsArchive = false) {
-                 core.debug(`Failed to delete archive: ${error}`);
-             }
-         }
--        return cacheId;
-+        return savedEntry;
+@@ -232,4 +239,11 @@ function saveCache(paths, key, options, enableCrossOsArchive = false) {
      });
  }
  exports.saveCache = saveCache;
