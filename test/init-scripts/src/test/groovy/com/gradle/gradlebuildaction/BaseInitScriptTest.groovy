@@ -21,9 +21,9 @@ class BaseInitScriptTest extends Specification {
     static final TestGradleVersion GRADLE_4_X = new TestGradleVersion(GradleVersion.version('4.10.3'), 7, 10)
     static final TestGradleVersion GRADLE_5_X = new TestGradleVersion(GradleVersion.version('5.6.4'), 8, 12)
     static final TestGradleVersion GRADLE_6_NO_BUILD_SERVICE = new TestGradleVersion(GradleVersion.version('6.5.1'), 8, 14)
-    static final TestGradleVersion GRADLE_6_X = new TestGradleVersion(GradleVersion.version('6.9.3'), 8, 15)
-    static final TestGradleVersion GRADLE_7_X = new TestGradleVersion(GradleVersion.version('7.6'), 8, 19)
-    static final TestGradleVersion GRADLE_8_X = new TestGradleVersion(GradleVersion.version('8.0.1'), 8, 19)
+    static final TestGradleVersion GRADLE_6_X = new TestGradleVersion(GradleVersion.version('6.9.4'), 8, 15)
+    static final TestGradleVersion GRADLE_7_X = new TestGradleVersion(GradleVersion.version('7.6.1'), 8, 19)
+    static final TestGradleVersion GRADLE_8_X = new TestGradleVersion(GradleVersion.version('8.0.2'), 8, 19)
 
     static final List<TestGradleVersion> ALL_VERSIONS = [
         GRADLE_3_X, // First version where TestKit supports environment variables
@@ -134,7 +134,7 @@ class BaseInitScriptTest extends Specification {
         } else {
             """
               plugins {
-                id 'com.gradle.enterprise' version '3.12.3'
+                id 'com.gradle.enterprise' version '3.12.6'
               }
               gradleEnterprise {
                 server = '$mockScansServer.address'
@@ -160,7 +160,7 @@ class BaseInitScriptTest extends Specification {
         } else if (gradleVersion < GradleVersion.version('6.0')) {
             """
               plugins {
-                id 'com.gradle.build-scan' version '3.12.3'
+                id 'com.gradle.build-scan' version '3.12.6'
               }
               gradleEnterprise {
                 server = '$mockScansServer.address'
