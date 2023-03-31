@@ -48,7 +48,7 @@ export class CacheCleaner {
     }
 
     private async ageAllFiles(fileName = '*'): Promise<void> {
-        core.debug(`Aging all files in Gradle User Homee with name ${fileName}`)
+        core.debug(`Aging all files in Gradle User Home with name ${fileName}`)
         await this.setUtimes(`${this.gradleUserHome}/**/${fileName}`, new Date(0))
     }
 
