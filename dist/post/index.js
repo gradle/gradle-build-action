@@ -16618,7 +16618,7 @@ let enabledNamespaces = [];
 let skippedNamespaces = [];
 const debuggers = [];
 if (debugEnvVariable) {
-    enable(debugEnvVariable);
+    // enable(debugEnvVariable);
 }
 const debugObj = Object.assign((namespace) => {
     return createDebugger(namespace);
