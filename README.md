@@ -252,9 +252,10 @@ gradle-home-cache-includes: |
     caches
     notifications
     jdks
-# Exclude the local build-cache from the directories cached.
+# Exclude the local build-cache and keyrings from the directories cached.
 gradle-home-cache-excludes: |
     caches/build-cache-1
+    caches/keyrings
 ```
 
 You can specify any number of fixed paths or patterns to include or exclude. 
