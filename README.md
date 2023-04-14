@@ -197,7 +197,6 @@ By default, this action aims to cache any and all reusable state that may be spe
 The state that is cached includes:
 - Any distributions downloaded to satisfy a `gradle-version` parameter ;
 - A subset of the Gradle User Home directory, including downloaded dependencies, wrapper distributions, and the local build cache ;
-- Any [configuration-cache](https://docs.gradle.org/nightly/userguide/configuration_cache.html) data stored in the project `.gradle` directory. (Only supported for Gradle 7 or higher.)
 
 To reduce the space required for caching, this action makes a best effort to reduce duplication in cache entries.
 
@@ -209,7 +208,7 @@ cache-disabled: true
 
 Distributions downloaded to satisfy a `gradle-version` parameter are stored outside of Gradle User Home and cached separately. The cache key is unique to the downloaded distribution and will not change over time.
 
-The state of the Gradle User Home and configuration-cache are highly dependent on the Gradle execution, so the cache key is composed of the current commit hash and the GitHub actions job id.
+The state of the Gradle User Home is highly dependent on the Gradle execution, so the cache key is composed of the current commit hash and the GitHub actions job id.
 As such, the cache key is likely to change on each subsequent run of GitHub actions. 
 This allows the most recent state to always be available in the GitHub actions cache.
 
