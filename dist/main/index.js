@@ -63664,7 +63664,6 @@ class GradleStateCache {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.debugReportGradleUserHomeSize('as restored from cache');
             yield new cache_extract_entries_1.GradleHomeEntryExtractor(this.gradleUserHome).restore(listener);
-            yield new cache_extract_entries_1.ConfigurationCacheEntryExtractor(this.gradleUserHome).restore(listener);
             yield this.debugReportGradleUserHomeSize('after restoring common artifacts');
         });
     }
@@ -63703,8 +63702,7 @@ class GradleStateCache {
             yield this.debugReportGradleUserHomeSize('before saving common artifacts');
             this.deleteExcludedPaths();
             yield Promise.all([
-                new cache_extract_entries_1.GradleHomeEntryExtractor(this.gradleUserHome).extract(listener),
-                new cache_extract_entries_1.ConfigurationCacheEntryExtractor(this.gradleUserHome).extract(listener)
+                new cache_extract_entries_1.GradleHomeEntryExtractor(this.gradleUserHome).extract(listener)
             ]);
             yield this.debugReportGradleUserHomeSize("after extracting common artifacts (only 'caches' and 'notifications' will be stored)");
         });
@@ -64449,7 +64447,7 @@ const exec = __importStar(__nccwpck_require__(1514));
 const crypto = __importStar(__nccwpck_require__(6113));
 const path = __importStar(__nccwpck_require__(1017));
 const fs = __importStar(__nccwpck_require__(7147));
-const CACHE_PROTOCOL_VERSION = 'v6-';
+const CACHE_PROTOCOL_VERSION = 'v7-';
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context';
 const CACHE_DISABLED_PARAMETER = 'cache-disabled';
 const CACHE_READONLY_PARAMETER = 'cache-read-only';
