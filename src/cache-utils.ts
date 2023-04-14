@@ -9,7 +9,7 @@ import * as fs from 'fs'
 
 import {CacheEntryListener} from './cache-reporting'
 
-const CACHE_PROTOCOL_VERSION = 'v6-'
+const CACHE_PROTOCOL_VERSION = 'v7-'
 
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
 const CACHE_DISABLED_PARAMETER = 'cache-disabled'
