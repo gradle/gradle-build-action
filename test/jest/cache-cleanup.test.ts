@@ -47,18 +47,18 @@ test('will cleanup unused gradle versions', async () => {
     // Run with only one of these versions
     await runGradleBuild(projectRoot, 'build')
 
-    const gradle733 = path.resolve(gradleUserHome, "caches/7.3.3")
-    const wrapper733 = path.resolve(gradleUserHome, "wrapper/dists/gradle-7.3.3-bin")
-    const gradleCurrent = path.resolve(gradleUserHome, "caches/7.6.1")
+    const gradle802 = path.resolve(gradleUserHome, "caches/8.0.2")
+    const wrapper802 = path.resolve(gradleUserHome, "wrapper/dists/gradle-8.0.2-bin")
+    const gradleCurrent = path.resolve(gradleUserHome, "caches/8.1.1")
 
-    expect(fs.existsSync(gradle733)).toBe(true)
-    expect(fs.existsSync(wrapper733)).toBe(true)
+    expect(fs.existsSync(gradle802)).toBe(true)
+    expect(fs.existsSync(wrapper802)).toBe(true)
     expect(fs.existsSync(gradleCurrent)).toBe(true)
 
     await cacheCleaner.forceCleanup()
 
-    expect(fs.existsSync(gradle733)).toBe(false)
-    expect(fs.existsSync(wrapper733)).toBe(false)
+    expect(fs.existsSync(gradle802)).toBe(false)
+    expect(fs.existsSync(wrapper802)).toBe(false)
     expect(fs.existsSync(gradleCurrent)).toBe(true)
 })
 
