@@ -38,6 +38,9 @@ class BaseInitScriptTest extends Specification {
     static final List<TestGradleVersion> CONFIGURATION_CACHE_VERSIONS =
         [GRADLE_7_X, GRADLE_8_X]
 
+    static final List<TestGradleVersion> SETTINGS_PLUGIN_VERSIONS =
+        [GRADLE_6_X, GRADLE_7_X, GRADLE_8_X]
+
     static final String PUBLIC_BUILD_SCAN_ID = 'i2wepy2gr7ovw'
     static final String DEFAULT_SCAN_UPLOAD_TOKEN = 'scan-upload-token'
     static final String ROOT_PROJECT_NAME = 'test-init-script'

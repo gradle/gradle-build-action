@@ -148,6 +148,34 @@ class TestBuildResultRecorder extends BaseInitScriptTest {
         testGradleVersion << ALL_VERSIONS
     }
 
+    def "produces build results file with build scan when GE plugin is applied in settingsEvaluated"() {
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
+
+        when:
+        settingsFile.text = """
+            plugins {
+                id 'com.gradle.enterprise' version '3.13' apply(false)
+            }
+            gradle.settingsEvaluated {
+                apply plugin: 'com.gradle.enterprise'
+                gradleEnterprise {
+                    server = '$mockScansServer.address'
+                    buildScan {
+                        publishAlways()
+                    }
+                }
+            }
+        """ + settingsFile.text
+        
+        run(['help'], initScript, testGradleVersion.gradleVersion)
+
+        then:
+        assertResults('help', testGradleVersion, false, true)
+
+        where:
+        testGradleVersion << SETTINGS_PLUGIN_VERSIONS
+    }
+
     void assertResults(String task, TestGradleVersion testGradleVersion, boolean hasFailure, boolean hasBuildScan, boolean scanUploadFailed = false) {
         def results = new JsonSlurper().parse(buildResultFile)
         assert results['rootProjectName'] == ROOT_PROJECT_NAME
