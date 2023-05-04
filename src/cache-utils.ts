@@ -115,7 +115,6 @@ function getCacheKeyEnvironment(): string {
 }
 
 function getCacheKeyJob(): string {
-    // Prefix can be used to force change all cache keys (defaults to cache protocol version)
     return process.env[CACHE_KEY_JOB_VAR] || github.context.job
 }
 
