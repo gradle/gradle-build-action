@@ -9,7 +9,7 @@ import * as fs from 'fs'
 
 import {CacheEntryListener} from './cache-reporting'
 
-const CACHE_PROTOCOL_VERSION = 'v7-'
+const CACHE_PROTOCOL_VERSION = 'v8-'
 
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
 const CACHE_DISABLED_PARAMETER = 'cache-disabled'
@@ -115,7 +115,7 @@ function getCacheKeyEnvironment(): string {
 }
 
 function getCacheKeyJob(): string {
-    return process.env[CACHE_KEY_JOB_VAR] || github.context.job
+    return process.env[CACHE_KEY_JOB_VAR] || `${github.context.workflow}-${github.context.job}`
 }
 
 function getCacheKeyJobInstance(): string {

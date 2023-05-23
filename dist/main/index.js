@@ -64395,7 +64395,7 @@ const exec = __importStar(__nccwpck_require__(1514));
 const crypto = __importStar(__nccwpck_require__(6113));
 const path = __importStar(__nccwpck_require__(1017));
 const fs = __importStar(__nccwpck_require__(7147));
-const CACHE_PROTOCOL_VERSION = 'v7-';
+const CACHE_PROTOCOL_VERSION = 'v8-';
 const JOB_CONTEXT_PARAMETER = 'workflow-job-context';
 const CACHE_DISABLED_PARAMETER = 'cache-disabled';
 const CACHE_READONLY_PARAMETER = 'cache-read-only';
@@ -64461,7 +64461,7 @@ function getCacheKeyEnvironment() {
     return process.env[CACHE_KEY_OS_VAR] || runnerOs;
 }
 function getCacheKeyJob() {
-    return process.env[CACHE_KEY_JOB_VAR] || github.context.job;
+    return process.env[CACHE_KEY_JOB_VAR] || `${github.context.workflow}-${github.context.job}`;
 }
 function getCacheKeyJobInstance() {
     const override = process.env[CACHE_KEY_JOB_INSTANCE_VAR];
