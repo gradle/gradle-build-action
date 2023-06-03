@@ -4,6 +4,7 @@ import {SUMMARY_ENV_VAR} from '@actions/core/lib/summary'
 import * as path from 'path'
 import * as os from 'os'
 import * as caches from './caches'
+import * as layout from './repository-layout'
 
 import {logJobSummary, writeJobSummary} from './job-summary'
 import {loadBuildResults} from './build-results'
@@ -15,17 +16,8 @@ const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
 const CACHE_LISTENER = 'CACHE_LISTENER'
 const JOB_SUMMARY_ENABLED_PARAMETER = 'generate-job-summary'
 
-function shouldGenerateJobSummary(): boolean {
-    // Check if Job Summary is supported on this platform
-    if (!process.env[SUMMARY_ENV_VAR]) {
-        return false
-    }
-
-    return core.getBooleanInput(JOB_SUMMARY_ENABLED_PARAMETER)
-}
-
-export async function setup(buildRootDirectory: string): Promise<void> {
-    const gradleUserHome = await determineGradleUserHome(buildRootDirectory)
+export async function setup(): Promise<void> {
+    const gradleUserHome = await determineGradleUserHome()
 
     // Bypass setup on all but first action step in workflow.
     if (process.env[GRADLE_SETUP_VAR]) {
@@ -68,9 +60,10 @@ export async function complete(): Promise<void> {
     }
 }
 
-async function determineGradleUserHome(rootDir: string): Promise<string> {
+async function determineGradleUserHome(): Promise<string> {
     const customGradleUserHome = process.env['GRADLE_USER_HOME']
     if (customGradleUserHome) {
+        const rootDir = layout.workspaceDirectory()
         return path.resolve(rootDir, customGradleUserHome)
     }
 
@@ -92,4 +85,13 @@ async function determineUserHome(): Promise<string> {
     const userHome = found[1]
     core.debug(`Determined user.home from java -version output: '${userHome}'`)
     return userHome
+}
+
+function shouldGenerateJobSummary(): boolean {
+    // Check if Job Summary is supported on this platform
+    if (!process.env[SUMMARY_ENV_VAR]) {
+        return false
+    }
+
+    return core.getBooleanInput(JOB_SUMMARY_ENABLED_PARAMETER)
 }
