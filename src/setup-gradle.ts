@@ -5,6 +5,7 @@ import * as path from 'path'
 import * as os from 'os'
 import * as caches from './caches'
 import * as layout from './repository-layout'
+import * as params from './input-params'
 
 import {logJobSummary, writeJobSummary} from './job-summary'
 import {loadBuildResults} from './build-results'
@@ -14,7 +15,6 @@ import {DaemonController} from './daemon-controller'
 const GRADLE_SETUP_VAR = 'GRADLE_BUILD_ACTION_SETUP_COMPLETED'
 const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
 const CACHE_LISTENER = 'CACHE_LISTENER'
-const JOB_SUMMARY_ENABLED_PARAMETER = 'generate-job-summary'
 
 export async function setup(): Promise<void> {
     const gradleUserHome = await determineGradleUserHome()
@@ -93,5 +93,5 @@ function shouldGenerateJobSummary(): boolean {
         return false
     }
 
-    return core.getBooleanInput(JOB_SUMMARY_ENABLED_PARAMETER)
+    return params.isJobSummaryEnabled()
 }

@@ -1,4 +1,4 @@
-import * as core from '@actions/core'
+import * as params from './input-params'
 import * as path from 'path'
 
 export function workspaceDirectory(): string {
@@ -7,7 +7,7 @@ export function workspaceDirectory(): string {
 
 export function buildRootDirectory(): string {
     const baseDirectory = workspaceDirectory()
-    const buildRootDirectoryInput = core.getInput('build-root-directory')
+    const buildRootDirectoryInput = params.getBuildRootDirectory()
     const resolvedBuildRootDirectory =
         buildRootDirectoryInput === ''
             ? path.resolve(baseDirectory)

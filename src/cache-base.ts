@@ -2,6 +2,7 @@ import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import path from 'path'
 import fs from 'fs'
+import * as params from './input-params'
 import {CacheListener} from './cache-reporting'
 import {saveCache, restoreCache, cacheDebug, isCacheDebuggingEnabled, tryDelete, generateCacheKey} from './cache-utils'
 import {GradleHomeEntryExtractor} from './cache-extract-entries'
@@ -9,8 +10,6 @@ import {GradleHomeEntryExtractor} from './cache-extract-entries'
 const RESTORED_CACHE_KEY_KEY = 'restored-cache-key'
 
 export const META_FILE_DIR = '.gradle-build-action'
-const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes'
-const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes'
 
 export class GradleStateCache {
     private cacheName: string
@@ -142,7 +141,7 @@ export class GradleStateCache {
      * Delete any file paths that are excluded by the `gradle-home-cache-excludes` parameter.
      */
     private deleteExcludedPaths(): void {
-        const rawPaths: string[] = core.getMultilineInput(EXCLUDE_PATHS_PARAMETER)
+        const rawPaths: string[] = params.getCacheExcludes()
         const resolvedPaths = rawPaths.map(x => path.resolve(this.gradleUserHome, x))
 
         for (const p of resolvedPaths) {
@@ -157,7 +156,7 @@ export class GradleStateCache {
      * but this can be overridden by the `gradle-home-cache-includes` parameter.
      */
     protected getCachePath(): string[] {
-        const rawPaths: string[] = core.getMultilineInput(INCLUDE_PATHS_PARAMETER)
+        const rawPaths: string[] = params.getCacheIncludes()
         rawPaths.push(META_FILE_DIR)
         const resolvedPaths = rawPaths.map(x => this.resolveCachePath(x))
         cacheDebug(`Using cache paths: ${resolvedPaths}`)

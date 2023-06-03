@@ -7,6 +7,7 @@ import * as cache from '@actions/cache'
 import * as toolCache from '@actions/tool-cache'
 
 import * as gradlew from './gradlew'
+import * as params from './input-params'
 import * as layout from './repository-layout'
 import {handleCacheFailure, isCacheDisabled, isCacheReadOnly} from './cache-utils'
 
@@ -17,12 +18,12 @@ const gradleVersionsBaseUrl = 'https://services.gradle.org/versions'
  * @return Installed Gradle executable or undefined if no version configured.
  */
 export async function provisionGradle(): Promise<string | undefined> {
-    const gradleVersion = core.getInput('gradle-version')
+    const gradleVersion = params.getGradleVersion()
     if (gradleVersion !== '' && gradleVersion !== 'wrapper') {
         return addToPath(path.resolve(await installGradle(gradleVersion)))
     }
 
-    const gradleExecutable = core.getInput('gradle-executable')
+    const gradleExecutable = params.getGradleExecutable()
     if (gradleExecutable !== '') {
         const workspaceDirectory = layout.workspaceDirectory()
         return addToPath(path.resolve(workspaceDirectory, gradleExecutable))
