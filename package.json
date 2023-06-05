@@ -8,7 +8,13 @@
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
     "lint": "eslint src/**/*.ts",
-    "compile": "ncc build src/main.ts --out dist/main --source-map --no-source-map-register && ncc build src/post.ts --out dist/post --source-map --no-source-map-register",
+
+    "compile-main": "ncc build src/main.ts --out dist/main --source-map --no-source-map-register",
+    "compile-post": "ncc build src/post.ts --out dist/post --source-map --no-source-map-register",
+    "compile-dependency-graph-generate": "ncc build src/dependency-graph-generate.ts --out dist/dependency-graph-generate --source-map --no-source-map-register",
+    "compile-dependency-graph-submit": "ncc build src/dependency-graph-submit.ts --out dist/dependency-graph-submit --source-map --no-source-map-register",
+    "compile": "npm run compile-main && npm run compile-post && npm run compile-dependency-graph-generate && npm run compile-dependency-graph-submit",
+
     "test": "jest",
     "check": "npm run format && npm run lint",
     "build": "npm run check && npm run compile",
@@ -26,6 +32,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@actions/artifact": "1.1.1",
     "@actions/cache": "3.2.1",
     "@actions/core": "1.10.0",
     "@actions/exec": "1.1.1",
@@ -33,6 +40,7 @@
     "@actions/glob": "0.4.0",
     "@actions/http-client": "2.1.0",
     "@actions/tool-cache": "2.0.1",
+    "@octokit/rest": "19.0.11",
     "string-argv": "0.3.2"
   },
   "devDependencies": {

@@ -1,0 +1,12 @@
+name: "Dependency Graph Submit"
+description: Retrieves a previously created dependency graph JSON and submits via the GitHub Dependency Submission API.
+
+inputs:
+  github-token:
+    description: The GitHub token used to authenticate when submitting via the Dependency Submission API.
+    default: ${{ github.token }}
+    required: false
+
+runs:
+  using: 'node16'
+  main: '../../dist/dependency-graph-submit/index.js'
