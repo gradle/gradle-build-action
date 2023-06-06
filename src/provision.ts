@@ -7,14 +7,37 @@ import * as cache from '@actions/cache'
 import * as toolCache from '@actions/tool-cache'
 
 import * as gradlew from './gradlew'
+import * as params from './input-params'
+import * as layout from './repository-layout'
 import {handleCacheFailure, isCacheDisabled, isCacheReadOnly} from './cache-utils'
 
 const gradleVersionsBaseUrl = 'https://services.gradle.org/versions'
 
 /**
- * @return Gradle executable path
+ * Install any configured version of Gradle, adding the executable to the PATH.
+ * @return Installed Gradle executable or undefined if no version configured.
  */
-export async function gradleVersion(version: string): Promise<string> {
+export async function provisionGradle(): Promise<string | undefined> {
+    const gradleVersion = params.getGradleVersion()
+    if (gradleVersion !== '' && gradleVersion !== 'wrapper') {
+        return addToPath(path.resolve(await installGradle(gradleVersion)))
+    }
+
+    const gradleExecutable = params.getGradleExecutable()
+    if (gradleExecutable !== '') {
+        const workspaceDirectory = layout.workspaceDirectory()
+        return addToPath(path.resolve(workspaceDirectory, gradleExecutable))
+    }
+
+    return undefined
+}
+
+async function addToPath(executable: string): Promise<string> {
+    core.addPath(path.dirname(executable))
+    return executable
+}
+
+async function installGradle(version: string): Promise<string> {
     switch (version) {
         case 'current':
             return gradleCurrent()
@@ -34,13 +57,13 @@ export async function gradleVersion(version: string): Promise<string> {
 
 async function gradleCurrent(): Promise<string> {
     const versionInfo = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/current`)
-    return provisionGradle(versionInfo)
+    return installGradleVersion(versionInfo)
 }
 
 async function gradleReleaseCandidate(): Promise<string> {
     const versionInfo = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-candidate`)
     if (versionInfo && versionInfo.version && versionInfo.downloadUrl) {
-        return provisionGradle(versionInfo)
+        return installGradleVersion(versionInfo)
     }
     core.info('No current release-candidate found, will fallback to current')
     return gradleCurrent()
@@ -48,12 +71,12 @@ async function gradleReleaseCandidate(): Promise<string> {
 
 async function gradleNightly(): Promise<string> {
     const versionInfo = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/nightly`)
-    return provisionGradle(versionInfo)
+    return installGradleVersion(versionInfo)
 }
 
 async function gradleReleaseNightly(): Promise<string> {
     const versionInfo = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-nightly`)
-    return provisionGradle(versionInfo)
+    return installGradleVersion(versionInfo)
 }
 
 async function gradle(version: string): Promise<string> {
@@ -61,7 +84,7 @@ async function gradle(version: string): Promise<string> {
     if (!versionInfo) {
         throw new Error(`Gradle version ${version} does not exists`)
     }
-    return provisionGradle(versionInfo)
+    return installGradleVersion(versionInfo)
 }
 
 async function gradleVersionDeclaration(url: string): Promise<GradleVersionInfo> {
@@ -75,7 +98,7 @@ async function findGradleVersionDeclaration(version: string): Promise<GradleVers
     })
 }
 
-async function provisionGradle(versionInfo: GradleVersionInfo): Promise<string> {
+async function installGradleVersion(versionInfo: GradleVersionInfo): Promise<string> {
     return core.group(`Provision Gradle ${versionInfo.version}`, async () => {
         return locateGradleAndDownloadIfRequired(versionInfo)
     })

@@ -5,7 +5,15 @@ description: 'Configures Gradle for use in GitHub actions, caching useful state 
 
 inputs:
   gradle-version:
-    description: Gradle version to use
+    description: Gradle version to use. If specified, this Gradle version will be downloaded, added to the PATH and used for invoking Gradle.
+    required: false
+
+  gradle-executable:
+    description: Path to the Gradle executable. If specified, this executable will be added to the PATH and used for invoking Gradle.
+    required: false
+
+  build-root-directory:
+    description: Path to the root directory of the build. Default is the root of the GitHub workspace.
     required: false
 
   cache-disabled:
@@ -43,14 +51,6 @@ inputs:
 
   arguments:
     description: Gradle command line arguments (supports multi-line input)
-    required: false
-
-  build-root-directory:
-    description: Path to the root directory of the build
-    required: false
-
-  gradle-executable:
-    description: Path to the Gradle executable
     required: false
 
   generate-job-summary:

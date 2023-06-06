@@ -7,17 +7,11 @@ import * as crypto from 'crypto'
 import * as path from 'path'
 import * as fs from 'fs'
 
+import * as params from './input-params'
+
 import {CacheEntryListener} from './cache-reporting'
 
 const CACHE_PROTOCOL_VERSION = 'v8-'
-
-const JOB_CONTEXT_PARAMETER = 'workflow-job-context'
-const CACHE_DISABLED_PARAMETER = 'cache-disabled'
-const CACHE_READONLY_PARAMETER = 'cache-read-only'
-const CACHE_WRITEONLY_PARAMETER = 'cache-write-only'
-const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match'
-const CACHE_CLEANUP_ENABLED_PARAMETER = 'gradle-home-cache-cleanup'
-const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED'
 
 const CACHE_KEY_PREFIX_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX'
 const CACHE_KEY_OS_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_ENVIRONMENT'
@@ -32,23 +26,23 @@ export function isCacheDisabled(): boolean {
     if (!cache.isFeatureAvailable()) {
         return true
     }
-    return core.getBooleanInput(CACHE_DISABLED_PARAMETER)
+    return params.isCacheDisabled()
 }
 
 export function isCacheReadOnly(): boolean {
-    return !isCacheWriteOnly() && core.getBooleanInput(CACHE_READONLY_PARAMETER)
+    return !isCacheWriteOnly() && params.isCacheReadOnly()
 }
 
 export function isCacheWriteOnly(): boolean {
-    return core.getBooleanInput(CACHE_WRITEONLY_PARAMETER)
+    return params.isCacheWriteOnly()
 }
 
 export function isCacheDebuggingEnabled(): boolean {
-    return process.env[CACHE_DEBUG_VAR] ? true : false
+    return params.isCacheDebuggingEnabled()
 }
 
 export function isCacheCleanupEnabled(): boolean {
-    return core.getBooleanInput(CACHE_CLEANUP_ENABLED_PARAMETER)
+    return params.isCacheCleanupEnabled()
 }
 
 /**
@@ -97,7 +91,7 @@ export function generateCacheKey(cacheName: string): CacheKey {
     // Exact match on Git SHA
     const cacheKey = `${cacheKeyForJobContext}-${getCacheKeyJobExecution()}`
 
-    if (core.getBooleanInput(STRICT_CACHE_MATCH_PARAMETER)) {
+    if (params.isCacheStrictMatch()) {
         return new CacheKey(cacheKey, [cacheKeyForJobContext])
     }
 
@@ -126,7 +120,7 @@ function getCacheKeyJobInstance(): string {
 
     // By default, we hash the full `matrix` data for the run, to uniquely identify this job invocation
     // The only way we can obtain the `matrix` data is via the `workflow-job-context` parameter in action.yml.
-    const workflowJobContext = core.getInput(JOB_CONTEXT_PARAMETER)
+    const workflowJobContext = params.getJobContext()
     return hashStrings([workflowJobContext])
 }
 

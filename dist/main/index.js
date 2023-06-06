@@ -63559,12 +63559,11 @@ const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
+const params = __importStar(__nccwpck_require__(3885));
 const cache_utils_1 = __nccwpck_require__(1678);
 const cache_extract_entries_1 = __nccwpck_require__(6161);
 const RESTORED_CACHE_KEY_KEY = 'restored-cache-key';
 exports.META_FILE_DIR = '.gradle-build-action';
-const INCLUDE_PATHS_PARAMETER = 'gradle-home-cache-includes';
-const EXCLUDE_PATHS_PARAMETER = 'gradle-home-cache-excludes';
 class GradleStateCache {
     constructor(gradleUserHome) {
         this.gradleUserHome = gradleUserHome;
@@ -63656,7 +63655,7 @@ class GradleStateCache {
         });
     }
     deleteExcludedPaths() {
-        const rawPaths = core.getMultilineInput(EXCLUDE_PATHS_PARAMETER);
+        const rawPaths = params.getCacheExcludes();
         const resolvedPaths = rawPaths.map(x => path_1.default.resolve(this.gradleUserHome, x));
         for (const p of resolvedPaths) {
             (0, cache_utils_1.cacheDebug)(`Deleting excluded path: ${p}`);
@@ -63664,7 +63663,7 @@ class GradleStateCache {
         }
     }
     getCachePath() {
-        const rawPaths = core.getMultilineInput(INCLUDE_PATHS_PARAMETER);
+        const rawPaths = params.getCacheIncludes();
         rawPaths.push(exports.META_FILE_DIR);
         const resolvedPaths = rawPaths.map(x => this.resolveCachePath(x));
         (0, cache_utils_1.cacheDebug)(`Using cache paths: ${resolvedPaths}`);
@@ -63892,6 +63891,7 @@ const path_1 = __importDefault(__nccwpck_require__(1017));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const core = __importStar(__nccwpck_require__(2186));
 const glob = __importStar(__nccwpck_require__(8090));
+const params = __importStar(__nccwpck_require__(3885));
 const cache_base_1 = __nccwpck_require__(6948);
 const cache_utils_1 = __nccwpck_require__(1678);
 const build_results_1 = __nccwpck_require__(2107);
@@ -64024,7 +64024,7 @@ class AbstractEntryExtractor {
     }
     awaitForDebugging(p) {
         return __awaiter(this, void 0, void 0, function* () {
-            if ((0, cache_utils_1.isCacheDebuggingEnabled)()) {
+            if (params.isCacheDebuggingEnabled()) {
                 yield p;
             }
             return p;
@@ -64395,14 +64395,8 @@ const exec = __importStar(__nccwpck_require__(1514));
 const crypto = __importStar(__nccwpck_require__(6113));
 const path = __importStar(__nccwpck_require__(1017));
 const fs = __importStar(__nccwpck_require__(7147));
+const params = __importStar(__nccwpck_require__(3885));
 const CACHE_PROTOCOL_VERSION = 'v8-';
-const JOB_CONTEXT_PARAMETER = 'workflow-job-context';
-const CACHE_DISABLED_PARAMETER = 'cache-disabled';
-const CACHE_READONLY_PARAMETER = 'cache-read-only';
-const CACHE_WRITEONLY_PARAMETER = 'cache-write-only';
-const STRICT_CACHE_MATCH_PARAMETER = 'gradle-home-cache-strict-match';
-const CACHE_CLEANUP_ENABLED_PARAMETER = 'gradle-home-cache-cleanup';
-const CACHE_DEBUG_VAR = 'GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED';
 const CACHE_KEY_PREFIX_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX';
 const CACHE_KEY_OS_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_ENVIRONMENT';
 const CACHE_KEY_JOB_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB';
@@ -64414,23 +64408,23 @@ function isCacheDisabled() {
     if (!cache.isFeatureAvailable()) {
         return true;
     }
-    return core.getBooleanInput(CACHE_DISABLED_PARAMETER);
+    return params.isCacheDisabled();
 }
 exports.isCacheDisabled = isCacheDisabled;
 function isCacheReadOnly() {
-    return !isCacheWriteOnly() && core.getBooleanInput(CACHE_READONLY_PARAMETER);
+    return !isCacheWriteOnly() && params.isCacheReadOnly();
 }
 exports.isCacheReadOnly = isCacheReadOnly;
 function isCacheWriteOnly() {
-    return core.getBooleanInput(CACHE_WRITEONLY_PARAMETER);
+    return params.isCacheWriteOnly();
 }
 exports.isCacheWriteOnly = isCacheWriteOnly;
 function isCacheDebuggingEnabled() {
-    return process.env[CACHE_DEBUG_VAR] ? true : false;
+    return params.isCacheDebuggingEnabled();
 }
 exports.isCacheDebuggingEnabled = isCacheDebuggingEnabled;
 function isCacheCleanupEnabled() {
-    return core.getBooleanInput(CACHE_CLEANUP_ENABLED_PARAMETER);
+    return params.isCacheCleanupEnabled();
 }
 exports.isCacheCleanupEnabled = isCacheCleanupEnabled;
 class CacheKey {
@@ -64446,7 +64440,7 @@ function generateCacheKey(cacheName) {
     const cacheKeyForJob = `${cacheKeyForEnvironment}|${getCacheKeyJob()}`;
     const cacheKeyForJobContext = `${cacheKeyForJob}[${getCacheKeyJobInstance()}]`;
     const cacheKey = `${cacheKeyForJobContext}-${getCacheKeyJobExecution()}`;
-    if (core.getBooleanInput(STRICT_CACHE_MATCH_PARAMETER)) {
+    if (params.isCacheStrictMatch()) {
         return new CacheKey(cacheKey, [cacheKeyForJobContext]);
     }
     return new CacheKey(cacheKey, [cacheKeyForJobContext, cacheKeyForJob, cacheKeyForEnvironment]);
@@ -64468,7 +64462,7 @@ function getCacheKeyJobInstance() {
     if (override) {
         return override;
     }
-    const workflowJobContext = core.getInput(JOB_CONTEXT_PARAMETER);
+    const workflowJobContext = params.getJobContext();
     return hashStrings([workflowJobContext]);
 }
 function getCacheKeyJobExecution() {
@@ -64913,6 +64907,115 @@ function validateGradleWrapper(buildRootDirectory) {
 
 /***/ }),
 
+/***/ 3885:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isJobSummaryEnabled = exports.getGithubToken = exports.getJobContext = exports.getArguments = exports.getGradleExecutable = exports.getGradleVersion = exports.getBuildRootDirectory = exports.getCacheExcludes = exports.getCacheIncludes = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheStrictMatch = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const string_argv_1 = __nccwpck_require__(9663);
+function isCacheDisabled() {
+    return getBooleanInput('cache-disabled');
+}
+exports.isCacheDisabled = isCacheDisabled;
+function isCacheReadOnly() {
+    return getBooleanInput('cache-read-only');
+}
+exports.isCacheReadOnly = isCacheReadOnly;
+function isCacheWriteOnly() {
+    return getBooleanInput('cache-write-only');
+}
+exports.isCacheWriteOnly = isCacheWriteOnly;
+function isCacheStrictMatch() {
+    return getBooleanInput('gradle-home-cache-strict-match');
+}
+exports.isCacheStrictMatch = isCacheStrictMatch;
+function isCacheDebuggingEnabled() {
+    return process.env['GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED'] ? true : false;
+}
+exports.isCacheDebuggingEnabled = isCacheDebuggingEnabled;
+function isCacheCleanupEnabled() {
+    return getBooleanInput('gradle-home-cache-cleanup');
+}
+exports.isCacheCleanupEnabled = isCacheCleanupEnabled;
+function getCacheIncludes() {
+    return core.getMultilineInput('gradle-home-cache-includes');
+}
+exports.getCacheIncludes = getCacheIncludes;
+function getCacheExcludes() {
+    return core.getMultilineInput('gradle-home-cache-excludes');
+}
+exports.getCacheExcludes = getCacheExcludes;
+function getBuildRootDirectory() {
+    return core.getInput('build-root-directory');
+}
+exports.getBuildRootDirectory = getBuildRootDirectory;
+function getGradleVersion() {
+    return core.getInput('gradle-version');
+}
+exports.getGradleVersion = getGradleVersion;
+function getGradleExecutable() {
+    return core.getInput('gradle-executable');
+}
+exports.getGradleExecutable = getGradleExecutable;
+function getArguments() {
+    const input = core.getInput('arguments');
+    return (0, string_argv_1.parseArgsStringToArgv)(input);
+}
+exports.getArguments = getArguments;
+function getJobContext() {
+    return core.getInput('workflow-job-context');
+}
+exports.getJobContext = getJobContext;
+function getGithubToken() {
+    return core.getInput('github-token', { required: true });
+}
+exports.getGithubToken = getGithubToken;
+function isJobSummaryEnabled() {
+    return getBooleanInput('generate-job-summary', true);
+}
+exports.isJobSummaryEnabled = isJobSummaryEnabled;
+function getBooleanInput(paramName, paramDefault = false) {
+    const paramValue = core.getInput(paramName);
+    switch (paramValue.toLowerCase().trim()) {
+        case '':
+            return paramDefault;
+        case 'false':
+            return false;
+        case 'true':
+            return true;
+    }
+    throw TypeError(`The value '${paramValue} is not valid for '${paramName}. Valid values are: [true, false]`);
+}
+
+
+/***/ }),
+
 /***/ 7345:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -65076,23 +65179,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = void 0;
 const core = __importStar(__nccwpck_require__(2186));
-const path = __importStar(__nccwpck_require__(1017));
-const string_argv_1 = __nccwpck_require__(9663);
 const setupGradle = __importStar(__nccwpck_require__(8652));
 const execution = __importStar(__nccwpck_require__(3584));
-const provision = __importStar(__nccwpck_require__(2501));
+const provisioner = __importStar(__nccwpck_require__(2501));
+const layout = __importStar(__nccwpck_require__(8182));
+const params = __importStar(__nccwpck_require__(3885));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const workspaceDirectory = process.env[`GITHUB_WORKSPACE`] || '';
-            const buildRootDirectory = resolveBuildRootDirectory(workspaceDirectory);
-            yield setupGradle.setup(buildRootDirectory);
-            const executable = yield provisionGradle(workspaceDirectory);
-            if (executable !== undefined) {
-                core.addPath(path.dirname(executable));
-            }
-            const args = parseCommandLineArguments();
+            yield setupGradle.setup();
+            const executable = yield provisioner.provisionGradle();
+            const args = params.getArguments();
             if (args.length > 0) {
+                const buildRootDirectory = layout.buildRootDirectory();
                 yield execution.executeGradleBuild(executable, buildRootDirectory, args);
             }
         }
@@ -65106,28 +65205,6 @@ function run() {
 }
 exports.run = run;
 run();
-function provisionGradle(workspaceDirectory) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const gradleVersion = core.getInput('gradle-version');
-        if (gradleVersion !== '' && gradleVersion !== 'wrapper') {
-            return path.resolve(yield provision.gradleVersion(gradleVersion));
-        }
-        const gradleExecutable = core.getInput('gradle-executable');
-        if (gradleExecutable !== '') {
-            return path.resolve(workspaceDirectory, gradleExecutable);
-        }
-        return undefined;
-    });
-}
-function resolveBuildRootDirectory(baseDirectory) {
-    const buildRootDirectory = core.getInput('build-root-directory');
-    const resolvedBuildRootDirectory = buildRootDirectory === '' ? path.resolve(baseDirectory) : path.resolve(baseDirectory, buildRootDirectory);
-    return resolvedBuildRootDirectory;
-}
-function parseCommandLineArguments() {
-    const input = core.getInput('arguments');
-    return (0, string_argv_1.parseArgsStringToArgv)(input);
-}
 
 
 /***/ }),
@@ -65170,7 +65247,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.gradleVersion = void 0;
+exports.provisionGradle = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const os = __importStar(__nccwpck_require__(2037));
 const path = __importStar(__nccwpck_require__(1017));
@@ -65179,9 +65256,32 @@ const core = __importStar(__nccwpck_require__(2186));
 const cache = __importStar(__nccwpck_require__(7799));
 const toolCache = __importStar(__nccwpck_require__(7784));
 const gradlew = __importStar(__nccwpck_require__(2335));
+const params = __importStar(__nccwpck_require__(3885));
+const layout = __importStar(__nccwpck_require__(8182));
 const cache_utils_1 = __nccwpck_require__(1678);
 const gradleVersionsBaseUrl = 'https://services.gradle.org/versions';
-function gradleVersion(version) {
+function provisionGradle() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const gradleVersion = params.getGradleVersion();
+        if (gradleVersion !== '' && gradleVersion !== 'wrapper') {
+            return addToPath(path.resolve(yield installGradle(gradleVersion)));
+        }
+        const gradleExecutable = params.getGradleExecutable();
+        if (gradleExecutable !== '') {
+            const workspaceDirectory = layout.workspaceDirectory();
+            return addToPath(path.resolve(workspaceDirectory, gradleExecutable));
+        }
+        return undefined;
+    });
+}
+exports.provisionGradle = provisionGradle;
+function addToPath(executable) {
+    return __awaiter(this, void 0, void 0, function* () {
+        core.addPath(path.dirname(executable));
+        return executable;
+    });
+}
+function installGradle(version) {
     return __awaiter(this, void 0, void 0, function* () {
         switch (version) {
             case 'current':
@@ -65200,18 +65300,17 @@ function gradleVersion(version) {
         }
     });
 }
-exports.gradleVersion = gradleVersion;
 function gradleCurrent() {
     return __awaiter(this, void 0, void 0, function* () {
         const versionInfo = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/current`);
-        return provisionGradle(versionInfo);
+        return installGradleVersion(versionInfo);
     });
 }
 function gradleReleaseCandidate() {
     return __awaiter(this, void 0, void 0, function* () {
         const versionInfo = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-candidate`);
         if (versionInfo && versionInfo.version && versionInfo.downloadUrl) {
-            return provisionGradle(versionInfo);
+            return installGradleVersion(versionInfo);
         }
         core.info('No current release-candidate found, will fallback to current');
         return gradleCurrent();
@@ -65220,13 +65319,13 @@ function gradleReleaseCandidate() {
 function gradleNightly() {
     return __awaiter(this, void 0, void 0, function* () {
         const versionInfo = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/nightly`);
-        return provisionGradle(versionInfo);
+        return installGradleVersion(versionInfo);
     });
 }
 function gradleReleaseNightly() {
     return __awaiter(this, void 0, void 0, function* () {
         const versionInfo = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-nightly`);
-        return provisionGradle(versionInfo);
+        return installGradleVersion(versionInfo);
     });
 }
 function gradle(version) {
@@ -65235,7 +65334,7 @@ function gradle(version) {
         if (!versionInfo) {
             throw new Error(`Gradle version ${version} does not exists`);
         }
-        return provisionGradle(versionInfo);
+        return installGradleVersion(versionInfo);
     });
 }
 function gradleVersionDeclaration(url) {
@@ -65251,7 +65350,7 @@ function findGradleVersionDeclaration(version) {
         });
     });
 }
-function provisionGradle(versionInfo) {
+function installGradleVersion(versionInfo) {
     return __awaiter(this, void 0, void 0, function* () {
         return core.group(`Provision Gradle ${versionInfo.version}`, () => __awaiter(this, void 0, void 0, function* () {
             return locateGradleAndDownloadIfRequired(versionInfo);
@@ -65336,6 +65435,55 @@ function httpGetString(url) {
 
 /***/ }),
 
+/***/ 8182:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildRootDirectory = exports.workspaceDirectory = void 0;
+const params = __importStar(__nccwpck_require__(3885));
+const path = __importStar(__nccwpck_require__(1017));
+function workspaceDirectory() {
+    return process.env[`GITHUB_WORKSPACE`] || '';
+}
+exports.workspaceDirectory = workspaceDirectory;
+function buildRootDirectory() {
+    const baseDirectory = workspaceDirectory();
+    const buildRootDirectoryInput = params.getBuildRootDirectory();
+    const resolvedBuildRootDirectory = buildRootDirectoryInput === ''
+        ? path.resolve(baseDirectory)
+        : path.resolve(baseDirectory, buildRootDirectoryInput);
+    return resolvedBuildRootDirectory;
+}
+exports.buildRootDirectory = buildRootDirectory;
+
+
+/***/ }),
+
 /***/ 8652:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -65381,6 +65529,8 @@ const summary_1 = __nccwpck_require__(1327);
 const path = __importStar(__nccwpck_require__(1017));
 const os = __importStar(__nccwpck_require__(2037));
 const caches = __importStar(__nccwpck_require__(3800));
+const layout = __importStar(__nccwpck_require__(8182));
+const params = __importStar(__nccwpck_require__(3885));
 const job_summary_1 = __nccwpck_require__(7345);
 const build_results_1 = __nccwpck_require__(2107);
 const cache_reporting_1 = __nccwpck_require__(6674);
@@ -65388,16 +65538,9 @@ const daemon_controller_1 = __nccwpck_require__(5146);
 const GRADLE_SETUP_VAR = 'GRADLE_BUILD_ACTION_SETUP_COMPLETED';
 const GRADLE_USER_HOME = 'GRADLE_USER_HOME';
 const CACHE_LISTENER = 'CACHE_LISTENER';
-const JOB_SUMMARY_ENABLED_PARAMETER = 'generate-job-summary';
-function shouldGenerateJobSummary() {
-    if (!process.env[summary_1.SUMMARY_ENV_VAR]) {
-        return false;
-    }
-    return core.getBooleanInput(JOB_SUMMARY_ENABLED_PARAMETER);
-}
-function setup(buildRootDirectory) {
+function setup() {
     return __awaiter(this, void 0, void 0, function* () {
-        const gradleUserHome = yield determineGradleUserHome(buildRootDirectory);
+        const gradleUserHome = yield determineGradleUserHome();
         if (process.env[GRADLE_SETUP_VAR]) {
             core.info('Gradle setup only performed on first gradle-build-action step in workflow.');
             return;
@@ -65432,10 +65575,11 @@ function complete() {
     });
 }
 exports.complete = complete;
-function determineGradleUserHome(rootDir) {
+function determineGradleUserHome() {
     return __awaiter(this, void 0, void 0, function* () {
         const customGradleUserHome = process.env['GRADLE_USER_HOME'];
         if (customGradleUserHome) {
+            const rootDir = layout.workspaceDirectory();
             return path.resolve(rootDir, customGradleUserHome);
         }
         return path.resolve(yield determineUserHome(), '.gradle');
@@ -65454,6 +65598,12 @@ function determineUserHome() {
         core.debug(`Determined user.home from java -version output: '${userHome}'`);
         return userHome;
     });
+}
+function shouldGenerateJobSummary() {
+    if (!process.env[summary_1.SUMMARY_ENV_VAR]) {
+        return false;
+    }
+    return params.isJobSummaryEnabled();
 }
 
 
