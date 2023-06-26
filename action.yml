@@ -28,6 +28,12 @@ inputs:
     required: false
     default: ${{ github.event.repository != null && github.ref_name != github.event.repository.default_branch }}
 
+  cache-provider:
+    description: |
+      The cache provider to use for caching files. Currently only supports `github`.
+    required: false
+    default: github
+
   cache-write-only:
     description: |
       When 'true', entries will not be restored from the cache but will be saved at the end of the Job. 

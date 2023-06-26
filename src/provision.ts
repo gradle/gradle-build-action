@@ -3,13 +3,12 @@ import * as os from 'os'
 import * as path from 'path'
 import * as httpm from '@actions/http-client'
 import * as core from '@actions/core'
-import * as cache from '@actions/cache'
 import * as toolCache from '@actions/tool-cache'
 
 import * as gradlew from './gradlew'
 import * as params from './input-params'
 import * as layout from './repository-layout'
-import {handleCacheFailure, isCacheDisabled, isCacheReadOnly} from './cache-utils'
+import {cache, handleCacheFailure, isCacheDisabled, isCacheReadOnly} from './cache-utils'
 
 const gradleVersionsBaseUrl = 'https://services.gradle.org/versions'
 
@@ -133,7 +132,7 @@ async function downloadAndCacheGradleDistribution(versionInfo: GradleVersionInfo
 
     const cacheKey = `gradle-${versionInfo.version}`
     try {
-        const restoreKey = await cache.restoreCache([downloadPath], cacheKey)
+        const restoreKey = await cache?.restoreCache([downloadPath], cacheKey)
         if (restoreKey) {
             core.info(`Restored Gradle distribution ${cacheKey} from cache to ${downloadPath}`)
             return downloadPath
@@ -145,7 +144,7 @@ async function downloadAndCacheGradleDistribution(versionInfo: GradleVersionInfo
     core.info(`Gradle distribution ${versionInfo.version} not found in cache. Will download.`)
     await downloadGradleDistribution(versionInfo, downloadPath)
 
-    if (!isCacheReadOnly()) {
+    if (!isCacheReadOnly() && cache) {
         try {
             await cache.saveCache([downloadPath], cacheKey)
         } catch (error) {

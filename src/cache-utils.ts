@@ -1,5 +1,4 @@
 import * as core from '@actions/core'
-import * as cache from '@actions/cache'
 import * as github from '@actions/github'
 import * as exec from '@actions/exec'
 
@@ -10,6 +9,9 @@ import * as fs from 'fs'
 import * as params from './input-params'
 
 import {CacheEntryListener} from './cache-reporting'
+import {CacheEntry, CacheProvider} from './cache-provider'
+import {ReserveCacheError, ValidationError} from '@actions/cache'
+import createGitHubCache from './cache-provider-github'
 
 const CACHE_PROTOCOL_VERSION = 'v8-'
 
@@ -19,14 +21,14 @@ const CACHE_KEY_JOB_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB'
 const CACHE_KEY_JOB_INSTANCE_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_INSTANCE'
 const CACHE_KEY_JOB_EXECUTION_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_EXECUTION'
 
-const SEGMENT_DOWNLOAD_TIMEOUT_VAR = 'SEGMENT_DOWNLOAD_TIMEOUT_MINS'
-const SEGMENT_DOWNLOAD_TIMEOUT_DEFAULT = 10 * 60 * 1000 // 10 minutes
+export const cache = provisionCache()
+
+function provisionCache(): CacheProvider | undefined {
+    return createGitHubCache()
+}
 
 export function isCacheDisabled(): boolean {
-    if (!cache.isFeatureAvailable()) {
-        return true
-    }
-    return params.isCacheDisabled()
+    return !cache || params.isCacheDisabled()
 }
 
 export function isCacheReadOnly(): boolean {
@@ -146,14 +148,10 @@ export async function restoreCache(
     cacheKey: string,
     cacheRestoreKeys: string[],
     listener: CacheEntryListener
-): Promise<cache.CacheEntry | undefined> {
+): Promise<CacheEntry | undefined> {
     listener.markRequested(cacheKey, cacheRestoreKeys)
     try {
-        // Only override the read timeout if the SEGMENT_DOWNLOAD_TIMEOUT_MINS env var has NOT been set
-        const cacheRestoreOptions = process.env[SEGMENT_DOWNLOAD_TIMEOUT_VAR]
-            ? {}
-            : {segmentTimeoutInMs: SEGMENT_DOWNLOAD_TIMEOUT_DEFAULT}
-        const restoredEntry = await cache.restoreCache(cachePath, cacheKey, cacheRestoreKeys, cacheRestoreOptions)
+        const restoredEntry = await cache?.restoreCache(cachePath, cacheKey, cacheRestoreKeys)
         if (restoredEntry !== undefined) {
             listener.markRestored(restoredEntry.key, restoredEntry.size)
         }
@@ -167,10 +165,12 @@ export async function restoreCache(
 
 export async function saveCache(cachePath: string[], cacheKey: string, listener: CacheEntryListener): Promise<void> {
     try {
-        const savedEntry = await cache.saveCache(cachePath, cacheKey)
-        listener.markSaved(savedEntry.key, savedEntry.size)
+        const savedEntry = await cache?.saveCache(cachePath, cacheKey)
+        if (savedEntry) {
+            listener.markSaved(savedEntry.key, savedEntry.size)
+        }
     } catch (error) {
-        if (error instanceof cache.ReserveCacheError) {
+        if (error instanceof ReserveCacheError) {
             listener.markAlreadyExists(cacheKey)
         } else {
             listener.markNotSaved((error as Error).message)
@@ -188,11 +188,11 @@ export function cacheDebug(message: string): void {
 }
 
 export function handleCacheFailure(error: unknown, message: string): void {
-    if (error instanceof cache.ValidationError) {
+    if (error instanceof ValidationError) {
         // Fail on cache validation errors
         throw error
     }
-    if (error instanceof cache.ReserveCacheError) {
+    if (error instanceof ReserveCacheError) {
         // Reserve cache errors are expected if the artifact has been previously cached
         core.info(`${message}: ${error}`)
     } else {

@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import * as cache from '@actions/cache'
+import {cache} from './cache-utils'
 
 /**
  * Collects information on what entries were saved and restored during the action.
@@ -16,7 +16,7 @@ export class CacheListener {
     }
 
     get cacheStatus(): string {
-        if (!cache.isFeatureAvailable()) return 'not available'
+        if (!cache) return 'not available'
         if (this.cacheDisabled) return 'disabled'
         if (this.cacheWriteOnly) return 'write-only'
         if (this.cacheReadOnly) return 'read-only'
