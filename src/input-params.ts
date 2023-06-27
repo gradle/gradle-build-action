@@ -25,6 +25,10 @@ export function isCacheCleanupEnabled(): boolean {
     return getBooleanInput('gradle-home-cache-cleanup')
 }
 
+export function getCacheProvider(): string {
+    return core.getInput('cache-provider') || 'github'
+}
+
 export function getCacheIncludes(): string[] {
     return core.getMultilineInput('gradle-home-cache-includes')
 }
@@ -61,6 +65,14 @@ export function getGithubToken(): string {
 
 export function isJobSummaryEnabled(): boolean {
     return getBooleanInput('generate-job-summary', true)
+}
+
+export function getAWSAccessKeyId(): string {
+    return core.getInput('aws-access-key-id')
+}
+
+export function getAWSSecretAccessKey(): string {
+    return core.getInput('aws-secret-access-key')
 }
 
 function getBooleanInput(paramName: string, paramDefault = false): boolean {

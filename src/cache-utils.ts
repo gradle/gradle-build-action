@@ -12,6 +12,7 @@ import {CacheEntryListener} from './cache-reporting'
 import {CacheEntry, CacheProvider} from './cache-provider'
 import {ReserveCacheError, ValidationError} from '@actions/cache'
 import createGitHubCache from './cache-provider-github'
+import createS3Cache from './cache-provider-s3'
 
 const CACHE_PROTOCOL_VERSION = 'v8-'
 
@@ -24,7 +25,16 @@ const CACHE_KEY_JOB_EXECUTION_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_JOB_EXECUTION
 export const cache = provisionCache()
 
 function provisionCache(): CacheProvider | undefined {
-    return createGitHubCache()
+    const provider = params.getCacheProvider()
+    switch (provider) {
+        case 'github':
+            return createGitHubCache()
+        default: {
+            const s3Provider = createS3Cache(provider, params.getAWSAccessKeyId(), params.getAWSSecretAccessKey())
+            if (s3Provider) return s3Provider
+        }
+    }
+    throw new TypeError(`The value '${provider}' is not supported cache provider.`)
 }
 
 export function isCacheDisabled(): boolean {

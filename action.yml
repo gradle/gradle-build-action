@@ -30,7 +30,9 @@ inputs:
 
   cache-provider:
     description: |
-      The cache provider to use for caching files. Currently only supports `github`.
+      The cache provider to use for caching files. It can be:
+      - `github` (default) which uses GitHub Cache API
+      - An `AWS S3` bucket virtual host URL. i.e. https://<bucket-name>.s3.<region-code>.amazonaws.com/
     required: false
     default: github
 
@@ -63,6 +65,14 @@ inputs:
     description: When 'false', no Job Summary will be generated for the Job.
     required: false
     default: true
+
+  aws-access-key-id:
+    description: AWS access key id to access your bucket
+    required: false
+
+  aws-secret-access-key:
+    description: AWS secret access key to access your bucket
+    required: false
 
   # EXPERIMENTAL & INTERNAL ACTION INPUTS
   # The following action properties allow fine-grained tweaking of the action caching behaviour.
