@@ -63818,16 +63818,11 @@ class CacheCleaner {
                 implicitDescendants: false
             });
             try {
-                for (var _d = true, _e = __asyncValues(globber.globGenerator()), _f; _f = yield _e.next(), _a = _f.done, !_a;) {
+                for (var _d = true, _e = __asyncValues(globber.globGenerator()), _f; _f = yield _e.next(), _a = _f.done, !_a; _d = true) {
                     _c = _f.value;
                     _d = false;
-                    try {
-                        const file = _c;
-                        fs_1.default.utimesSync(file, timestamp, timestamp);
-                    }
-                    finally {
-                        _d = true;
-                    }
+                    const file = _c;
+                    fs_1.default.utimesSync(file, timestamp, timestamp);
                 }
             }
             catch (e_1_1) { e_1 = { error: e_1_1 }; }
