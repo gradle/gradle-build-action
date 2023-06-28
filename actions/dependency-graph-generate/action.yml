@@ -1,0 +1,19 @@
+name: "Dependency Graph Generate"
+description: Calculates the complete dependency graph for the repository, saving it as a JSON artifact.
+
+inputs:
+  gradle-version:
+    description: Gradle version to use. If specified, this Gradle version will be downloaded, added to the PATH and used for invoking Gradle.
+    required: false
+
+  gradle-executable:
+    description: Path to the Gradle executable. If specified, this executable will be added to the PATH and used for invoking Gradle.
+    required: false
+
+  build-root-directory:
+    description: Path to the root directory of the build. Default is the root of the GitHub workspace.
+    required: false
+
+runs:
+  using: 'node16'
+  main: '../../dist/dependency-graph-generate/index.js'
