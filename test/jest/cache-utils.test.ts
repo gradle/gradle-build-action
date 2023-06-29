@@ -17,4 +17,10 @@ describe('cacheUtils-utils', () => {
             expect(posixHash).toBe(windowsHash)
         })
     })
+    describe('sanitizes workflow name in cache key', () => {
+        it('with comma', () => {
+            const cacheKey = cacheUtils.getCacheKeyForJob("Workflow, with,commas", "JOB_ID")
+            expect(cacheKey).toBe('workflow withcommas-JOB_ID')
+        })
+    })
 })

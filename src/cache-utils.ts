@@ -109,7 +109,12 @@ function getCacheKeyEnvironment(): string {
 }
 
 function getCacheKeyJob(): string {
-    return process.env[CACHE_KEY_JOB_VAR] || `${github.context.workflow}-${github.context.job}`
+    return process.env[CACHE_KEY_JOB_VAR] || getCacheKeyForJob(github.context.workflow, github.context.job)
+}
+
+export function getCacheKeyForJob(workflowName: string, jobId: string): string {
+    const sanitizedWorkflow = workflowName.replace(/,/g, '').toLowerCase()
+    return `${sanitizedWorkflow}-${jobId}`
 }
 
 function getCacheKeyJobInstance(): string {

@@ -71597,7 +71597,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.tryDelete = exports.handleCacheFailure = exports.cacheDebug = exports.saveCache = exports.restoreCache = exports.hashStrings = exports.hashFileNames = exports.getCacheKeyPrefix = exports.generateCacheKey = exports.CacheKey = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
+exports.tryDelete = exports.handleCacheFailure = exports.cacheDebug = exports.saveCache = exports.restoreCache = exports.hashStrings = exports.hashFileNames = exports.getCacheKeyForJob = exports.getCacheKeyPrefix = exports.generateCacheKey = exports.CacheKey = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const cache = __importStar(__nccwpck_require__(7799));
 const github = __importStar(__nccwpck_require__(5438));
@@ -71665,8 +71665,13 @@ function getCacheKeyEnvironment() {
     return process.env[CACHE_KEY_OS_VAR] || runnerOs;
 }
 function getCacheKeyJob() {
-    return process.env[CACHE_KEY_JOB_VAR] || `${github.context.workflow}-${github.context.job}`;
+    return process.env[CACHE_KEY_JOB_VAR] || getCacheKeyForJob(github.context.workflow, github.context.job);
 }
+function getCacheKeyForJob(workflowName, jobId) {
+    const sanitizedWorkflow = workflowName.replace(/,/g, '').toLowerCase();
+    return `${sanitizedWorkflow}-${jobId}`;
+}
+exports.getCacheKeyForJob = getCacheKeyForJob;
 function getCacheKeyJobInstance() {
     const override = process.env[CACHE_KEY_JOB_INSTANCE_VAR];
     if (override) {
