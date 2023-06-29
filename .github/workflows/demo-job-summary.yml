@@ -1,4 +1,4 @@
-name: Demo Job Summary for Gradle builds
+name: Demo Job Summary, for Gradle builds
 
 on:
   workflow_dispatch:
