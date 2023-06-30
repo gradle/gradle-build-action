@@ -8,7 +8,7 @@ repositories {
 
 dependencies {
     api("org.apache.commons:commons-math3:3.6.1")
-    implementation("com.google.guava:guava:32.0.1-jre")
+    implementation("com.google.guava:guava:32.1.1-jre")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.3")
 }
