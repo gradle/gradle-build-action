@@ -1,12 +1,7 @@
-import org.gradle.github.GitHubDependencyGraphPlugin
+// TODO:DAZ This should be conditionally applied, since the script may be present when not required.
 initscript {
-  repositories {
-    maven {
-      url = uri("https://plugins.gradle.org/m2/")
-    }
-  }
   dependencies {
-    classpath("org.gradle:github-dependency-graph-gradle-plugin:+")
+    classpath files("github-dependency-graph-gradle-plugin-0.0.3.jar")
   }
 }
-apply plugin: GitHubDependencyGraphPlugin
+apply plugin: org.gradle.github.GitHubDependencyGraphPlugin

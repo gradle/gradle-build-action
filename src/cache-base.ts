@@ -172,12 +172,21 @@ export class GradleStateCache {
     }
 
     private initializeGradleUserHome(gradleUserHome: string, initScriptsDir: string): void {
-        const initScriptFilenames = ['build-result-capture.init.gradle', 'build-result-capture-service.plugin.groovy']
+        const initScriptFilenames = [
+            'build-result-capture.init.gradle',
+            'build-result-capture-service.plugin.groovy',
+            'github-dependency-graph.init.gradle'
+        ]
         for (const initScriptFilename of initScriptFilenames) {
             const initScriptContent = this.readInitScriptAsString(initScriptFilename)
             const initScriptPath = path.resolve(initScriptsDir, initScriptFilename)
             fs.writeFileSync(initScriptPath, initScriptContent)
         }
+
+        // TODO:DAZ Remove this when we use a real dependency again
+        const depGraphJar = 'github-dependency-graph-gradle-plugin-0.0.3.jar'
+        const jarFile = path.resolve(__dirname, '..', '..', 'src', 'resources', 'init-scripts', depGraphJar)
+        fs.copyFileSync(jarFile, path.resolve(initScriptsDir, depGraphJar))
     }
 
     private readInitScriptAsString(resource: string): string {
