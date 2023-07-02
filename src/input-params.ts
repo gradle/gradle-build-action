@@ -51,7 +51,7 @@ export function getArguments(): string[] {
 }
 
 // Internal parameters
-export function getJobContext(): string {
+export function getJobMatrix(): string {
     return core.getInput('workflow-job-context')
 }
 
@@ -61,6 +61,10 @@ export function getGithubToken(): string {
 
 export function isJobSummaryEnabled(): boolean {
     return getBooleanInput('generate-job-summary', true)
+}
+
+export function isDependencyGraphEnabled(): boolean {
+    return getBooleanInput('generate-dependency-graph', true)
 }
 
 function getBooleanInput(paramName: string, paramDefault = false): boolean {
