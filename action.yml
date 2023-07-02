@@ -58,6 +58,11 @@ inputs:
     required: false
     default: true
 
+  generate-dependency-graph:
+    description: When 'true', a dependency graph snapshot will be generated for Gradle builds.
+    required: false
+    default: false
+
   # EXPERIMENTAL & INTERNAL ACTION INPUTS
   # The following action properties allow fine-grained tweaking of the action caching behaviour.
   # These properties are experimental and not (yet) designed for production use, and may change without notice in a subsequent release of `gradle-build-action`.

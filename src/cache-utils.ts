@@ -125,8 +125,23 @@ function getCacheKeyJobInstance(): string {
 
     // By default, we hash the full `matrix` data for the run, to uniquely identify this job invocation
     // The only way we can obtain the `matrix` data is via the `workflow-job-context` parameter in action.yml.
-    const workflowJobContext = params.getJobContext()
+    const workflowJobContext = params.getJobMatrix()
     return hashStrings([workflowJobContext])
+}
+
+export function getUniqueLabelForJobInstance(): string {
+    return getUniqueLabelForJobInstanceValues(github.context.workflow, github.context.job, params.getJobMatrix())
+}
+
+export function getUniqueLabelForJobInstanceValues(workflow: string, jobId: string, matrixJson: string): string {
+    const matrix = JSON.parse(matrixJson)
+    const matrixString = Object.values(matrix).join('-')
+    const label = matrixString ? `${workflow}-${jobId}-${matrixString}` : `${workflow}-${jobId}`
+    return sanitize(label)
+}
+
+function sanitize(value: string): string {
+    return value.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase()
 }
 
 function getCacheKeyJobExecution(): string {

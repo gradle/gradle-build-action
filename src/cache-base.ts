@@ -175,7 +175,8 @@ export class GradleStateCache {
         const initScriptFilenames = [
             'build-result-capture.init.gradle',
             'build-result-capture-service.plugin.groovy',
-            'github-dependency-graph.init.gradle'
+            'github-dependency-graph.init.gradle',
+            'github-dependency-graph-gradle-plugin-apply.groovy'
         ]
         for (const initScriptFilename of initScriptFilenames) {
             const initScriptContent = this.readInitScriptAsString(initScriptFilename)
