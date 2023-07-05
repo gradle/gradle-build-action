@@ -58,10 +58,10 @@ inputs:
     required: false
     default: true
 
-  generate-dependency-graph:
-    description: When 'true', a dependency graph snapshot will be generated for Gradle builds.
+  dependency-graph:
+    description: Specifies if a GitHub dependency snapshot should be generated for each Gradle build, and if so, how. Valid values are 'disabled' (default), 'generate', 'generate-and-submit' and 'download-and-submit'.
     required: false
-    default: false
+    default: 'disabled'
 
   # EXPERIMENTAL & INTERNAL ACTION INPUTS
   # The following action properties allow fine-grained tweaking of the action caching behaviour.
@@ -79,6 +79,11 @@ inputs:
     description: When 'true', the action will attempt to remove any stale/unused entries from the Gradle User Home prior to saving to the GitHub Actions cache.
     required: false
     default: false
+
+  github-token:
+    description: The GitHub token used to authenticate when submitting via the Dependency Submission API.
+    default: ${{ github.token }}
+    required: false
 
 outputs:
   build-scan-url:
