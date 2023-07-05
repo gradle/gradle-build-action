@@ -8,7 +8,6 @@ import {Octokit} from '@octokit/rest'
 import * as path from 'path'
 import fs from 'fs'
 
-import * as execution from './execution'
 import * as layout from './repository-layout'
 import {DependencyGraphOption, getJobMatrix} from './input-params'
 
@@ -45,15 +44,7 @@ export async function complete(option: DependencyGraphOption): Promise<void> {
     }
 }
 
-export async function generateDependencyGraph(executable: string | undefined): Promise<void> {
-    const buildRootDirectory = layout.buildRootDirectory()
-
-    const args = [':GitHubDependencyGraphPlugin_generateDependencyGraph']
-
-    await execution.executeGradleBuild(executable, buildRootDirectory, args)
-}
-
-export async function uploadDependencyGraphs(): Promise<string[]> {
+async function uploadDependencyGraphs(): Promise<string[]> {
     const workspaceDirectory = layout.workspaceDirectory()
     const graphFiles = await findDependencyGraphFiles(workspaceDirectory)
 
@@ -66,7 +57,7 @@ export async function uploadDependencyGraphs(): Promise<string[]> {
     return graphFiles
 }
 
-export async function downloadAndSubmitDependencyGraphs(): Promise<void> {
+async function downloadAndSubmitDependencyGraphs(): Promise<void> {
     const workspaceDirectory = layout.workspaceDirectory()
     submitDependencyGraphs(await retrieveDependencyGraphs(workspaceDirectory))
 }
