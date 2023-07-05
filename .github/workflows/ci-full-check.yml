@@ -29,6 +29,11 @@ jobs:
     with:
       cache-key-prefix: ${{github.run_number}}-
 
+  dependency-graph:
+    uses: ./.github/workflows/integ-test-dependency-graph.yml
+    with:
+      cache-key-prefix: ${{github.run_number}}-
+
   execution-with-caching:
     uses: ./.github/workflows/integ-test-execution-with-caching.yml
     with:
