@@ -38,9 +38,7 @@ export async function setup(): Promise<void> {
 
     core.saveState(CACHE_LISTENER, cacheListener.stringify())
 
-    if (params.isDependencyGraphEnabled()) {
-        dependencyGraph.prepare()
-    }
+    dependencyGraph.setup(params.getDependencyGraphOption())
 }
 
 export async function complete(): Promise<void> {
@@ -64,9 +62,7 @@ export async function complete(): Promise<void> {
         logJobSummary(buildResults, cacheListener)
     }
 
-    if (params.isDependencyGraphEnabled()) {
-        dependencyGraph.uploadDependencyGraphs()
-    }
+    dependencyGraph.complete(params.getDependencyGraphOption())
 }
 
 async function determineGradleUserHome(): Promise<string> {

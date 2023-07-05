@@ -10,12 +10,16 @@ import fs from 'fs'
 
 import * as execution from './execution'
 import * as layout from './repository-layout'
-import * as params from './input-params'
+import {DependencyGraphOption, getJobMatrix} from './input-params'
 
 const DEPENDENCY_GRAPH_ARTIFACT = 'dependency-graph'
 
-export function prepare(): void {
-    core.info('Enabling dependency graph')
+export function setup(option: DependencyGraphOption): void {
+    if (option === DependencyGraphOption.Disabled || option === DependencyGraphOption.DownloadAndSubmit) {
+        return
+    }
+
+    core.info('Enabling dependency graph generation')
     const jobCorrelator = getJobCorrelator()
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED', 'true')
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR', jobCorrelator)
@@ -26,6 +30,21 @@ export function prepare(): void {
     )
 }
 
+export async function complete(option: DependencyGraphOption): Promise<void> {
+    switch (option) {
+        case DependencyGraphOption.Disabled:
+            return
+        case DependencyGraphOption.Generate:
+            await uploadDependencyGraphs()
+            return
+        case DependencyGraphOption.GenerateAndSubmit:
+            await submitDependencyGraphs(await uploadDependencyGraphs())
+            return
+        case DependencyGraphOption.DownloadAndSubmit:
+            await downloadAndSubmitDependencyGraphs()
+    }
+}
+
 export async function generateDependencyGraph(executable: string | undefined): Promise<void> {
     const buildRootDirectory = layout.buildRootDirectory()
 
@@ -34,7 +53,7 @@ export async function generateDependencyGraph(executable: string | undefined): P
     await execution.executeGradleBuild(executable, buildRootDirectory, args)
 }
 
-export async function uploadDependencyGraphs(): Promise<void> {
+export async function uploadDependencyGraphs(): Promise<string[]> {
     const workspaceDirectory = layout.workspaceDirectory()
     const graphFiles = await findDependencyGraphFiles(workspaceDirectory)
 
@@ -43,6 +62,8 @@ export async function uploadDependencyGraphs(): Promise<void> {
 
     const artifactClient = artifact.create()
     artifactClient.uploadArtifact(DEPENDENCY_GRAPH_ARTIFACT, graphFiles, workspaceDirectory)
+
+    return graphFiles
 }
 
 export async function downloadAndSubmitDependencyGraphs(): Promise<void> {
@@ -140,7 +161,7 @@ function getRelativePathFromWorkspace(file: string): string {
 }
 
 export function getJobCorrelator(): string {
-    return constructJobCorrelator(github.context.workflow, github.context.job, params.getJobMatrix())
+    return constructJobCorrelator(github.context.workflow, github.context.job, getJobMatrix())
 }
 
 export function constructJobCorrelator(workflow: string, jobId: string, matrixJson: string): string {
