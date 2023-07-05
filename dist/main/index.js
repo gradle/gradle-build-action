@@ -1,6 +1,2197 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 2605:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.create = void 0;
+const artifact_client_1 = __nccwpck_require__(8802);
+/**
+ * Constructs an ArtifactClient
+ */
+function create() {
+    return artifact_client_1.DefaultArtifactClient.create();
+}
+exports.create = create;
+//# sourceMappingURL=artifact-client.js.map
+
+/***/ }),
+
+/***/ 8802:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DefaultArtifactClient = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const upload_specification_1 = __nccwpck_require__(183);
+const upload_http_client_1 = __nccwpck_require__(4354);
+const utils_1 = __nccwpck_require__(6327);
+const path_and_artifact_name_validation_1 = __nccwpck_require__(7398);
+const download_http_client_1 = __nccwpck_require__(8538);
+const download_specification_1 = __nccwpck_require__(5686);
+const config_variables_1 = __nccwpck_require__(2222);
+const path_1 = __nccwpck_require__(1017);
+class DefaultArtifactClient {
+    /**
+     * Constructs a DefaultArtifactClient
+     */
+    static create() {
+        return new DefaultArtifactClient();
+    }
+    /**
+     * Uploads an artifact
+     */
+    uploadArtifact(name, files, rootDirectory, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            core.info(`Starting artifact upload
+For more detailed logs during the artifact upload process, enable step-debugging: https://docs.github.com/actions/monitoring-and-troubleshooting-workflows/enabling-debug-logging#enabling-step-debug-logging`);
+            path_and_artifact_name_validation_1.checkArtifactName(name);
+            // Get specification for the files being uploaded
+            const uploadSpecification = upload_specification_1.getUploadSpecification(name, rootDirectory, files);
+            const uploadResponse = {
+                artifactName: name,
+                artifactItems: [],
+                size: 0,
+                failedItems: []
+            };
+            const uploadHttpClient = new upload_http_client_1.UploadHttpClient();
+            if (uploadSpecification.length === 0) {
+                core.warning(`No files found that can be uploaded`);
+            }
+            else {
+                // Create an entry for the artifact in the file container
+                const response = yield uploadHttpClient.createArtifactInFileContainer(name, options);
+                if (!response.fileContainerResourceUrl) {
+                    core.debug(response.toString());
+                    throw new Error('No URL provided by the Artifact Service to upload an artifact to');
+                }
+                core.debug(`Upload Resource URL: ${response.fileContainerResourceUrl}`);
+                core.info(`Container for artifact "${name}" successfully created. Starting upload of file(s)`);
+                // Upload each of the files that were found concurrently
+                const uploadResult = yield uploadHttpClient.uploadArtifactToFileContainer(response.fileContainerResourceUrl, uploadSpecification, options);
+                // Update the size of the artifact to indicate we are done uploading
+                // The uncompressed size is used for display when downloading a zip of the artifact from the UI
+                core.info(`File upload process has finished. Finalizing the artifact upload`);
+                yield uploadHttpClient.patchArtifactSize(uploadResult.totalSize, name);
+                if (uploadResult.failedItems.length > 0) {
+                    core.info(`Upload finished. There were ${uploadResult.failedItems.length} items that failed to upload`);
+                }
+                else {
+                    core.info(`Artifact has been finalized. All files have been successfully uploaded!`);
+                }
+                core.info(`
+The raw size of all the files that were specified for upload is ${uploadResult.totalSize} bytes
+The size of all the files that were uploaded is ${uploadResult.uploadSize} bytes. This takes into account any gzip compression used to reduce the upload size, time and storage
+
+Note: The size of downloaded zips can differ significantly from the reported size. For more information see: https://github.com/actions/upload-artifact#zipped-artifact-downloads \r\n`);
+                uploadResponse.artifactItems = uploadSpecification.map(item => item.absoluteFilePath);
+                uploadResponse.size = uploadResult.uploadSize;
+                uploadResponse.failedItems = uploadResult.failedItems;
+            }
+            return uploadResponse;
+        });
+    }
+    downloadArtifact(name, path, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const downloadHttpClient = new download_http_client_1.DownloadHttpClient();
+            const artifacts = yield downloadHttpClient.listArtifacts();
+            if (artifacts.count === 0) {
+                throw new Error(`Unable to find any artifacts for the associated workflow`);
+            }
+            const artifactToDownload = artifacts.value.find(artifact => {
+                return artifact.name === name;
+            });
+            if (!artifactToDownload) {
+                throw new Error(`Unable to find an artifact with the name: ${name}`);
+            }
+            const items = yield downloadHttpClient.getContainerItems(artifactToDownload.name, artifactToDownload.fileContainerResourceUrl);
+            if (!path) {
+                path = config_variables_1.getWorkSpaceDirectory();
+            }
+            path = path_1.normalize(path);
+            path = path_1.resolve(path);
+            // During upload, empty directories are rejected by the remote server so there should be no artifacts that consist of only empty directories
+            const downloadSpecification = download_specification_1.getDownloadSpecification(name, items.value, path, (options === null || options === void 0 ? void 0 : options.createArtifactFolder) || false);
+            if (downloadSpecification.filesToDownload.length === 0) {
+                core.info(`No downloadable files were found for the artifact: ${artifactToDownload.name}`);
+            }
+            else {
+                // Create all necessary directories recursively before starting any download
+                yield utils_1.createDirectoriesForArtifact(downloadSpecification.directoryStructure);
+                core.info('Directory structure has been setup for the artifact');
+                yield utils_1.createEmptyFilesForArtifact(downloadSpecification.emptyFilesToCreate);
+                yield downloadHttpClient.downloadSingleArtifact(downloadSpecification.filesToDownload);
+            }
+            return {
+                artifactName: name,
+                downloadPath: downloadSpecification.rootDownloadLocation
+            };
+        });
+    }
+    downloadAllArtifacts(path) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const downloadHttpClient = new download_http_client_1.DownloadHttpClient();
+            const response = [];
+            const artifacts = yield downloadHttpClient.listArtifacts();
+            if (artifacts.count === 0) {
+                core.info('Unable to find any artifacts for the associated workflow');
+                return response;
+            }
+            if (!path) {
+                path = config_variables_1.getWorkSpaceDirectory();
+            }
+            path = path_1.normalize(path);
+            path = path_1.resolve(path);
+            let downloadedArtifacts = 0;
+            while (downloadedArtifacts < artifacts.count) {
+                const currentArtifactToDownload = artifacts.value[downloadedArtifacts];
+                downloadedArtifacts += 1;
+                core.info(`starting download of artifact ${currentArtifactToDownload.name} : ${downloadedArtifacts}/${artifacts.count}`);
+                // Get container entries for the specific artifact
+                const items = yield downloadHttpClient.getContainerItems(currentArtifactToDownload.name, currentArtifactToDownload.fileContainerResourceUrl);
+                const downloadSpecification = download_specification_1.getDownloadSpecification(currentArtifactToDownload.name, items.value, path, true);
+                if (downloadSpecification.filesToDownload.length === 0) {
+                    core.info(`No downloadable files were found for any artifact ${currentArtifactToDownload.name}`);
+                }
+                else {
+                    yield utils_1.createDirectoriesForArtifact(downloadSpecification.directoryStructure);
+                    yield utils_1.createEmptyFilesForArtifact(downloadSpecification.emptyFilesToCreate);
+                    yield downloadHttpClient.downloadSingleArtifact(downloadSpecification.filesToDownload);
+                }
+                response.push({
+                    artifactName: currentArtifactToDownload.name,
+                    downloadPath: downloadSpecification.rootDownloadLocation
+                });
+            }
+            return response;
+        });
+    }
+}
+exports.DefaultArtifactClient = DefaultArtifactClient;
+//# sourceMappingURL=artifact-client.js.map
+
+/***/ }),
+
+/***/ 2222:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getRetentionDays = exports.getWorkSpaceDirectory = exports.getWorkFlowRunId = exports.getRuntimeUrl = exports.getRuntimeToken = exports.getDownloadFileConcurrency = exports.getInitialRetryIntervalInMilliseconds = exports.getRetryMultiplier = exports.getRetryLimit = exports.getUploadChunkSize = exports.getUploadFileConcurrency = void 0;
+// The number of concurrent uploads that happens at the same time
+function getUploadFileConcurrency() {
+    return 2;
+}
+exports.getUploadFileConcurrency = getUploadFileConcurrency;
+// When uploading large files that can't be uploaded with a single http call, this controls
+// the chunk size that is used during upload
+function getUploadChunkSize() {
+    return 8 * 1024 * 1024; // 8 MB Chunks
+}
+exports.getUploadChunkSize = getUploadChunkSize;
+// The maximum number of retries that can be attempted before an upload or download fails
+function getRetryLimit() {
+    return 5;
+}
+exports.getRetryLimit = getRetryLimit;
+// With exponential backoff, the larger the retry count, the larger the wait time before another attempt
+// The retry multiplier controls by how much the backOff time increases depending on the number of retries
+function getRetryMultiplier() {
+    return 1.5;
+}
+exports.getRetryMultiplier = getRetryMultiplier;
+// The initial wait time if an upload or download fails and a retry is being attempted for the first time
+function getInitialRetryIntervalInMilliseconds() {
+    return 3000;
+}
+exports.getInitialRetryIntervalInMilliseconds = getInitialRetryIntervalInMilliseconds;
+// The number of concurrent downloads that happens at the same time
+function getDownloadFileConcurrency() {
+    return 2;
+}
+exports.getDownloadFileConcurrency = getDownloadFileConcurrency;
+function getRuntimeToken() {
+    const token = process.env['ACTIONS_RUNTIME_TOKEN'];
+    if (!token) {
+        throw new Error('Unable to get ACTIONS_RUNTIME_TOKEN env variable');
+    }
+    return token;
+}
+exports.getRuntimeToken = getRuntimeToken;
+function getRuntimeUrl() {
+    const runtimeUrl = process.env['ACTIONS_RUNTIME_URL'];
+    if (!runtimeUrl) {
+        throw new Error('Unable to get ACTIONS_RUNTIME_URL env variable');
+    }
+    return runtimeUrl;
+}
+exports.getRuntimeUrl = getRuntimeUrl;
+function getWorkFlowRunId() {
+    const workFlowRunId = process.env['GITHUB_RUN_ID'];
+    if (!workFlowRunId) {
+        throw new Error('Unable to get GITHUB_RUN_ID env variable');
+    }
+    return workFlowRunId;
+}
+exports.getWorkFlowRunId = getWorkFlowRunId;
+function getWorkSpaceDirectory() {
+    const workspaceDirectory = process.env['GITHUB_WORKSPACE'];
+    if (!workspaceDirectory) {
+        throw new Error('Unable to get GITHUB_WORKSPACE env variable');
+    }
+    return workspaceDirectory;
+}
+exports.getWorkSpaceDirectory = getWorkSpaceDirectory;
+function getRetentionDays() {
+    return process.env['GITHUB_RETENTION_DAYS'];
+}
+exports.getRetentionDays = getRetentionDays;
+//# sourceMappingURL=config-variables.js.map
+
+/***/ }),
+
+/***/ 3549:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/**
+ * CRC64: cyclic redundancy check, 64-bits
+ *
+ * In order to validate that artifacts are not being corrupted over the wire, this redundancy check allows us to
+ * validate that there was no corruption during transmission. The implementation here is based on Go's hash/crc64 pkg,
+ * but without the slicing-by-8 optimization: https://cs.opensource.google/go/go/+/master:src/hash/crc64/crc64.go
+ *
+ * This implementation uses a pregenerated table based on 0x9A6C9329AC4BC9B5 as the polynomial, the same polynomial that
+ * is used for Azure Storage: https://github.com/Azure/azure-storage-net/blob/cbe605f9faa01bfc3003d75fc5a16b2eaccfe102/Lib/Common/Core/Util/Crc64.cs#L27
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+// when transpile target is >= ES2020 (after dropping node 12) these can be changed to bigint literals - ts(2737)
+const PREGEN_POLY_TABLE = [
+    BigInt('0x0000000000000000'),
+    BigInt('0x7F6EF0C830358979'),
+    BigInt('0xFEDDE190606B12F2'),
+    BigInt('0x81B31158505E9B8B'),
+    BigInt('0xC962E5739841B68F'),
+    BigInt('0xB60C15BBA8743FF6'),
+    BigInt('0x37BF04E3F82AA47D'),
+    BigInt('0x48D1F42BC81F2D04'),
+    BigInt('0xA61CECB46814FE75'),
+    BigInt('0xD9721C7C5821770C'),
+    BigInt('0x58C10D24087FEC87'),
+    BigInt('0x27AFFDEC384A65FE'),
+    BigInt('0x6F7E09C7F05548FA'),
+    BigInt('0x1010F90FC060C183'),
+    BigInt('0x91A3E857903E5A08'),
+    BigInt('0xEECD189FA00BD371'),
+    BigInt('0x78E0FF3B88BE6F81'),
+    BigInt('0x078E0FF3B88BE6F8'),
+    BigInt('0x863D1EABE8D57D73'),
+    BigInt('0xF953EE63D8E0F40A'),
+    BigInt('0xB1821A4810FFD90E'),
+    BigInt('0xCEECEA8020CA5077'),
+    BigInt('0x4F5FFBD87094CBFC'),
+    BigInt('0x30310B1040A14285'),
+    BigInt('0xDEFC138FE0AA91F4'),
+    BigInt('0xA192E347D09F188D'),
+    BigInt('0x2021F21F80C18306'),
+    BigInt('0x5F4F02D7B0F40A7F'),
+    BigInt('0x179EF6FC78EB277B'),
+    BigInt('0x68F0063448DEAE02'),
+    BigInt('0xE943176C18803589'),
+    BigInt('0x962DE7A428B5BCF0'),
+    BigInt('0xF1C1FE77117CDF02'),
+    BigInt('0x8EAF0EBF2149567B'),
+    BigInt('0x0F1C1FE77117CDF0'),
+    BigInt('0x7072EF2F41224489'),
+    BigInt('0x38A31B04893D698D'),
+    BigInt('0x47CDEBCCB908E0F4'),
+    BigInt('0xC67EFA94E9567B7F'),
+    BigInt('0xB9100A5CD963F206'),
+    BigInt('0x57DD12C379682177'),
+    BigInt('0x28B3E20B495DA80E'),
+    BigInt('0xA900F35319033385'),
+    BigInt('0xD66E039B2936BAFC'),
+    BigInt('0x9EBFF7B0E12997F8'),
+    BigInt('0xE1D10778D11C1E81'),
+    BigInt('0x606216208142850A'),
+    BigInt('0x1F0CE6E8B1770C73'),
+    BigInt('0x8921014C99C2B083'),
+    BigInt('0xF64FF184A9F739FA'),
+    BigInt('0x77FCE0DCF9A9A271'),
+    BigInt('0x08921014C99C2B08'),
+    BigInt('0x4043E43F0183060C'),
+    BigInt('0x3F2D14F731B68F75'),
+    BigInt('0xBE9E05AF61E814FE'),
+    BigInt('0xC1F0F56751DD9D87'),
+    BigInt('0x2F3DEDF8F1D64EF6'),
+    BigInt('0x50531D30C1E3C78F'),
+    BigInt('0xD1E00C6891BD5C04'),
+    BigInt('0xAE8EFCA0A188D57D'),
+    BigInt('0xE65F088B6997F879'),
+    BigInt('0x9931F84359A27100'),
+    BigInt('0x1882E91B09FCEA8B'),
+    BigInt('0x67EC19D339C963F2'),
+    BigInt('0xD75ADABD7A6E2D6F'),
+    BigInt('0xA8342A754A5BA416'),
+    BigInt('0x29873B2D1A053F9D'),
+    BigInt('0x56E9CBE52A30B6E4'),
+    BigInt('0x1E383FCEE22F9BE0'),
+    BigInt('0x6156CF06D21A1299'),
+    BigInt('0xE0E5DE5E82448912'),
+    BigInt('0x9F8B2E96B271006B'),
+    BigInt('0x71463609127AD31A'),
+    BigInt('0x0E28C6C1224F5A63'),
+    BigInt('0x8F9BD7997211C1E8'),
+    BigInt('0xF0F5275142244891'),
+    BigInt('0xB824D37A8A3B6595'),
+    BigInt('0xC74A23B2BA0EECEC'),
+    BigInt('0x46F932EAEA507767'),
+    BigInt('0x3997C222DA65FE1E'),
+    BigInt('0xAFBA2586F2D042EE'),
+    BigInt('0xD0D4D54EC2E5CB97'),
+    BigInt('0x5167C41692BB501C'),
+    BigInt('0x2E0934DEA28ED965'),
+    BigInt('0x66D8C0F56A91F461'),
+    BigInt('0x19B6303D5AA47D18'),
+    BigInt('0x980521650AFAE693'),
+    BigInt('0xE76BD1AD3ACF6FEA'),
+    BigInt('0x09A6C9329AC4BC9B'),
+    BigInt('0x76C839FAAAF135E2'),
+    BigInt('0xF77B28A2FAAFAE69'),
+    BigInt('0x8815D86ACA9A2710'),
+    BigInt('0xC0C42C4102850A14'),
+    BigInt('0xBFAADC8932B0836D'),
+    BigInt('0x3E19CDD162EE18E6'),
+    BigInt('0x41773D1952DB919F'),
+    BigInt('0x269B24CA6B12F26D'),
+    BigInt('0x59F5D4025B277B14'),
+    BigInt('0xD846C55A0B79E09F'),
+    BigInt('0xA72835923B4C69E6'),
+    BigInt('0xEFF9C1B9F35344E2'),
+    BigInt('0x90973171C366CD9B'),
+    BigInt('0x1124202993385610'),
+    BigInt('0x6E4AD0E1A30DDF69'),
+    BigInt('0x8087C87E03060C18'),
+    BigInt('0xFFE938B633338561'),
+    BigInt('0x7E5A29EE636D1EEA'),
+    BigInt('0x0134D92653589793'),
+    BigInt('0x49E52D0D9B47BA97'),
+    BigInt('0x368BDDC5AB7233EE'),
+    BigInt('0xB738CC9DFB2CA865'),
+    BigInt('0xC8563C55CB19211C'),
+    BigInt('0x5E7BDBF1E3AC9DEC'),
+    BigInt('0x21152B39D3991495'),
+    BigInt('0xA0A63A6183C78F1E'),
+    BigInt('0xDFC8CAA9B3F20667'),
+    BigInt('0x97193E827BED2B63'),
+    BigInt('0xE877CE4A4BD8A21A'),
+    BigInt('0x69C4DF121B863991'),
+    BigInt('0x16AA2FDA2BB3B0E8'),
+    BigInt('0xF86737458BB86399'),
+    BigInt('0x8709C78DBB8DEAE0'),
+    BigInt('0x06BAD6D5EBD3716B'),
+    BigInt('0x79D4261DDBE6F812'),
+    BigInt('0x3105D23613F9D516'),
+    BigInt('0x4E6B22FE23CC5C6F'),
+    BigInt('0xCFD833A67392C7E4'),
+    BigInt('0xB0B6C36E43A74E9D'),
+    BigInt('0x9A6C9329AC4BC9B5'),
+    BigInt('0xE50263E19C7E40CC'),
+    BigInt('0x64B172B9CC20DB47'),
+    BigInt('0x1BDF8271FC15523E'),
+    BigInt('0x530E765A340A7F3A'),
+    BigInt('0x2C608692043FF643'),
+    BigInt('0xADD397CA54616DC8'),
+    BigInt('0xD2BD67026454E4B1'),
+    BigInt('0x3C707F9DC45F37C0'),
+    BigInt('0x431E8F55F46ABEB9'),
+    BigInt('0xC2AD9E0DA4342532'),
+    BigInt('0xBDC36EC59401AC4B'),
+    BigInt('0xF5129AEE5C1E814F'),
+    BigInt('0x8A7C6A266C2B0836'),
+    BigInt('0x0BCF7B7E3C7593BD'),
+    BigInt('0x74A18BB60C401AC4'),
+    BigInt('0xE28C6C1224F5A634'),
+    BigInt('0x9DE29CDA14C02F4D'),
+    BigInt('0x1C518D82449EB4C6'),
+    BigInt('0x633F7D4A74AB3DBF'),
+    BigInt('0x2BEE8961BCB410BB'),
+    BigInt('0x548079A98C8199C2'),
+    BigInt('0xD53368F1DCDF0249'),
+    BigInt('0xAA5D9839ECEA8B30'),
+    BigInt('0x449080A64CE15841'),
+    BigInt('0x3BFE706E7CD4D138'),
+    BigInt('0xBA4D61362C8A4AB3'),
+    BigInt('0xC52391FE1CBFC3CA'),
+    BigInt('0x8DF265D5D4A0EECE'),
+    BigInt('0xF29C951DE49567B7'),
+    BigInt('0x732F8445B4CBFC3C'),
+    BigInt('0x0C41748D84FE7545'),
+    BigInt('0x6BAD6D5EBD3716B7'),
+    BigInt('0x14C39D968D029FCE'),
+    BigInt('0x95708CCEDD5C0445'),
+    BigInt('0xEA1E7C06ED698D3C'),
+    BigInt('0xA2CF882D2576A038'),
+    BigInt('0xDDA178E515432941'),
+    BigInt('0x5C1269BD451DB2CA'),
+    BigInt('0x237C997575283BB3'),
+    BigInt('0xCDB181EAD523E8C2'),
+    BigInt('0xB2DF7122E51661BB'),
+    BigInt('0x336C607AB548FA30'),
+    BigInt('0x4C0290B2857D7349'),
+    BigInt('0x04D364994D625E4D'),
+    BigInt('0x7BBD94517D57D734'),
+    BigInt('0xFA0E85092D094CBF'),
+    BigInt('0x856075C11D3CC5C6'),
+    BigInt('0x134D926535897936'),
+    BigInt('0x6C2362AD05BCF04F'),
+    BigInt('0xED9073F555E26BC4'),
+    BigInt('0x92FE833D65D7E2BD'),
+    BigInt('0xDA2F7716ADC8CFB9'),
+    BigInt('0xA54187DE9DFD46C0'),
+    BigInt('0x24F29686CDA3DD4B'),
+    BigInt('0x5B9C664EFD965432'),
+    BigInt('0xB5517ED15D9D8743'),
+    BigInt('0xCA3F8E196DA80E3A'),
+    BigInt('0x4B8C9F413DF695B1'),
+    BigInt('0x34E26F890DC31CC8'),
+    BigInt('0x7C339BA2C5DC31CC'),
+    BigInt('0x035D6B6AF5E9B8B5'),
+    BigInt('0x82EE7A32A5B7233E'),
+    BigInt('0xFD808AFA9582AA47'),
+    BigInt('0x4D364994D625E4DA'),
+    BigInt('0x3258B95CE6106DA3'),
+    BigInt('0xB3EBA804B64EF628'),
+    BigInt('0xCC8558CC867B7F51'),
+    BigInt('0x8454ACE74E645255'),
+    BigInt('0xFB3A5C2F7E51DB2C'),
+    BigInt('0x7A894D772E0F40A7'),
+    BigInt('0x05E7BDBF1E3AC9DE'),
+    BigInt('0xEB2AA520BE311AAF'),
+    BigInt('0x944455E88E0493D6'),
+    BigInt('0x15F744B0DE5A085D'),
+    BigInt('0x6A99B478EE6F8124'),
+    BigInt('0x224840532670AC20'),
+    BigInt('0x5D26B09B16452559'),
+    BigInt('0xDC95A1C3461BBED2'),
+    BigInt('0xA3FB510B762E37AB'),
+    BigInt('0x35D6B6AF5E9B8B5B'),
+    BigInt('0x4AB846676EAE0222'),
+    BigInt('0xCB0B573F3EF099A9'),
+    BigInt('0xB465A7F70EC510D0'),
+    BigInt('0xFCB453DCC6DA3DD4'),
+    BigInt('0x83DAA314F6EFB4AD'),
+    BigInt('0x0269B24CA6B12F26'),
+    BigInt('0x7D0742849684A65F'),
+    BigInt('0x93CA5A1B368F752E'),
+    BigInt('0xECA4AAD306BAFC57'),
+    BigInt('0x6D17BB8B56E467DC'),
+    BigInt('0x12794B4366D1EEA5'),
+    BigInt('0x5AA8BF68AECEC3A1'),
+    BigInt('0x25C64FA09EFB4AD8'),
+    BigInt('0xA4755EF8CEA5D153'),
+    BigInt('0xDB1BAE30FE90582A'),
+    BigInt('0xBCF7B7E3C7593BD8'),
+    BigInt('0xC399472BF76CB2A1'),
+    BigInt('0x422A5673A732292A'),
+    BigInt('0x3D44A6BB9707A053'),
+    BigInt('0x759552905F188D57'),
+    BigInt('0x0AFBA2586F2D042E'),
+    BigInt('0x8B48B3003F739FA5'),
+    BigInt('0xF42643C80F4616DC'),
+    BigInt('0x1AEB5B57AF4DC5AD'),
+    BigInt('0x6585AB9F9F784CD4'),
+    BigInt('0xE436BAC7CF26D75F'),
+    BigInt('0x9B584A0FFF135E26'),
+    BigInt('0xD389BE24370C7322'),
+    BigInt('0xACE74EEC0739FA5B'),
+    BigInt('0x2D545FB4576761D0'),
+    BigInt('0x523AAF7C6752E8A9'),
+    BigInt('0xC41748D84FE75459'),
+    BigInt('0xBB79B8107FD2DD20'),
+    BigInt('0x3ACAA9482F8C46AB'),
+    BigInt('0x45A459801FB9CFD2'),
+    BigInt('0x0D75ADABD7A6E2D6'),
+    BigInt('0x721B5D63E7936BAF'),
+    BigInt('0xF3A84C3BB7CDF024'),
+    BigInt('0x8CC6BCF387F8795D'),
+    BigInt('0x620BA46C27F3AA2C'),
+    BigInt('0x1D6554A417C62355'),
+    BigInt('0x9CD645FC4798B8DE'),
+    BigInt('0xE3B8B53477AD31A7'),
+    BigInt('0xAB69411FBFB21CA3'),
+    BigInt('0xD407B1D78F8795DA'),
+    BigInt('0x55B4A08FDFD90E51'),
+    BigInt('0x2ADA5047EFEC8728')
+];
+class CRC64 {
+    constructor() {
+        this._crc = BigInt(0);
+    }
+    update(data) {
+        const buffer = typeof data === 'string' ? Buffer.from(data) : data;
+        let crc = CRC64.flip64Bits(this._crc);
+        for (const dataByte of buffer) {
+            const crcByte = Number(crc & BigInt(0xff));
+            crc = PREGEN_POLY_TABLE[crcByte ^ dataByte] ^ (crc >> BigInt(8));
+        }
+        this._crc = CRC64.flip64Bits(crc);
+    }
+    digest(encoding) {
+        switch (encoding) {
+            case 'hex':
+                return this._crc.toString(16).toUpperCase();
+            case 'base64':
+                return this.toBuffer().toString('base64');
+            default:
+                return this.toBuffer();
+        }
+    }
+    toBuffer() {
+        return Buffer.from([0, 8, 16, 24, 32, 40, 48, 56].map(s => Number((this._crc >> BigInt(s)) & BigInt(0xff))));
+    }
+    static flip64Bits(n) {
+        return (BigInt(1) << BigInt(64)) - BigInt(1) - n;
+    }
+}
+exports["default"] = CRC64;
+//# sourceMappingURL=crc64.js.map
+
+/***/ }),
+
+/***/ 8538:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DownloadHttpClient = void 0;
+const fs = __importStar(__nccwpck_require__(7147));
+const core = __importStar(__nccwpck_require__(2186));
+const zlib = __importStar(__nccwpck_require__(9796));
+const utils_1 = __nccwpck_require__(6327);
+const url_1 = __nccwpck_require__(7310);
+const status_reporter_1 = __nccwpck_require__(9081);
+const perf_hooks_1 = __nccwpck_require__(4074);
+const http_manager_1 = __nccwpck_require__(6527);
+const config_variables_1 = __nccwpck_require__(2222);
+const requestUtils_1 = __nccwpck_require__(755);
+class DownloadHttpClient {
+    constructor() {
+        this.downloadHttpManager = new http_manager_1.HttpManager(config_variables_1.getDownloadFileConcurrency(), '@actions/artifact-download');
+        // downloads are usually significantly faster than uploads so display status information every second
+        this.statusReporter = new status_reporter_1.StatusReporter(1000);
+    }
+    /**
+     * Gets a list of all artifacts that are in a specific container
+     */
+    listArtifacts() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const artifactUrl = utils_1.getArtifactUrl();
+            // use the first client from the httpManager, `keep-alive` is not used so the connection will close immediately
+            const client = this.downloadHttpManager.getClient(0);
+            const headers = utils_1.getDownloadHeaders('application/json');
+            const response = yield requestUtils_1.retryHttpClientRequest('List Artifacts', () => __awaiter(this, void 0, void 0, function* () { return client.get(artifactUrl, headers); }));
+            const body = yield response.readBody();
+            return JSON.parse(body);
+        });
+    }
+    /**
+     * Fetches a set of container items that describe the contents of an artifact
+     * @param artifactName the name of the artifact
+     * @param containerUrl the artifact container URL for the run
+     */
+    getContainerItems(artifactName, containerUrl) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // the itemPath search parameter controls which containers will be returned
+            const resourceUrl = new url_1.URL(containerUrl);
+            resourceUrl.searchParams.append('itemPath', artifactName);
+            // use the first client from the httpManager, `keep-alive` is not used so the connection will close immediately
+            const client = this.downloadHttpManager.getClient(0);
+            const headers = utils_1.getDownloadHeaders('application/json');
+            const response = yield requestUtils_1.retryHttpClientRequest('Get Container Items', () => __awaiter(this, void 0, void 0, function* () { return client.get(resourceUrl.toString(), headers); }));
+            const body = yield response.readBody();
+            return JSON.parse(body);
+        });
+    }
+    /**
+     * Concurrently downloads all the files that are part of an artifact
+     * @param downloadItems information about what items to download and where to save them
+     */
+    downloadSingleArtifact(downloadItems) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const DOWNLOAD_CONCURRENCY = config_variables_1.getDownloadFileConcurrency();
+            // limit the number of files downloaded at a single time
+            core.debug(`Download file concurrency is set to ${DOWNLOAD_CONCURRENCY}`);
+            const parallelDownloads = [...new Array(DOWNLOAD_CONCURRENCY).keys()];
+            let currentFile = 0;
+            let downloadedFiles = 0;
+            core.info(`Total number of files that will be downloaded: ${downloadItems.length}`);
+            this.statusReporter.setTotalNumberOfFilesToProcess(downloadItems.length);
+            this.statusReporter.start();
+            yield Promise.all(parallelDownloads.map((index) => __awaiter(this, void 0, void 0, function* () {
+                while (currentFile < downloadItems.length) {
+                    const currentFileToDownload = downloadItems[currentFile];
+                    currentFile += 1;
+                    const startTime = perf_hooks_1.performance.now();
+                    yield this.downloadIndividualFile(index, currentFileToDownload.sourceLocation, currentFileToDownload.targetPath);
+                    if (core.isDebug()) {
+                        core.debug(`File: ${++downloadedFiles}/${downloadItems.length}. ${currentFileToDownload.targetPath} took ${(perf_hooks_1.performance.now() - startTime).toFixed(3)} milliseconds to finish downloading`);
+                    }
+                    this.statusReporter.incrementProcessedCount();
+                }
+            })))
+                .catch(error => {
+                throw new Error(`Unable to download the artifact: ${error}`);
+            })
+                .finally(() => {
+                this.statusReporter.stop();
+                // safety dispose all connections
+                this.downloadHttpManager.disposeAndReplaceAllClients();
+            });
+        });
+    }
+    /**
+     * Downloads an individual file
+     * @param httpClientIndex the index of the http client that is used to make all of the calls
+     * @param artifactLocation origin location where a file will be downloaded from
+     * @param downloadPath destination location for the file being downloaded
+     */
+    downloadIndividualFile(httpClientIndex, artifactLocation, downloadPath) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let retryCount = 0;
+            const retryLimit = config_variables_1.getRetryLimit();
+            let destinationStream = fs.createWriteStream(downloadPath);
+            const headers = utils_1.getDownloadHeaders('application/json', true, true);
+            // a single GET request is used to download a file
+            const makeDownloadRequest = () => __awaiter(this, void 0, void 0, function* () {
+                const client = this.downloadHttpManager.getClient(httpClientIndex);
+                return yield client.get(artifactLocation, headers);
+            });
+            // check the response headers to determine if the file was compressed using gzip
+            const isGzip = (incomingHeaders) => {
+                return ('content-encoding' in incomingHeaders &&
+                    incomingHeaders['content-encoding'] === 'gzip');
+            };
+            // Increments the current retry count and then checks if the retry limit has been reached
+            // If there have been too many retries, fail so the download stops. If there is a retryAfterValue value provided,
+            // it will be used
+            const backOff = (retryAfterValue) => __awaiter(this, void 0, void 0, function* () {
+                retryCount++;
+                if (retryCount > retryLimit) {
+                    return Promise.reject(new Error(`Retry limit has been reached. Unable to download ${artifactLocation}`));
+                }
+                else {
+                    this.downloadHttpManager.disposeAndReplaceClient(httpClientIndex);
+                    if (retryAfterValue) {
+                        // Back off by waiting the specified time denoted by the retry-after header
+                        core.info(`Backoff due to too many requests, retry #${retryCount}. Waiting for ${retryAfterValue} milliseconds before continuing the download`);
+                        yield utils_1.sleep(retryAfterValue);
+                    }
+                    else {
+                        // Back off using an exponential value that depends on the retry count
+                        const backoffTime = utils_1.getExponentialRetryTimeInMilliseconds(retryCount);
+                        core.info(`Exponential backoff for retry #${retryCount}. Waiting for ${backoffTime} milliseconds before continuing the download`);
+                        yield utils_1.sleep(backoffTime);
+                    }
+                    core.info(`Finished backoff for retry #${retryCount}, continuing with download`);
+                }
+            });
+            const isAllBytesReceived = (expected, received) => {
+                // be lenient, if any input is missing, assume success, i.e. not truncated
+                if (!expected ||
+                    !received ||
+                    process.env['ACTIONS_ARTIFACT_SKIP_DOWNLOAD_VALIDATION']) {
+                    core.info('Skipping download validation.');
+                    return true;
+                }
+                return parseInt(expected) === received;
+            };
+            const resetDestinationStream = (fileDownloadPath) => __awaiter(this, void 0, void 0, function* () {
+                destinationStream.close();
+                // await until file is created at downloadpath; node15 and up fs.createWriteStream had not created a file yet
+                yield new Promise(resolve => {
+                    destinationStream.on('close', resolve);
+                    if (destinationStream.writableFinished) {
+                        resolve();
+                    }
+                });
+                yield utils_1.rmFile(fileDownloadPath);
+                destinationStream = fs.createWriteStream(fileDownloadPath);
+            });
+            // keep trying to download a file until a retry limit has been reached
+            while (retryCount <= retryLimit) {
+                let response;
+                try {
+                    response = yield makeDownloadRequest();
+                }
+                catch (error) {
+                    // if an error is caught, it is usually indicative of a timeout so retry the download
+                    core.info('An error occurred while attempting to download a file');
+                    // eslint-disable-next-line no-console
+                    console.log(error);
+                    // increment the retryCount and use exponential backoff to wait before making the next request
+                    yield backOff();
+                    continue;
+                }
+                let forceRetry = false;
+                if (utils_1.isSuccessStatusCode(response.message.statusCode)) {
+                    // The body contains the contents of the file however calling response.readBody() causes all the content to be converted to a string
+                    // which can cause some gzip encoded data to be lost
+                    // Instead of using response.readBody(), response.message is a readableStream that can be directly used to get the raw body contents
+                    try {
+                        const isGzipped = isGzip(response.message.headers);
+                        yield this.pipeResponseToFile(response, destinationStream, isGzipped);
+                        if (isGzipped ||
+                            isAllBytesReceived(response.message.headers['content-length'], yield utils_1.getFileSize(downloadPath))) {
+                            return;
+                        }
+                        else {
+                            forceRetry = true;
+                        }
+                    }
+                    catch (error) {
+                        // retry on error, most likely streams were corrupted
+                        forceRetry = true;
+                    }
+                }
+                if (forceRetry || utils_1.isRetryableStatusCode(response.message.statusCode)) {
+                    core.info(`A ${response.message.statusCode} response code has been received while attempting to download an artifact`);
+                    resetDestinationStream(downloadPath);
+                    // if a throttled status code is received, try to get the retryAfter header value, else differ to standard exponential backoff
+                    utils_1.isThrottledStatusCode(response.message.statusCode)
+                        ? yield backOff(utils_1.tryGetRetryAfterValueTimeInMilliseconds(response.message.headers))
+                        : yield backOff();
+                }
+                else {
+                    // Some unexpected response code, fail immediately and stop the download
+                    utils_1.displayHttpDiagnostics(response);
+                    return Promise.reject(new Error(`Unexpected http ${response.message.statusCode} during download for ${artifactLocation}`));
+                }
+            }
+        });
+    }
+    /**
+     * Pipes the response from downloading an individual file to the appropriate destination stream while decoding gzip content if necessary
+     * @param response the http response received when downloading a file
+     * @param destinationStream the stream where the file should be written to
+     * @param isGzip a boolean denoting if the content is compressed using gzip and if we need to decode it
+     */
+    pipeResponseToFile(response, destinationStream, isGzip) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield new Promise((resolve, reject) => {
+                if (isGzip) {
+                    const gunzip = zlib.createGunzip();
+                    response.message
+                        .on('error', error => {
+                        core.error(`An error occurred while attempting to read the response stream`);
+                        gunzip.close();
+                        destinationStream.close();
+                        reject(error);
+                    })
+                        .pipe(gunzip)
+                        .on('error', error => {
+                        core.error(`An error occurred while attempting to decompress the response stream`);
+                        destinationStream.close();
+                        reject(error);
+                    })
+                        .pipe(destinationStream)
+                        .on('close', () => {
+                        resolve();
+                    })
+                        .on('error', error => {
+                        core.error(`An error occurred while writing a downloaded file to ${destinationStream.path}`);
+                        reject(error);
+                    });
+                }
+                else {
+                    response.message
+                        .on('error', error => {
+                        core.error(`An error occurred while attempting to read the response stream`);
+                        destinationStream.close();
+                        reject(error);
+                    })
+                        .pipe(destinationStream)
+                        .on('close', () => {
+                        resolve();
+                    })
+                        .on('error', error => {
+                        core.error(`An error occurred while writing a downloaded file to ${destinationStream.path}`);
+                        reject(error);
+                    });
+                }
+            });
+            return;
+        });
+    }
+}
+exports.DownloadHttpClient = DownloadHttpClient;
+//# sourceMappingURL=download-http-client.js.map
+
+/***/ }),
+
+/***/ 5686:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getDownloadSpecification = void 0;
+const path = __importStar(__nccwpck_require__(1017));
+/**
+ * Creates a specification for a set of files that will be downloaded
+ * @param artifactName the name of the artifact
+ * @param artifactEntries a set of container entries that describe that files that make up an artifact
+ * @param downloadPath the path where the artifact will be downloaded to
+ * @param includeRootDirectory specifies if there should be an extra directory (denoted by the artifact name) where the artifact files should be downloaded to
+ */
+function getDownloadSpecification(artifactName, artifactEntries, downloadPath, includeRootDirectory) {
+    // use a set for the directory paths so that there are no duplicates
+    const directories = new Set();
+    const specifications = {
+        rootDownloadLocation: includeRootDirectory
+            ? path.join(downloadPath, artifactName)
+            : downloadPath,
+        directoryStructure: [],
+        emptyFilesToCreate: [],
+        filesToDownload: []
+    };
+    for (const entry of artifactEntries) {
+        // Ignore artifacts in the container that don't begin with the same name
+        if (entry.path.startsWith(`${artifactName}/`) ||
+            entry.path.startsWith(`${artifactName}\\`)) {
+            // normalize all separators to the local OS
+            const normalizedPathEntry = path.normalize(entry.path);
+            // entry.path always starts with the artifact name, if includeRootDirectory is false, remove the name from the beginning of the path
+            const filePath = path.join(downloadPath, includeRootDirectory
+                ? normalizedPathEntry
+                : normalizedPathEntry.replace(artifactName, ''));
+            // Case insensitive folder structure maintained in the backend, not every folder is created so the 'folder'
+            // itemType cannot be relied upon. The file must be used to determine the directory structure
+            if (entry.itemType === 'file') {
+                // Get the directories that we need to create from the filePath for each individual file
+                directories.add(path.dirname(filePath));
+                if (entry.fileLength === 0) {
+                    // An empty file was uploaded, create the empty files locally so that no extra http calls are made
+                    specifications.emptyFilesToCreate.push(filePath);
+                }
+                else {
+                    specifications.filesToDownload.push({
+                        sourceLocation: entry.contentLocation,
+                        targetPath: filePath
+                    });
+                }
+            }
+        }
+    }
+    specifications.directoryStructure = Array.from(directories);
+    return specifications;
+}
+exports.getDownloadSpecification = getDownloadSpecification;
+//# sourceMappingURL=download-specification.js.map
+
+/***/ }),
+
+/***/ 6527:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HttpManager = void 0;
+const utils_1 = __nccwpck_require__(6327);
+/**
+ * Used for managing http clients during either upload or download
+ */
+class HttpManager {
+    constructor(clientCount, userAgent) {
+        if (clientCount < 1) {
+            throw new Error('There must be at least one client');
+        }
+        this.userAgent = userAgent;
+        this.clients = new Array(clientCount).fill(utils_1.createHttpClient(userAgent));
+    }
+    getClient(index) {
+        return this.clients[index];
+    }
+    // client disposal is necessary if a keep-alive connection is used to properly close the connection
+    // for more information see: https://github.com/actions/http-client/blob/04e5ad73cd3fd1f5610a32116b0759eddf6570d2/index.ts#L292
+    disposeAndReplaceClient(index) {
+        this.clients[index].dispose();
+        this.clients[index] = utils_1.createHttpClient(this.userAgent);
+    }
+    disposeAndReplaceAllClients() {
+        for (const [index] of this.clients.entries()) {
+            this.disposeAndReplaceClient(index);
+        }
+    }
+}
+exports.HttpManager = HttpManager;
+//# sourceMappingURL=http-manager.js.map
+
+/***/ }),
+
+/***/ 7398:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.checkArtifactFilePath = exports.checkArtifactName = void 0;
+const core_1 = __nccwpck_require__(2186);
+/**
+ * Invalid characters that cannot be in the artifact name or an uploaded file. Will be rejected
+ * from the server if attempted to be sent over. These characters are not allowed due to limitations with certain
+ * file systems such as NTFS. To maintain platform-agnostic behavior, all characters that are not supported by an
+ * individual filesystem/platform will not be supported on all fileSystems/platforms
+ *
+ * FilePaths can include characters such as \ and / which are not permitted in the artifact name alone
+ */
+const invalidArtifactFilePathCharacters = new Map([
+    ['"', ' Double quote "'],
+    [':', ' Colon :'],
+    ['<', ' Less than <'],
+    ['>', ' Greater than >'],
+    ['|', ' Vertical bar |'],
+    ['*', ' Asterisk *'],
+    ['?', ' Question mark ?'],
+    ['\r', ' Carriage return \\r'],
+    ['\n', ' Line feed \\n']
+]);
+const invalidArtifactNameCharacters = new Map([
+    ...invalidArtifactFilePathCharacters,
+    ['\\', ' Backslash \\'],
+    ['/', ' Forward slash /']
+]);
+/**
+ * Scans the name of the artifact to make sure there are no illegal characters
+ */
+function checkArtifactName(name) {
+    if (!name) {
+        throw new Error(`Artifact name: ${name}, is incorrectly provided`);
+    }
+    for (const [invalidCharacterKey, errorMessageForCharacter] of invalidArtifactNameCharacters) {
+        if (name.includes(invalidCharacterKey)) {
+            throw new Error(`Artifact name is not valid: ${name}. Contains the following character: ${errorMessageForCharacter}
+          
+Invalid characters include: ${Array.from(invalidArtifactNameCharacters.values()).toString()}
+          
+These characters are not allowed in the artifact name due to limitations with certain file systems such as NTFS. To maintain file system agnostic behavior, these characters are intentionally not allowed to prevent potential problems with downloads on different file systems.`);
+        }
+    }
+    core_1.info(`Artifact name is valid!`);
+}
+exports.checkArtifactName = checkArtifactName;
+/**
+ * Scans the name of the filePath used to make sure there are no illegal characters
+ */
+function checkArtifactFilePath(path) {
+    if (!path) {
+        throw new Error(`Artifact path: ${path}, is incorrectly provided`);
+    }
+    for (const [invalidCharacterKey, errorMessageForCharacter] of invalidArtifactFilePathCharacters) {
+        if (path.includes(invalidCharacterKey)) {
+            throw new Error(`Artifact path is not valid: ${path}. Contains the following character: ${errorMessageForCharacter}
+          
+Invalid characters include: ${Array.from(invalidArtifactFilePathCharacters.values()).toString()}
+          
+The following characters are not allowed in files that are uploaded due to limitations with certain file systems such as NTFS. To maintain file system agnostic behavior, these characters are intentionally not allowed to prevent potential problems with downloads on different file systems.
+          `);
+        }
+    }
+}
+exports.checkArtifactFilePath = checkArtifactFilePath;
+//# sourceMappingURL=path-and-artifact-name-validation.js.map
+
+/***/ }),
+
+/***/ 755:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.retryHttpClientRequest = exports.retry = void 0;
+const utils_1 = __nccwpck_require__(6327);
+const core = __importStar(__nccwpck_require__(2186));
+const config_variables_1 = __nccwpck_require__(2222);
+function retry(name, operation, customErrorMessages, maxAttempts) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let response = undefined;
+        let statusCode = undefined;
+        let isRetryable = false;
+        let errorMessage = '';
+        let customErrorInformation = undefined;
+        let attempt = 1;
+        while (attempt <= maxAttempts) {
+            try {
+                response = yield operation();
+                statusCode = response.message.statusCode;
+                if (utils_1.isSuccessStatusCode(statusCode)) {
+                    return response;
+                }
+                // Extra error information that we want to display if a particular response code is hit
+                if (statusCode) {
+                    customErrorInformation = customErrorMessages.get(statusCode);
+                }
+                isRetryable = utils_1.isRetryableStatusCode(statusCode);
+                errorMessage = `Artifact service responded with ${statusCode}`;
+            }
+            catch (error) {
+                isRetryable = true;
+                errorMessage = error.message;
+            }
+            if (!isRetryable) {
+                core.info(`${name} - Error is not retryable`);
+                if (response) {
+                    utils_1.displayHttpDiagnostics(response);
+                }
+                break;
+            }
+            core.info(`${name} - Attempt ${attempt} of ${maxAttempts} failed with error: ${errorMessage}`);
+            yield utils_1.sleep(utils_1.getExponentialRetryTimeInMilliseconds(attempt));
+            attempt++;
+        }
+        if (response) {
+            utils_1.displayHttpDiagnostics(response);
+        }
+        if (customErrorInformation) {
+            throw Error(`${name} failed: ${customErrorInformation}`);
+        }
+        throw Error(`${name} failed: ${errorMessage}`);
+    });
+}
+exports.retry = retry;
+function retryHttpClientRequest(name, method, customErrorMessages = new Map(), maxAttempts = config_variables_1.getRetryLimit()) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield retry(name, method, customErrorMessages, maxAttempts);
+    });
+}
+exports.retryHttpClientRequest = retryHttpClientRequest;
+//# sourceMappingURL=requestUtils.js.map
+
+/***/ }),
+
+/***/ 9081:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.StatusReporter = void 0;
+const core_1 = __nccwpck_require__(2186);
+/**
+ * Status Reporter that displays information about the progress/status of an artifact that is being uploaded or downloaded
+ *
+ * Variable display time that can be adjusted using the displayFrequencyInMilliseconds variable
+ * The total status of the upload/download gets displayed according to this value
+ * If there is a large file that is being uploaded, extra information about the individual status can also be displayed using the updateLargeFileStatus function
+ */
+class StatusReporter {
+    constructor(displayFrequencyInMilliseconds) {
+        this.totalNumberOfFilesToProcess = 0;
+        this.processedCount = 0;
+        this.largeFiles = new Map();
+        this.totalFileStatus = undefined;
+        this.displayFrequencyInMilliseconds = displayFrequencyInMilliseconds;
+    }
+    setTotalNumberOfFilesToProcess(fileTotal) {
+        this.totalNumberOfFilesToProcess = fileTotal;
+        this.processedCount = 0;
+    }
+    start() {
+        // displays information about the total upload/download status
+        this.totalFileStatus = setInterval(() => {
+            // display 1 decimal place without any rounding
+            const percentage = this.formatPercentage(this.processedCount, this.totalNumberOfFilesToProcess);
+            core_1.info(`Total file count: ${this.totalNumberOfFilesToProcess} ---- Processed file #${this.processedCount} (${percentage.slice(0, percentage.indexOf('.') + 2)}%)`);
+        }, this.displayFrequencyInMilliseconds);
+    }
+    // if there is a large file that is being uploaded in chunks, this is used to display extra information about the status of the upload
+    updateLargeFileStatus(fileName, chunkStartIndex, chunkEndIndex, totalUploadFileSize) {
+        // display 1 decimal place without any rounding
+        const percentage = this.formatPercentage(chunkEndIndex, totalUploadFileSize);
+        core_1.info(`Uploaded ${fileName} (${percentage.slice(0, percentage.indexOf('.') + 2)}%) bytes ${chunkStartIndex}:${chunkEndIndex}`);
+    }
+    stop() {
+        if (this.totalFileStatus) {
+            clearInterval(this.totalFileStatus);
+        }
+    }
+    incrementProcessedCount() {
+        this.processedCount++;
+    }
+    formatPercentage(numerator, denominator) {
+        // toFixed() rounds, so use extra precision to display accurate information even though 4 decimal places are not displayed
+        return ((numerator / denominator) * 100).toFixed(4).toString();
+    }
+}
+exports.StatusReporter = StatusReporter;
+//# sourceMappingURL=status-reporter.js.map
+
+/***/ }),
+
+/***/ 606:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __asyncValues = (this && this.__asyncValues) || function (o) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var m = o[Symbol.asyncIterator], i;
+    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
+    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
+    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createGZipFileInBuffer = exports.createGZipFileOnDisk = void 0;
+const fs = __importStar(__nccwpck_require__(7147));
+const zlib = __importStar(__nccwpck_require__(9796));
+const util_1 = __nccwpck_require__(3837);
+const stat = util_1.promisify(fs.stat);
+/**
+ * GZipping certain files that are already compressed will likely not yield further size reductions. Creating large temporary gzip
+ * files then will just waste a lot of time before ultimately being discarded (especially for very large files).
+ * If any of these types of files are encountered then on-disk gzip creation will be skipped and the original file will be uploaded as-is
+ */
+const gzipExemptFileExtensions = [
+    '.gzip',
+    '.zip',
+    '.tar.lz',
+    '.tar.gz',
+    '.tar.bz2',
+    '.7z'
+];
+/**
+ * Creates a Gzip compressed file of an original file at the provided temporary filepath location
+ * @param {string} originalFilePath filepath of whatever will be compressed. The original file will be unmodified
+ * @param {string} tempFilePath the location of where the Gzip file will be created
+ * @returns the size of gzip file that gets created
+ */
+function createGZipFileOnDisk(originalFilePath, tempFilePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        for (const gzipExemptExtension of gzipExemptFileExtensions) {
+            if (originalFilePath.endsWith(gzipExemptExtension)) {
+                // return a really large number so that the original file gets uploaded
+                return Number.MAX_SAFE_INTEGER;
+            }
+        }
+        return new Promise((resolve, reject) => {
+            const inputStream = fs.createReadStream(originalFilePath);
+            const gzip = zlib.createGzip();
+            const outputStream = fs.createWriteStream(tempFilePath);
+            inputStream.pipe(gzip).pipe(outputStream);
+            outputStream.on('finish', () => __awaiter(this, void 0, void 0, function* () {
+                // wait for stream to finish before calculating the size which is needed as part of the Content-Length header when starting an upload
+                const size = (yield stat(tempFilePath)).size;
+                resolve(size);
+            }));
+            outputStream.on('error', error => {
+                // eslint-disable-next-line no-console
+                console.log(error);
+                reject;
+            });
+        });
+    });
+}
+exports.createGZipFileOnDisk = createGZipFileOnDisk;
+/**
+ * Creates a GZip file in memory using a buffer. Should be used for smaller files to reduce disk I/O
+ * @param originalFilePath the path to the original file that is being GZipped
+ * @returns a buffer with the GZip file
+ */
+function createGZipFileInBuffer(originalFilePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve) => __awaiter(this, void 0, void 0, function* () {
+            var e_1, _a;
+            const inputStream = fs.createReadStream(originalFilePath);
+            const gzip = zlib.createGzip();
+            inputStream.pipe(gzip);
+            // read stream into buffer, using experimental async iterators see https://github.com/nodejs/readable-stream/issues/403#issuecomment-479069043
+            const chunks = [];
+            try {
+                for (var gzip_1 = __asyncValues(gzip), gzip_1_1; gzip_1_1 = yield gzip_1.next(), !gzip_1_1.done;) {
+                    const chunk = gzip_1_1.value;
+                    chunks.push(chunk);
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (gzip_1_1 && !gzip_1_1.done && (_a = gzip_1.return)) yield _a.call(gzip_1);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+            resolve(Buffer.concat(chunks));
+        }));
+    });
+}
+exports.createGZipFileInBuffer = createGZipFileInBuffer;
+//# sourceMappingURL=upload-gzip.js.map
+
+/***/ }),
+
+/***/ 4354:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UploadHttpClient = void 0;
+const fs = __importStar(__nccwpck_require__(7147));
+const core = __importStar(__nccwpck_require__(2186));
+const tmp = __importStar(__nccwpck_require__(8065));
+const stream = __importStar(__nccwpck_require__(2781));
+const utils_1 = __nccwpck_require__(6327);
+const config_variables_1 = __nccwpck_require__(2222);
+const util_1 = __nccwpck_require__(3837);
+const url_1 = __nccwpck_require__(7310);
+const perf_hooks_1 = __nccwpck_require__(4074);
+const status_reporter_1 = __nccwpck_require__(9081);
+const http_client_1 = __nccwpck_require__(6255);
+const http_manager_1 = __nccwpck_require__(6527);
+const upload_gzip_1 = __nccwpck_require__(606);
+const requestUtils_1 = __nccwpck_require__(755);
+const stat = util_1.promisify(fs.stat);
+class UploadHttpClient {
+    constructor() {
+        this.uploadHttpManager = new http_manager_1.HttpManager(config_variables_1.getUploadFileConcurrency(), '@actions/artifact-upload');
+        this.statusReporter = new status_reporter_1.StatusReporter(10000);
+    }
+    /**
+     * Creates a file container for the new artifact in the remote blob storage/file service
+     * @param {string} artifactName Name of the artifact being created
+     * @returns The response from the Artifact Service if the file container was successfully created
+     */
+    createArtifactInFileContainer(artifactName, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const parameters = {
+                Type: 'actions_storage',
+                Name: artifactName
+            };
+            // calculate retention period
+            if (options && options.retentionDays) {
+                const maxRetentionStr = config_variables_1.getRetentionDays();
+                parameters.RetentionDays = utils_1.getProperRetention(options.retentionDays, maxRetentionStr);
+            }
+            const data = JSON.stringify(parameters, null, 2);
+            const artifactUrl = utils_1.getArtifactUrl();
+            // use the first client from the httpManager, `keep-alive` is not used so the connection will close immediately
+            const client = this.uploadHttpManager.getClient(0);
+            const headers = utils_1.getUploadHeaders('application/json', false);
+            // Extra information to display when a particular HTTP code is returned
+            // If a 403 is returned when trying to create a file container, the customer has exceeded
+            // their storage quota so no new artifact containers can be created
+            const customErrorMessages = new Map([
+                [
+                    http_client_1.HttpCodes.Forbidden,
+                    'Artifact storage quota has been hit. Unable to upload any new artifacts'
+                ],
+                [
+                    http_client_1.HttpCodes.BadRequest,
+                    `The artifact name ${artifactName} is not valid. Request URL ${artifactUrl}`
+                ]
+            ]);
+            const response = yield requestUtils_1.retryHttpClientRequest('Create Artifact Container', () => __awaiter(this, void 0, void 0, function* () { return client.post(artifactUrl, data, headers); }), customErrorMessages);
+            const body = yield response.readBody();
+            return JSON.parse(body);
+        });
+    }
+    /**
+     * Concurrently upload all of the files in chunks
+     * @param {string} uploadUrl Base Url for the artifact that was created
+     * @param {SearchResult[]} filesToUpload A list of information about the files being uploaded
+     * @returns The size of all the files uploaded in bytes
+     */
+    uploadArtifactToFileContainer(uploadUrl, filesToUpload, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const FILE_CONCURRENCY = config_variables_1.getUploadFileConcurrency();
+            const MAX_CHUNK_SIZE = config_variables_1.getUploadChunkSize();
+            core.debug(`File Concurrency: ${FILE_CONCURRENCY}, and Chunk Size: ${MAX_CHUNK_SIZE}`);
+            const parameters = [];
+            // by default, file uploads will continue if there is an error unless specified differently in the options
+            let continueOnError = true;
+            if (options) {
+                if (options.continueOnError === false) {
+                    continueOnError = false;
+                }
+            }
+            // prepare the necessary parameters to upload all the files
+            for (const file of filesToUpload) {
+                const resourceUrl = new url_1.URL(uploadUrl);
+                resourceUrl.searchParams.append('itemPath', file.uploadFilePath);
+                parameters.push({
+                    file: file.absoluteFilePath,
+                    resourceUrl: resourceUrl.toString(),
+                    maxChunkSize: MAX_CHUNK_SIZE,
+                    continueOnError
+                });
+            }
+            const parallelUploads = [...new Array(FILE_CONCURRENCY).keys()];
+            const failedItemsToReport = [];
+            let currentFile = 0;
+            let completedFiles = 0;
+            let uploadFileSize = 0;
+            let totalFileSize = 0;
+            let abortPendingFileUploads = false;
+            this.statusReporter.setTotalNumberOfFilesToProcess(filesToUpload.length);
+            this.statusReporter.start();
+            // only allow a certain amount of files to be uploaded at once, this is done to reduce potential errors
+            yield Promise.all(parallelUploads.map((index) => __awaiter(this, void 0, void 0, function* () {
+                while (currentFile < filesToUpload.length) {
+                    const currentFileParameters = parameters[currentFile];
+                    currentFile += 1;
+                    if (abortPendingFileUploads) {
+                        failedItemsToReport.push(currentFileParameters.file);
+                        continue;
+                    }
+                    const startTime = perf_hooks_1.performance.now();
+                    const uploadFileResult = yield this.uploadFileAsync(index, currentFileParameters);
+                    if (core.isDebug()) {
+                        core.debug(`File: ${++completedFiles}/${filesToUpload.length}. ${currentFileParameters.file} took ${(perf_hooks_1.performance.now() - startTime).toFixed(3)} milliseconds to finish upload`);
+                    }
+                    uploadFileSize += uploadFileResult.successfulUploadSize;
+                    totalFileSize += uploadFileResult.totalSize;
+                    if (uploadFileResult.isSuccess === false) {
+                        failedItemsToReport.push(currentFileParameters.file);
+                        if (!continueOnError) {
+                            // fail fast
+                            core.error(`aborting artifact upload`);
+                            abortPendingFileUploads = true;
+                        }
+                    }
+                    this.statusReporter.incrementProcessedCount();
+                }
+            })));
+            this.statusReporter.stop();
+            // done uploading, safety dispose all connections
+            this.uploadHttpManager.disposeAndReplaceAllClients();
+            core.info(`Total size of all the files uploaded is ${uploadFileSize} bytes`);
+            return {
+                uploadSize: uploadFileSize,
+                totalSize: totalFileSize,
+                failedItems: failedItemsToReport
+            };
+        });
+    }
+    /**
+     * Asynchronously uploads a file. The file is compressed and uploaded using GZip if it is determined to save space.
+     * If the upload file is bigger than the max chunk size it will be uploaded via multiple calls
+     * @param {number} httpClientIndex The index of the httpClient that is being used to make all of the calls
+     * @param {UploadFileParameters} parameters Information about the file that needs to be uploaded
+     * @returns The size of the file that was uploaded in bytes along with any failed uploads
+     */
+    uploadFileAsync(httpClientIndex, parameters) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const fileStat = yield stat(parameters.file);
+            const totalFileSize = fileStat.size;
+            const isFIFO = fileStat.isFIFO();
+            let offset = 0;
+            let isUploadSuccessful = true;
+            let failedChunkSizes = 0;
+            let uploadFileSize = 0;
+            let isGzip = true;
+            // the file that is being uploaded is less than 64k in size to increase throughput and to minimize disk I/O
+            // for creating a new GZip file, an in-memory buffer is used for compression
+            // with named pipes the file size is reported as zero in that case don't read the file in memory
+            if (!isFIFO && totalFileSize < 65536) {
+                core.debug(`${parameters.file} is less than 64k in size. Creating a gzip file in-memory to potentially reduce the upload size`);
+                const buffer = yield upload_gzip_1.createGZipFileInBuffer(parameters.file);
+                // An open stream is needed in the event of a failure and we need to retry. If a NodeJS.ReadableStream is directly passed in,
+                // it will not properly get reset to the start of the stream if a chunk upload needs to be retried
+                let openUploadStream;
+                if (totalFileSize < buffer.byteLength) {
+                    // compression did not help with reducing the size, use a readable stream from the original file for upload
+                    core.debug(`The gzip file created for ${parameters.file} did not help with reducing the size of the file. The original file will be uploaded as-is`);
+                    openUploadStream = () => fs.createReadStream(parameters.file);
+                    isGzip = false;
+                    uploadFileSize = totalFileSize;
+                }
+                else {
+                    // create a readable stream using a PassThrough stream that is both readable and writable
+                    core.debug(`A gzip file created for ${parameters.file} helped with reducing the size of the original file. The file will be uploaded using gzip.`);
+                    openUploadStream = () => {
+                        const passThrough = new stream.PassThrough();
+                        passThrough.end(buffer);
+                        return passThrough;
+                    };
+                    uploadFileSize = buffer.byteLength;
+                }
+                const result = yield this.uploadChunk(httpClientIndex, parameters.resourceUrl, openUploadStream, 0, uploadFileSize - 1, uploadFileSize, isGzip, totalFileSize);
+                if (!result) {
+                    // chunk failed to upload
+                    isUploadSuccessful = false;
+                    failedChunkSizes += uploadFileSize;
+                    core.warning(`Aborting upload for ${parameters.file} due to failure`);
+                }
+                return {
+                    isSuccess: isUploadSuccessful,
+                    successfulUploadSize: uploadFileSize - failedChunkSizes,
+                    totalSize: totalFileSize
+                };
+            }
+            else {
+                // the file that is being uploaded is greater than 64k in size, a temporary file gets created on disk using the
+                // npm tmp-promise package and this file gets used to create a GZipped file
+                const tempFile = yield tmp.file();
+                core.debug(`${parameters.file} is greater than 64k in size. Creating a gzip file on-disk ${tempFile.path} to potentially reduce the upload size`);
+                // create a GZip file of the original file being uploaded, the original file should not be modified in any way
+                uploadFileSize = yield upload_gzip_1.createGZipFileOnDisk(parameters.file, tempFile.path);
+                let uploadFilePath = tempFile.path;
+                // compression did not help with size reduction, use the original file for upload and delete the temp GZip file
+                // for named pipes totalFileSize is zero, this assumes compression did help
+                if (!isFIFO && totalFileSize < uploadFileSize) {
+                    core.debug(`The gzip file created for ${parameters.file} did not help with reducing the size of the file. The original file will be uploaded as-is`);
+                    uploadFileSize = totalFileSize;
+                    uploadFilePath = parameters.file;
+                    isGzip = false;
+                }
+                else {
+                    core.debug(`The gzip file created for ${parameters.file} is smaller than the original file. The file will be uploaded using gzip.`);
+                }
+                let abortFileUpload = false;
+                // upload only a single chunk at a time
+                while (offset < uploadFileSize) {
+                    const chunkSize = Math.min(uploadFileSize - offset, parameters.maxChunkSize);
+                    const startChunkIndex = offset;
+                    const endChunkIndex = offset + chunkSize - 1;
+                    offset += parameters.maxChunkSize;
+                    if (abortFileUpload) {
+                        // if we don't want to continue in the event of an error, any pending upload chunks will be marked as failed
+                        failedChunkSizes += chunkSize;
+                        continue;
+                    }
+                    const result = yield this.uploadChunk(httpClientIndex, parameters.resourceUrl, () => fs.createReadStream(uploadFilePath, {
+                        start: startChunkIndex,
+                        end: endChunkIndex,
+                        autoClose: false
+                    }), startChunkIndex, endChunkIndex, uploadFileSize, isGzip, totalFileSize);
+                    if (!result) {
+                        // Chunk failed to upload, report as failed and do not continue uploading any more chunks for the file. It is possible that part of a chunk was
+                        // successfully uploaded so the server may report a different size for what was uploaded
+                        isUploadSuccessful = false;
+                        failedChunkSizes += chunkSize;
+                        core.warning(`Aborting upload for ${parameters.file} due to failure`);
+                        abortFileUpload = true;
+                    }
+                    else {
+                        // if an individual file is greater than 8MB (1024*1024*8) in size, display extra information about the upload status
+                        if (uploadFileSize > 8388608) {
+                            this.statusReporter.updateLargeFileStatus(parameters.file, startChunkIndex, endChunkIndex, uploadFileSize);
+                        }
+                    }
+                }
+                // Delete the temporary file that was created as part of the upload. If the temp file does not get manually deleted by
+                // calling cleanup, it gets removed when the node process exits. For more info see: https://www.npmjs.com/package/tmp-promise#about
+                core.debug(`deleting temporary gzip file ${tempFile.path}`);
+                yield tempFile.cleanup();
+                return {
+                    isSuccess: isUploadSuccessful,
+                    successfulUploadSize: uploadFileSize - failedChunkSizes,
+                    totalSize: totalFileSize
+                };
+            }
+        });
+    }
+    /**
+     * Uploads a chunk of an individual file to the specified resourceUrl. If the upload fails and the status code
+     * indicates a retryable status, we try to upload the chunk as well
+     * @param {number} httpClientIndex The index of the httpClient being used to make all the necessary calls
+     * @param {string} resourceUrl Url of the resource that the chunk will be uploaded to
+     * @param {NodeJS.ReadableStream} openStream Stream of the file that will be uploaded
+     * @param {number} start Starting byte index of file that the chunk belongs to
+     * @param {number} end Ending byte index of file that the chunk belongs to
+     * @param {number} uploadFileSize Total size of the file in bytes that is being uploaded
+     * @param {boolean} isGzip Denotes if we are uploading a Gzip compressed stream
+     * @param {number} totalFileSize Original total size of the file that is being uploaded
+     * @returns if the chunk was successfully uploaded
+     */
+    uploadChunk(httpClientIndex, resourceUrl, openStream, start, end, uploadFileSize, isGzip, totalFileSize) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // open a new stream and read it to compute the digest
+            const digest = yield utils_1.digestForStream(openStream());
+            // prepare all the necessary headers before making any http call
+            const headers = utils_1.getUploadHeaders('application/octet-stream', true, isGzip, totalFileSize, end - start + 1, utils_1.getContentRange(start, end, uploadFileSize), digest);
+            const uploadChunkRequest = () => __awaiter(this, void 0, void 0, function* () {
+                const client = this.uploadHttpManager.getClient(httpClientIndex);
+                return yield client.sendStream('PUT', resourceUrl, openStream(), headers);
+            });
+            let retryCount = 0;
+            const retryLimit = config_variables_1.getRetryLimit();
+            // Increments the current retry count and then checks if the retry limit has been reached
+            // If there have been too many retries, fail so the download stops
+            const incrementAndCheckRetryLimit = (response) => {
+                retryCount++;
+                if (retryCount > retryLimit) {
+                    if (response) {
+                        utils_1.displayHttpDiagnostics(response);
+                    }
+                    core.info(`Retry limit has been reached for chunk at offset ${start} to ${resourceUrl}`);
+                    return true;
+                }
+                return false;
+            };
+            const backOff = (retryAfterValue) => __awaiter(this, void 0, void 0, function* () {
+                this.uploadHttpManager.disposeAndReplaceClient(httpClientIndex);
+                if (retryAfterValue) {
+                    core.info(`Backoff due to too many requests, retry #${retryCount}. Waiting for ${retryAfterValue} milliseconds before continuing the upload`);
+                    yield utils_1.sleep(retryAfterValue);
+                }
+                else {
+                    const backoffTime = utils_1.getExponentialRetryTimeInMilliseconds(retryCount);
+                    core.info(`Exponential backoff for retry #${retryCount}. Waiting for ${backoffTime} milliseconds before continuing the upload at offset ${start}`);
+                    yield utils_1.sleep(backoffTime);
+                }
+                core.info(`Finished backoff for retry #${retryCount}, continuing with upload`);
+                return;
+            });
+            // allow for failed chunks to be retried multiple times
+            while (retryCount <= retryLimit) {
+                let response;
+                try {
+                    response = yield uploadChunkRequest();
+                }
+                catch (error) {
+                    // if an error is caught, it is usually indicative of a timeout so retry the upload
+                    core.info(`An error has been caught http-client index ${httpClientIndex}, retrying the upload`);
+                    // eslint-disable-next-line no-console
+                    console.log(error);
+                    if (incrementAndCheckRetryLimit()) {
+                        return false;
+                    }
+                    yield backOff();
+                    continue;
+                }
+                // Always read the body of the response. There is potential for a resource leak if the body is not read which will
+                // result in the connection remaining open along with unintended consequences when trying to dispose of the client
+                yield response.readBody();
+                if (utils_1.isSuccessStatusCode(response.message.statusCode)) {
+                    return true;
+                }
+                else if (utils_1.isRetryableStatusCode(response.message.statusCode)) {
+                    core.info(`A ${response.message.statusCode} status code has been received, will attempt to retry the upload`);
+                    if (incrementAndCheckRetryLimit(response)) {
+                        return false;
+                    }
+                    utils_1.isThrottledStatusCode(response.message.statusCode)
+                        ? yield backOff(utils_1.tryGetRetryAfterValueTimeInMilliseconds(response.message.headers))
+                        : yield backOff();
+                }
+                else {
+                    core.error(`Unexpected response. Unable to upload chunk to ${resourceUrl}`);
+                    utils_1.displayHttpDiagnostics(response);
+                    return false;
+                }
+            }
+            return false;
+        });
+    }
+    /**
+     * Updates the size of the artifact from -1 which was initially set when the container was first created for the artifact.
+     * Updating the size indicates that we are done uploading all the contents of the artifact
+     */
+    patchArtifactSize(size, artifactName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const resourceUrl = new url_1.URL(utils_1.getArtifactUrl());
+            resourceUrl.searchParams.append('artifactName', artifactName);
+            const parameters = { Size: size };
+            const data = JSON.stringify(parameters, null, 2);
+            core.debug(`URL is ${resourceUrl.toString()}`);
+            // use the first client from the httpManager, `keep-alive` is not used so the connection will close immediately
+            const client = this.uploadHttpManager.getClient(0);
+            const headers = utils_1.getUploadHeaders('application/json', false);
+            // Extra information to display when a particular HTTP code is returned
+            const customErrorMessages = new Map([
+                [
+                    http_client_1.HttpCodes.NotFound,
+                    `An Artifact with the name ${artifactName} was not found`
+                ]
+            ]);
+            // TODO retry for all possible response codes, the artifact upload is pretty much complete so it at all costs we should try to finish this
+            const response = yield requestUtils_1.retryHttpClientRequest('Finalize artifact upload', () => __awaiter(this, void 0, void 0, function* () { return client.patch(resourceUrl.toString(), data, headers); }), customErrorMessages);
+            yield response.readBody();
+            core.debug(`Artifact ${artifactName} has been successfully uploaded, total size in bytes: ${size}`);
+        });
+    }
+}
+exports.UploadHttpClient = UploadHttpClient;
+//# sourceMappingURL=upload-http-client.js.map
+
+/***/ }),
+
+/***/ 183:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getUploadSpecification = void 0;
+const fs = __importStar(__nccwpck_require__(7147));
+const core_1 = __nccwpck_require__(2186);
+const path_1 = __nccwpck_require__(1017);
+const path_and_artifact_name_validation_1 = __nccwpck_require__(7398);
+/**
+ * Creates a specification that describes how each file that is part of the artifact will be uploaded
+ * @param artifactName the name of the artifact being uploaded. Used during upload to denote where the artifact is stored on the server
+ * @param rootDirectory an absolute file path that denotes the path that should be removed from the beginning of each artifact file
+ * @param artifactFiles a list of absolute file paths that denote what should be uploaded as part of the artifact
+ */
+function getUploadSpecification(artifactName, rootDirectory, artifactFiles) {
+    // artifact name was checked earlier on, no need to check again
+    const specifications = [];
+    if (!fs.existsSync(rootDirectory)) {
+        throw new Error(`Provided rootDirectory ${rootDirectory} does not exist`);
+    }
+    if (!fs.lstatSync(rootDirectory).isDirectory()) {
+        throw new Error(`Provided rootDirectory ${rootDirectory} is not a valid directory`);
+    }
+    // Normalize and resolve, this allows for either absolute or relative paths to be used
+    rootDirectory = path_1.normalize(rootDirectory);
+    rootDirectory = path_1.resolve(rootDirectory);
+    /*
+       Example to demonstrate behavior
+       
+       Input:
+         artifactName: my-artifact
+         rootDirectory: '/home/user/files/plz-upload'
+         artifactFiles: [
+           '/home/user/files/plz-upload/file1.txt',
+           '/home/user/files/plz-upload/file2.txt',
+           '/home/user/files/plz-upload/dir/file3.txt'
+         ]
+       
+       Output:
+         specifications: [
+           ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file1.txt'],
+           ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file2.txt'],
+           ['/home/user/files/plz-upload/file1.txt', 'my-artifact/dir/file3.txt']
+         ]
+    */
+    for (let file of artifactFiles) {
+        if (!fs.existsSync(file)) {
+            throw new Error(`File ${file} does not exist`);
+        }
+        if (!fs.lstatSync(file).isDirectory()) {
+            // Normalize and resolve, this allows for either absolute or relative paths to be used
+            file = path_1.normalize(file);
+            file = path_1.resolve(file);
+            if (!file.startsWith(rootDirectory)) {
+                throw new Error(`The rootDirectory: ${rootDirectory} is not a parent directory of the file: ${file}`);
+            }
+            // Check for forbidden characters in file paths that will be rejected during upload
+            const uploadPath = file.replace(rootDirectory, '');
+            path_and_artifact_name_validation_1.checkArtifactFilePath(uploadPath);
+            /*
+              uploadFilePath denotes where the file will be uploaded in the file container on the server. During a run, if multiple artifacts are uploaded, they will all
+              be saved in the same container. The artifact name is used as the root directory in the container to separate and distinguish uploaded artifacts
+      
+              path.join handles all the following cases and would return 'artifact-name/file-to-upload.txt
+                join('artifact-name/', 'file-to-upload.txt')
+                join('artifact-name/', '/file-to-upload.txt')
+                join('artifact-name', 'file-to-upload.txt')
+                join('artifact-name', '/file-to-upload.txt')
+            */
+            specifications.push({
+                absoluteFilePath: file,
+                uploadFilePath: path_1.join(artifactName, uploadPath)
+            });
+        }
+        else {
+            // Directories are rejected by the server during upload
+            core_1.debug(`Removing ${file} from rawSearchResults because it is a directory`);
+        }
+    }
+    return specifications;
+}
+exports.getUploadSpecification = getUploadSpecification;
+//# sourceMappingURL=upload-specification.js.map
+
+/***/ }),
+
+/***/ 6327:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.digestForStream = exports.sleep = exports.getProperRetention = exports.rmFile = exports.getFileSize = exports.createEmptyFilesForArtifact = exports.createDirectoriesForArtifact = exports.displayHttpDiagnostics = exports.getArtifactUrl = exports.createHttpClient = exports.getUploadHeaders = exports.getDownloadHeaders = exports.getContentRange = exports.tryGetRetryAfterValueTimeInMilliseconds = exports.isThrottledStatusCode = exports.isRetryableStatusCode = exports.isForbiddenStatusCode = exports.isSuccessStatusCode = exports.getApiVersion = exports.parseEnvNumber = exports.getExponentialRetryTimeInMilliseconds = void 0;
+const crypto_1 = __importDefault(__nccwpck_require__(6113));
+const fs_1 = __nccwpck_require__(7147);
+const core_1 = __nccwpck_require__(2186);
+const http_client_1 = __nccwpck_require__(6255);
+const auth_1 = __nccwpck_require__(5526);
+const config_variables_1 = __nccwpck_require__(2222);
+const crc64_1 = __importDefault(__nccwpck_require__(3549));
+/**
+ * Returns a retry time in milliseconds that exponentially gets larger
+ * depending on the amount of retries that have been attempted
+ */
+function getExponentialRetryTimeInMilliseconds(retryCount) {
+    if (retryCount < 0) {
+        throw new Error('RetryCount should not be negative');
+    }
+    else if (retryCount === 0) {
+        return config_variables_1.getInitialRetryIntervalInMilliseconds();
+    }
+    const minTime = config_variables_1.getInitialRetryIntervalInMilliseconds() * config_variables_1.getRetryMultiplier() * retryCount;
+    const maxTime = minTime * config_variables_1.getRetryMultiplier();
+    // returns a random number between the minTime (inclusive) and the maxTime (exclusive)
+    return Math.trunc(Math.random() * (maxTime - minTime) + minTime);
+}
+exports.getExponentialRetryTimeInMilliseconds = getExponentialRetryTimeInMilliseconds;
+/**
+ * Parses a env variable that is a number
+ */
+function parseEnvNumber(key) {
+    const value = Number(process.env[key]);
+    if (Number.isNaN(value) || value < 0) {
+        return undefined;
+    }
+    return value;
+}
+exports.parseEnvNumber = parseEnvNumber;
+/**
+ * Various utility functions to help with the necessary API calls
+ */
+function getApiVersion() {
+    return '6.0-preview';
+}
+exports.getApiVersion = getApiVersion;
+function isSuccessStatusCode(statusCode) {
+    if (!statusCode) {
+        return false;
+    }
+    return statusCode >= 200 && statusCode < 300;
+}
+exports.isSuccessStatusCode = isSuccessStatusCode;
+function isForbiddenStatusCode(statusCode) {
+    if (!statusCode) {
+        return false;
+    }
+    return statusCode === http_client_1.HttpCodes.Forbidden;
+}
+exports.isForbiddenStatusCode = isForbiddenStatusCode;
+function isRetryableStatusCode(statusCode) {
+    if (!statusCode) {
+        return false;
+    }
+    const retryableStatusCodes = [
+        http_client_1.HttpCodes.BadGateway,
+        http_client_1.HttpCodes.GatewayTimeout,
+        http_client_1.HttpCodes.InternalServerError,
+        http_client_1.HttpCodes.ServiceUnavailable,
+        http_client_1.HttpCodes.TooManyRequests,
+        413 // Payload Too Large
+    ];
+    return retryableStatusCodes.includes(statusCode);
+}
+exports.isRetryableStatusCode = isRetryableStatusCode;
+function isThrottledStatusCode(statusCode) {
+    if (!statusCode) {
+        return false;
+    }
+    return statusCode === http_client_1.HttpCodes.TooManyRequests;
+}
+exports.isThrottledStatusCode = isThrottledStatusCode;
+/**
+ * Attempts to get the retry-after value from a set of http headers. The retry time
+ * is originally denoted in seconds, so if present, it is converted to milliseconds
+ * @param headers all the headers received when making an http call
+ */
+function tryGetRetryAfterValueTimeInMilliseconds(headers) {
+    if (headers['retry-after']) {
+        const retryTime = Number(headers['retry-after']);
+        if (!isNaN(retryTime)) {
+            core_1.info(`Retry-After header is present with a value of ${retryTime}`);
+            return retryTime * 1000;
+        }
+        core_1.info(`Returned retry-after header value: ${retryTime} is non-numeric and cannot be used`);
+        return undefined;
+    }
+    core_1.info(`No retry-after header was found. Dumping all headers for diagnostic purposes`);
+    // eslint-disable-next-line no-console
+    console.log(headers);
+    return undefined;
+}
+exports.tryGetRetryAfterValueTimeInMilliseconds = tryGetRetryAfterValueTimeInMilliseconds;
+function getContentRange(start, end, total) {
+    // Format: `bytes start-end/fileSize
+    // start and end are inclusive
+    // For a 200 byte chunk starting at byte 0:
+    // Content-Range: bytes 0-199/200
+    return `bytes ${start}-${end}/${total}`;
+}
+exports.getContentRange = getContentRange;
+/**
+ * Sets all the necessary headers when downloading an artifact
+ * @param {string} contentType the type of content being uploaded
+ * @param {boolean} isKeepAlive is the same connection being used to make multiple calls
+ * @param {boolean} acceptGzip can we accept a gzip encoded response
+ * @param {string} acceptType the type of content that we can accept
+ * @returns appropriate headers to make a specific http call during artifact download
+ */
+function getDownloadHeaders(contentType, isKeepAlive, acceptGzip) {
+    const requestOptions = {};
+    if (contentType) {
+        requestOptions['Content-Type'] = contentType;
+    }
+    if (isKeepAlive) {
+        requestOptions['Connection'] = 'Keep-Alive';
+        // keep alive for at least 10 seconds before closing the connection
+        requestOptions['Keep-Alive'] = '10';
+    }
+    if (acceptGzip) {
+        // if we are expecting a response with gzip encoding, it should be using an octet-stream in the accept header
+        requestOptions['Accept-Encoding'] = 'gzip';
+        requestOptions['Accept'] = `application/octet-stream;api-version=${getApiVersion()}`;
+    }
+    else {
+        // default to application/json if we are not working with gzip content
+        requestOptions['Accept'] = `application/json;api-version=${getApiVersion()}`;
+    }
+    return requestOptions;
+}
+exports.getDownloadHeaders = getDownloadHeaders;
+/**
+ * Sets all the necessary headers when uploading an artifact
+ * @param {string} contentType the type of content being uploaded
+ * @param {boolean} isKeepAlive is the same connection being used to make multiple calls
+ * @param {boolean} isGzip is the connection being used to upload GZip compressed content
+ * @param {number} uncompressedLength the original size of the content if something is being uploaded that has been compressed
+ * @param {number} contentLength the length of the content that is being uploaded
+ * @param {string} contentRange the range of the content that is being uploaded
+ * @returns appropriate headers to make a specific http call during artifact upload
+ */
+function getUploadHeaders(contentType, isKeepAlive, isGzip, uncompressedLength, contentLength, contentRange, digest) {
+    const requestOptions = {};
+    requestOptions['Accept'] = `application/json;api-version=${getApiVersion()}`;
+    if (contentType) {
+        requestOptions['Content-Type'] = contentType;
+    }
+    if (isKeepAlive) {
+        requestOptions['Connection'] = 'Keep-Alive';
+        // keep alive for at least 10 seconds before closing the connection
+        requestOptions['Keep-Alive'] = '10';
+    }
+    if (isGzip) {
+        requestOptions['Content-Encoding'] = 'gzip';
+        requestOptions['x-tfs-filelength'] = uncompressedLength;
+    }
+    if (contentLength) {
+        requestOptions['Content-Length'] = contentLength;
+    }
+    if (contentRange) {
+        requestOptions['Content-Range'] = contentRange;
+    }
+    if (digest) {
+        requestOptions['x-actions-results-crc64'] = digest.crc64;
+        requestOptions['x-actions-results-md5'] = digest.md5;
+    }
+    return requestOptions;
+}
+exports.getUploadHeaders = getUploadHeaders;
+function createHttpClient(userAgent) {
+    return new http_client_1.HttpClient(userAgent, [
+        new auth_1.BearerCredentialHandler(config_variables_1.getRuntimeToken())
+    ]);
+}
+exports.createHttpClient = createHttpClient;
+function getArtifactUrl() {
+    const artifactUrl = `${config_variables_1.getRuntimeUrl()}_apis/pipelines/workflows/${config_variables_1.getWorkFlowRunId()}/artifacts?api-version=${getApiVersion()}`;
+    core_1.debug(`Artifact Url: ${artifactUrl}`);
+    return artifactUrl;
+}
+exports.getArtifactUrl = getArtifactUrl;
+/**
+ * Uh oh! Something might have gone wrong during either upload or download. The IHtttpClientResponse object contains information
+ * about the http call that was made by the actions http client. This information might be useful to display for diagnostic purposes, but
+ * this entire object is really big and most of the information is not really useful. This function takes the response object and displays only
+ * the information that we want.
+ *
+ * Certain information such as the TLSSocket and the Readable state are not really useful for diagnostic purposes so they can be avoided.
+ * Other information such as the headers, the response code and message might be useful, so this is displayed.
+ */
+function displayHttpDiagnostics(response) {
+    core_1.info(`##### Begin Diagnostic HTTP information #####
+Status Code: ${response.message.statusCode}
+Status Message: ${response.message.statusMessage}
+Header Information: ${JSON.stringify(response.message.headers, undefined, 2)}
+###### End Diagnostic HTTP information ######`);
+}
+exports.displayHttpDiagnostics = displayHttpDiagnostics;
+function createDirectoriesForArtifact(directories) {
+    return __awaiter(this, void 0, void 0, function* () {
+        for (const directory of directories) {
+            yield fs_1.promises.mkdir(directory, {
+                recursive: true
+            });
+        }
+    });
+}
+exports.createDirectoriesForArtifact = createDirectoriesForArtifact;
+function createEmptyFilesForArtifact(emptyFilesToCreate) {
+    return __awaiter(this, void 0, void 0, function* () {
+        for (const filePath of emptyFilesToCreate) {
+            yield (yield fs_1.promises.open(filePath, 'w')).close();
+        }
+    });
+}
+exports.createEmptyFilesForArtifact = createEmptyFilesForArtifact;
+function getFileSize(filePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const stats = yield fs_1.promises.stat(filePath);
+        core_1.debug(`${filePath} size:(${stats.size}) blksize:(${stats.blksize}) blocks:(${stats.blocks})`);
+        return stats.size;
+    });
+}
+exports.getFileSize = getFileSize;
+function rmFile(filePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield fs_1.promises.unlink(filePath);
+    });
+}
+exports.rmFile = rmFile;
+function getProperRetention(retentionInput, retentionSetting) {
+    if (retentionInput < 0) {
+        throw new Error('Invalid retention, minimum value is 1.');
+    }
+    let retention = retentionInput;
+    if (retentionSetting) {
+        const maxRetention = parseInt(retentionSetting);
+        if (!isNaN(maxRetention) && maxRetention < retention) {
+            core_1.warning(`Retention days is greater than the max value allowed by the repository setting, reduce retention to ${maxRetention} days`);
+            retention = maxRetention;
+        }
+    }
+    return retention;
+}
+exports.getProperRetention = getProperRetention;
+function sleep(milliseconds) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise(resolve => setTimeout(resolve, milliseconds));
+    });
+}
+exports.sleep = sleep;
+function digestForStream(stream) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            const crc64 = new crc64_1.default();
+            const md5 = crypto_1.default.createHash('md5');
+            stream
+                .on('data', data => {
+                crc64.update(data);
+                md5.update(data);
+            })
+                .on('end', () => resolve({
+                crc64: crc64.digest('base64'),
+                md5: md5.digest('base64')
+            }))
+                .on('error', reject);
+        });
+    });
+}
+exports.digestForStream = digestForStream;
+//# sourceMappingURL=utils.js.map
+
+/***/ }),
+
 /***/ 7799:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -43811,6 +46002,44 @@ exports.paginatingEndpoints = paginatingEndpoints;
 
 /***/ }),
 
+/***/ 8883:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+const VERSION = "1.0.4";
+
+/**
+ * @param octokit Octokit instance
+ * @param options Options passed to Octokit constructor
+ */
+
+function requestLog(octokit) {
+  octokit.hook.wrap("request", (request, options) => {
+    octokit.log.debug("request", options);
+    const start = Date.now();
+    const requestOptions = octokit.request.endpoint.parse(options);
+    const path = requestOptions.url.replace(options.baseUrl, "");
+    return request(options).then(response => {
+      octokit.log.info(`${requestOptions.method} ${path} - ${response.status} in ${Date.now() - start}ms`);
+      return response;
+    }).catch(error => {
+      octokit.log.info(`${requestOptions.method} ${path} - ${error.status} in ${Date.now() - start}ms`);
+      throw error;
+    });
+  });
+}
+requestLog.VERSION = VERSION;
+
+exports.requestLog = requestLog;
+//# sourceMappingURL=index.js.map
+
+
+/***/ }),
+
 /***/ 3044:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -45189,6 +47418,2602 @@ const request = withDefaults(endpoint.endpoint, {
 
 exports.request = request;
 //# sourceMappingURL=index.js.map
+
+
+/***/ }),
+
+/***/ 5375:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// pkg/dist-src/index.js
+var dist_src_exports = {};
+__export(dist_src_exports, {
+  Octokit: () => Octokit
+});
+module.exports = __toCommonJS(dist_src_exports);
+var import_core = __nccwpck_require__(4952);
+var import_plugin_request_log = __nccwpck_require__(8883);
+var import_plugin_paginate_rest = __nccwpck_require__(1237);
+var import_plugin_rest_endpoint_methods = __nccwpck_require__(4923);
+
+// pkg/dist-src/version.js
+var VERSION = "19.0.11";
+
+// pkg/dist-src/index.js
+var Octokit = import_core.Octokit.plugin(
+  import_plugin_request_log.requestLog,
+  import_plugin_rest_endpoint_methods.legacyRestEndpointMethods,
+  import_plugin_paginate_rest.paginateRest
+).defaults({
+  userAgent: `octokit-rest.js/${VERSION}`
+});
+// Annotate the CommonJS export names for ESM import in node:
+0 && (0);
+
+
+/***/ }),
+
+/***/ 7633:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+const REGEX_IS_INSTALLATION_LEGACY = /^v1\./;
+const REGEX_IS_INSTALLATION = /^ghs_/;
+const REGEX_IS_USER_TO_SERVER = /^ghu_/;
+async function auth(token) {
+  const isApp = token.split(/\./).length === 3;
+  const isInstallation = REGEX_IS_INSTALLATION_LEGACY.test(token) || REGEX_IS_INSTALLATION.test(token);
+  const isUserToServer = REGEX_IS_USER_TO_SERVER.test(token);
+  const tokenType = isApp ? "app" : isInstallation ? "installation" : isUserToServer ? "user-to-server" : "oauth";
+  return {
+    type: "token",
+    token: token,
+    tokenType
+  };
+}
+
+/**
+ * Prefix token for usage in the Authorization header
+ *
+ * @param token OAuth token or JSON Web Token
+ */
+function withAuthorizationPrefix(token) {
+  if (token.split(/\./).length === 3) {
+    return `bearer ${token}`;
+  }
+  return `token ${token}`;
+}
+
+async function hook(token, request, route, parameters) {
+  const endpoint = request.endpoint.merge(route, parameters);
+  endpoint.headers.authorization = withAuthorizationPrefix(token);
+  return request(endpoint);
+}
+
+const createTokenAuth = function createTokenAuth(token) {
+  if (!token) {
+    throw new Error("[@octokit/auth-token] No token passed to createTokenAuth");
+  }
+  if (typeof token !== "string") {
+    throw new Error("[@octokit/auth-token] Token passed to createTokenAuth is not a string");
+  }
+  token = token.replace(/^(token|bearer) +/i, "");
+  return Object.assign(auth.bind(null, token), {
+    hook: hook.bind(null, token)
+  });
+};
+
+exports.createTokenAuth = createTokenAuth;
+//# sourceMappingURL=index.js.map
+
+
+/***/ }),
+
+/***/ 4952:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// pkg/dist-src/index.js
+var dist_src_exports = {};
+__export(dist_src_exports, {
+  Octokit: () => Octokit
+});
+module.exports = __toCommonJS(dist_src_exports);
+var import_universal_user_agent = __nccwpck_require__(5030);
+var import_before_after_hook = __nccwpck_require__(3682);
+var import_request = __nccwpck_require__(6206);
+var import_graphql = __nccwpck_require__(7461);
+var import_auth_token = __nccwpck_require__(7633);
+
+// pkg/dist-src/version.js
+var VERSION = "4.2.1";
+
+// pkg/dist-src/index.js
+var Octokit = class {
+  static defaults(defaults) {
+    const OctokitWithDefaults = class extends this {
+      constructor(...args) {
+        const options = args[0] || {};
+        if (typeof defaults === "function") {
+          super(defaults(options));
+          return;
+        }
+        super(
+          Object.assign(
+            {},
+            defaults,
+            options,
+            options.userAgent && defaults.userAgent ? {
+              userAgent: `${options.userAgent} ${defaults.userAgent}`
+            } : null
+          )
+        );
+      }
+    };
+    return OctokitWithDefaults;
+  }
+  /**
+   * Attach a plugin (or many) to your Octokit instance.
+   *
+   * @example
+   * const API = Octokit.plugin(plugin1, plugin2, plugin3, ...)
+   */
+  static plugin(...newPlugins) {
+    var _a;
+    const currentPlugins = this.plugins;
+    const NewOctokit = (_a = class extends this {
+    }, _a.plugins = currentPlugins.concat(
+      newPlugins.filter((plugin) => !currentPlugins.includes(plugin))
+    ), _a);
+    return NewOctokit;
+  }
+  constructor(options = {}) {
+    const hook = new import_before_after_hook.Collection();
+    const requestDefaults = {
+      baseUrl: import_request.request.endpoint.DEFAULTS.baseUrl,
+      headers: {},
+      request: Object.assign({}, options.request, {
+        // @ts-ignore internal usage only, no need to type
+        hook: hook.bind(null, "request")
+      }),
+      mediaType: {
+        previews: [],
+        format: ""
+      }
+    };
+    requestDefaults.headers["user-agent"] = [
+      options.userAgent,
+      `octokit-core.js/${VERSION} ${(0, import_universal_user_agent.getUserAgent)()}`
+    ].filter(Boolean).join(" ");
+    if (options.baseUrl) {
+      requestDefaults.baseUrl = options.baseUrl;
+    }
+    if (options.previews) {
+      requestDefaults.mediaType.previews = options.previews;
+    }
+    if (options.timeZone) {
+      requestDefaults.headers["time-zone"] = options.timeZone;
+    }
+    this.request = import_request.request.defaults(requestDefaults);
+    this.graphql = (0, import_graphql.withCustomRequest)(this.request).defaults(requestDefaults);
+    this.log = Object.assign(
+      {
+        debug: () => {
+        },
+        info: () => {
+        },
+        warn: console.warn.bind(console),
+        error: console.error.bind(console)
+      },
+      options.log
+    );
+    this.hook = hook;
+    if (!options.authStrategy) {
+      if (!options.auth) {
+        this.auth = async () => ({
+          type: "unauthenticated"
+        });
+      } else {
+        const auth = (0, import_auth_token.createTokenAuth)(options.auth);
+        hook.wrap("request", auth.hook);
+        this.auth = auth;
+      }
+    } else {
+      const { authStrategy, ...otherOptions } = options;
+      const auth = authStrategy(
+        Object.assign(
+          {
+            request: this.request,
+            log: this.log,
+            // we pass the current octokit instance as well as its constructor options
+            // to allow for authentication strategies that return a new octokit instance
+            // that shares the same internal state as the current one. The original
+            // requirement for this was the "event-octokit" authentication strategy
+            // of https://github.com/probot/octokit-auth-probot.
+            octokit: this,
+            octokitOptions: otherOptions
+          },
+          options.auth
+        )
+      );
+      hook.wrap("request", auth.hook);
+      this.auth = auth;
+    }
+    const classConstructor = this.constructor;
+    classConstructor.plugins.forEach((plugin) => {
+      Object.assign(this, plugin(this, options));
+    });
+  }
+};
+Octokit.VERSION = VERSION;
+Octokit.plugins = [];
+// Annotate the CommonJS export names for ESM import in node:
+0 && (0);
+
+
+/***/ }),
+
+/***/ 6065:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+var isPlainObject = __nccwpck_require__(3287);
+var universalUserAgent = __nccwpck_require__(5030);
+
+function lowercaseKeys(object) {
+  if (!object) {
+    return {};
+  }
+  return Object.keys(object).reduce((newObj, key) => {
+    newObj[key.toLowerCase()] = object[key];
+    return newObj;
+  }, {});
+}
+
+function mergeDeep(defaults, options) {
+  const result = Object.assign({}, defaults);
+  Object.keys(options).forEach(key => {
+    if (isPlainObject.isPlainObject(options[key])) {
+      if (!(key in defaults)) Object.assign(result, {
+        [key]: options[key]
+      });else result[key] = mergeDeep(defaults[key], options[key]);
+    } else {
+      Object.assign(result, {
+        [key]: options[key]
+      });
+    }
+  });
+  return result;
+}
+
+function removeUndefinedProperties(obj) {
+  for (const key in obj) {
+    if (obj[key] === undefined) {
+      delete obj[key];
+    }
+  }
+  return obj;
+}
+
+function merge(defaults, route, options) {
+  if (typeof route === "string") {
+    let [method, url] = route.split(" ");
+    options = Object.assign(url ? {
+      method,
+      url
+    } : {
+      url: method
+    }, options);
+  } else {
+    options = Object.assign({}, route);
+  }
+  // lowercase header names before merging with defaults to avoid duplicates
+  options.headers = lowercaseKeys(options.headers);
+  // remove properties with undefined values before merging
+  removeUndefinedProperties(options);
+  removeUndefinedProperties(options.headers);
+  const mergedOptions = mergeDeep(defaults || {}, options);
+  // mediaType.previews arrays are merged, instead of overwritten
+  if (defaults && defaults.mediaType.previews.length) {
+    mergedOptions.mediaType.previews = defaults.mediaType.previews.filter(preview => !mergedOptions.mediaType.previews.includes(preview)).concat(mergedOptions.mediaType.previews);
+  }
+  mergedOptions.mediaType.previews = mergedOptions.mediaType.previews.map(preview => preview.replace(/-preview/, ""));
+  return mergedOptions;
+}
+
+function addQueryParameters(url, parameters) {
+  const separator = /\?/.test(url) ? "&" : "?";
+  const names = Object.keys(parameters);
+  if (names.length === 0) {
+    return url;
+  }
+  return url + separator + names.map(name => {
+    if (name === "q") {
+      return "q=" + parameters.q.split("+").map(encodeURIComponent).join("+");
+    }
+    return `${name}=${encodeURIComponent(parameters[name])}`;
+  }).join("&");
+}
+
+const urlVariableRegex = /\{[^}]+\}/g;
+function removeNonChars(variableName) {
+  return variableName.replace(/^\W+|\W+$/g, "").split(/,/);
+}
+function extractUrlVariableNames(url) {
+  const matches = url.match(urlVariableRegex);
+  if (!matches) {
+    return [];
+  }
+  return matches.map(removeNonChars).reduce((a, b) => a.concat(b), []);
+}
+
+function omit(object, keysToOmit) {
+  return Object.keys(object).filter(option => !keysToOmit.includes(option)).reduce((obj, key) => {
+    obj[key] = object[key];
+    return obj;
+  }, {});
+}
+
+// Based on https://github.com/bramstein/url-template, licensed under BSD
+// TODO: create separate package.
+//
+// Copyright (c) 2012-2014, Bram Stein
+// All rights reserved.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+//  1. Redistributions of source code must retain the above copyright
+//     notice, this list of conditions and the following disclaimer.
+//  2. Redistributions in binary form must reproduce the above copyright
+//     notice, this list of conditions and the following disclaimer in the
+//     documentation and/or other materials provided with the distribution.
+//  3. The name of the author may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+// THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+// EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+// OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+// EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+/* istanbul ignore file */
+function encodeReserved(str) {
+  return str.split(/(%[0-9A-Fa-f]{2})/g).map(function (part) {
+    if (!/%[0-9A-Fa-f]/.test(part)) {
+      part = encodeURI(part).replace(/%5B/g, "[").replace(/%5D/g, "]");
+    }
+    return part;
+  }).join("");
+}
+function encodeUnreserved(str) {
+  return encodeURIComponent(str).replace(/[!'()*]/g, function (c) {
+    return "%" + c.charCodeAt(0).toString(16).toUpperCase();
+  });
+}
+function encodeValue(operator, value, key) {
+  value = operator === "+" || operator === "#" ? encodeReserved(value) : encodeUnreserved(value);
+  if (key) {
+    return encodeUnreserved(key) + "=" + value;
+  } else {
+    return value;
+  }
+}
+function isDefined(value) {
+  return value !== undefined && value !== null;
+}
+function isKeyOperator(operator) {
+  return operator === ";" || operator === "&" || operator === "?";
+}
+function getValues(context, operator, key, modifier) {
+  var value = context[key],
+    result = [];
+  if (isDefined(value) && value !== "") {
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      value = value.toString();
+      if (modifier && modifier !== "*") {
+        value = value.substring(0, parseInt(modifier, 10));
+      }
+      result.push(encodeValue(operator, value, isKeyOperator(operator) ? key : ""));
+    } else {
+      if (modifier === "*") {
+        if (Array.isArray(value)) {
+          value.filter(isDefined).forEach(function (value) {
+            result.push(encodeValue(operator, value, isKeyOperator(operator) ? key : ""));
+          });
+        } else {
+          Object.keys(value).forEach(function (k) {
+            if (isDefined(value[k])) {
+              result.push(encodeValue(operator, value[k], k));
+            }
+          });
+        }
+      } else {
+        const tmp = [];
+        if (Array.isArray(value)) {
+          value.filter(isDefined).forEach(function (value) {
+            tmp.push(encodeValue(operator, value));
+          });
+        } else {
+          Object.keys(value).forEach(function (k) {
+            if (isDefined(value[k])) {
+              tmp.push(encodeUnreserved(k));
+              tmp.push(encodeValue(operator, value[k].toString()));
+            }
+          });
+        }
+        if (isKeyOperator(operator)) {
+          result.push(encodeUnreserved(key) + "=" + tmp.join(","));
+        } else if (tmp.length !== 0) {
+          result.push(tmp.join(","));
+        }
+      }
+    }
+  } else {
+    if (operator === ";") {
+      if (isDefined(value)) {
+        result.push(encodeUnreserved(key));
+      }
+    } else if (value === "" && (operator === "&" || operator === "?")) {
+      result.push(encodeUnreserved(key) + "=");
+    } else if (value === "") {
+      result.push("");
+    }
+  }
+  return result;
+}
+function parseUrl(template) {
+  return {
+    expand: expand.bind(null, template)
+  };
+}
+function expand(template, context) {
+  var operators = ["+", "#", ".", "/", ";", "?", "&"];
+  return template.replace(/\{([^\{\}]+)\}|([^\{\}]+)/g, function (_, expression, literal) {
+    if (expression) {
+      let operator = "";
+      const values = [];
+      if (operators.indexOf(expression.charAt(0)) !== -1) {
+        operator = expression.charAt(0);
+        expression = expression.substr(1);
+      }
+      expression.split(/,/g).forEach(function (variable) {
+        var tmp = /([^:\*]*)(?::(\d+)|(\*))?/.exec(variable);
+        values.push(getValues(context, operator, tmp[1], tmp[2] || tmp[3]));
+      });
+      if (operator && operator !== "+") {
+        var separator = ",";
+        if (operator === "?") {
+          separator = "&";
+        } else if (operator !== "#") {
+          separator = operator;
+        }
+        return (values.length !== 0 ? operator : "") + values.join(separator);
+      } else {
+        return values.join(",");
+      }
+    } else {
+      return encodeReserved(literal);
+    }
+  });
+}
+
+function parse(options) {
+  // https://fetch.spec.whatwg.org/#methods
+  let method = options.method.toUpperCase();
+  // replace :varname with {varname} to make it RFC 6570 compatible
+  let url = (options.url || "/").replace(/:([a-z]\w+)/g, "{$1}");
+  let headers = Object.assign({}, options.headers);
+  let body;
+  let parameters = omit(options, ["method", "baseUrl", "url", "headers", "request", "mediaType"]);
+  // extract variable names from URL to calculate remaining variables later
+  const urlVariableNames = extractUrlVariableNames(url);
+  url = parseUrl(url).expand(parameters);
+  if (!/^http/.test(url)) {
+    url = options.baseUrl + url;
+  }
+  const omittedParameters = Object.keys(options).filter(option => urlVariableNames.includes(option)).concat("baseUrl");
+  const remainingParameters = omit(parameters, omittedParameters);
+  const isBinaryRequest = /application\/octet-stream/i.test(headers.accept);
+  if (!isBinaryRequest) {
+    if (options.mediaType.format) {
+      // e.g. application/vnd.github.v3+json => application/vnd.github.v3.raw
+      headers.accept = headers.accept.split(/,/).map(preview => preview.replace(/application\/vnd(\.\w+)(\.v3)?(\.\w+)?(\+json)?$/, `application/vnd$1$2.${options.mediaType.format}`)).join(",");
+    }
+    if (options.mediaType.previews.length) {
+      const previewsFromAcceptHeader = headers.accept.match(/[\w-]+(?=-preview)/g) || [];
+      headers.accept = previewsFromAcceptHeader.concat(options.mediaType.previews).map(preview => {
+        const format = options.mediaType.format ? `.${options.mediaType.format}` : "+json";
+        return `application/vnd.github.${preview}-preview${format}`;
+      }).join(",");
+    }
+  }
+  // for GET/HEAD requests, set URL query parameters from remaining parameters
+  // for PATCH/POST/PUT/DELETE requests, set request body from remaining parameters
+  if (["GET", "HEAD"].includes(method)) {
+    url = addQueryParameters(url, remainingParameters);
+  } else {
+    if ("data" in remainingParameters) {
+      body = remainingParameters.data;
+    } else {
+      if (Object.keys(remainingParameters).length) {
+        body = remainingParameters;
+      }
+    }
+  }
+  // default content-type for JSON if body is set
+  if (!headers["content-type"] && typeof body !== "undefined") {
+    headers["content-type"] = "application/json; charset=utf-8";
+  }
+  // GitHub expects 'content-length: 0' header for PUT/PATCH requests without body.
+  // fetch does not allow to set `content-length` header, but we can set body to an empty string
+  if (["PATCH", "PUT"].includes(method) && typeof body === "undefined") {
+    body = "";
+  }
+  // Only return body/request keys if present
+  return Object.assign({
+    method,
+    url,
+    headers
+  }, typeof body !== "undefined" ? {
+    body
+  } : null, options.request ? {
+    request: options.request
+  } : null);
+}
+
+function endpointWithDefaults(defaults, route, options) {
+  return parse(merge(defaults, route, options));
+}
+
+function withDefaults(oldDefaults, newDefaults) {
+  const DEFAULTS = merge(oldDefaults, newDefaults);
+  const endpoint = endpointWithDefaults.bind(null, DEFAULTS);
+  return Object.assign(endpoint, {
+    DEFAULTS,
+    defaults: withDefaults.bind(null, DEFAULTS),
+    merge: merge.bind(null, DEFAULTS),
+    parse
+  });
+}
+
+const VERSION = "7.0.5";
+
+const userAgent = `octokit-endpoint.js/${VERSION} ${universalUserAgent.getUserAgent()}`;
+// DEFAULTS has all properties set that EndpointOptions has, except url.
+// So we use RequestParameters and add method as additional required property.
+const DEFAULTS = {
+  method: "GET",
+  baseUrl: "https://api.github.com",
+  headers: {
+    accept: "application/vnd.github.v3+json",
+    "user-agent": userAgent
+  },
+  mediaType: {
+    format: "",
+    previews: []
+  }
+};
+
+const endpoint = withDefaults(null, DEFAULTS);
+
+exports.endpoint = endpoint;
+//# sourceMappingURL=index.js.map
+
+
+/***/ }),
+
+/***/ 7461:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// pkg/dist-src/index.js
+var dist_src_exports = {};
+__export(dist_src_exports, {
+  GraphqlResponseError: () => GraphqlResponseError,
+  graphql: () => graphql2,
+  withCustomRequest: () => withCustomRequest
+});
+module.exports = __toCommonJS(dist_src_exports);
+var import_request = __nccwpck_require__(6206);
+var import_universal_user_agent = __nccwpck_require__(5030);
+
+// pkg/dist-src/version.js
+var VERSION = "5.0.6";
+
+// pkg/dist-src/error.js
+function _buildMessageForResponseErrors(data) {
+  return `Request failed due to following response errors:
+` + data.errors.map((e) => ` - ${e.message}`).join("\n");
+}
+var GraphqlResponseError = class extends Error {
+  constructor(request2, headers, response) {
+    super(_buildMessageForResponseErrors(response));
+    this.request = request2;
+    this.headers = headers;
+    this.response = response;
+    this.name = "GraphqlResponseError";
+    this.errors = response.errors;
+    this.data = response.data;
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, this.constructor);
+    }
+  }
+};
+
+// pkg/dist-src/graphql.js
+var NON_VARIABLE_OPTIONS = [
+  "method",
+  "baseUrl",
+  "url",
+  "headers",
+  "request",
+  "query",
+  "mediaType"
+];
+var FORBIDDEN_VARIABLE_OPTIONS = ["query", "method", "url"];
+var GHES_V3_SUFFIX_REGEX = /\/api\/v3\/?$/;
+function graphql(request2, query, options) {
+  if (options) {
+    if (typeof query === "string" && "query" in options) {
+      return Promise.reject(
+        new Error(`[@octokit/graphql] "query" cannot be used as variable name`)
+      );
+    }
+    for (const key in options) {
+      if (!FORBIDDEN_VARIABLE_OPTIONS.includes(key))
+        continue;
+      return Promise.reject(
+        new Error(`[@octokit/graphql] "${key}" cannot be used as variable name`)
+      );
+    }
+  }
+  const parsedOptions = typeof query === "string" ? Object.assign({ query }, options) : query;
+  const requestOptions = Object.keys(
+    parsedOptions
+  ).reduce((result, key) => {
+    if (NON_VARIABLE_OPTIONS.includes(key)) {
+      result[key] = parsedOptions[key];
+      return result;
+    }
+    if (!result.variables) {
+      result.variables = {};
+    }
+    result.variables[key] = parsedOptions[key];
+    return result;
+  }, {});
+  const baseUrl = parsedOptions.baseUrl || request2.endpoint.DEFAULTS.baseUrl;
+  if (GHES_V3_SUFFIX_REGEX.test(baseUrl)) {
+    requestOptions.url = baseUrl.replace(GHES_V3_SUFFIX_REGEX, "/api/graphql");
+  }
+  return request2(requestOptions).then((response) => {
+    if (response.data.errors) {
+      const headers = {};
+      for (const key of Object.keys(response.headers)) {
+        headers[key] = response.headers[key];
+      }
+      throw new GraphqlResponseError(
+        requestOptions,
+        headers,
+        response.data
+      );
+    }
+    return response.data.data;
+  });
+}
+
+// pkg/dist-src/with-defaults.js
+function withDefaults(request2, newDefaults) {
+  const newRequest = request2.defaults(newDefaults);
+  const newApi = (query, options) => {
+    return graphql(newRequest, query, options);
+  };
+  return Object.assign(newApi, {
+    defaults: withDefaults.bind(null, newRequest),
+    endpoint: newRequest.endpoint
+  });
+}
+
+// pkg/dist-src/index.js
+var graphql2 = withDefaults(import_request.request, {
+  headers: {
+    "user-agent": `octokit-graphql.js/${VERSION} ${(0, import_universal_user_agent.getUserAgent)()}`
+  },
+  method: "POST",
+  url: "/graphql"
+});
+function withCustomRequest(customRequest) {
+  return withDefaults(customRequest, {
+    method: "POST",
+    url: "/graphql"
+  });
+}
+// Annotate the CommonJS export names for ESM import in node:
+0 && (0);
+
+
+/***/ }),
+
+/***/ 1237:
+/***/ ((module) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// pkg/dist-src/index.js
+var dist_src_exports = {};
+__export(dist_src_exports, {
+  composePaginateRest: () => composePaginateRest,
+  isPaginatingEndpoint: () => isPaginatingEndpoint,
+  paginateRest: () => paginateRest,
+  paginatingEndpoints: () => paginatingEndpoints
+});
+module.exports = __toCommonJS(dist_src_exports);
+
+// pkg/dist-src/version.js
+var VERSION = "6.1.2";
+
+// pkg/dist-src/normalize-paginated-list-response.js
+function normalizePaginatedListResponse(response) {
+  if (!response.data) {
+    return {
+      ...response,
+      data: []
+    };
+  }
+  const responseNeedsNormalization = "total_count" in response.data && !("url" in response.data);
+  if (!responseNeedsNormalization)
+    return response;
+  const incompleteResults = response.data.incomplete_results;
+  const repositorySelection = response.data.repository_selection;
+  const totalCount = response.data.total_count;
+  delete response.data.incomplete_results;
+  delete response.data.repository_selection;
+  delete response.data.total_count;
+  const namespaceKey = Object.keys(response.data)[0];
+  const data = response.data[namespaceKey];
+  response.data = data;
+  if (typeof incompleteResults !== "undefined") {
+    response.data.incomplete_results = incompleteResults;
+  }
+  if (typeof repositorySelection !== "undefined") {
+    response.data.repository_selection = repositorySelection;
+  }
+  response.data.total_count = totalCount;
+  return response;
+}
+
+// pkg/dist-src/iterator.js
+function iterator(octokit, route, parameters) {
+  const options = typeof route === "function" ? route.endpoint(parameters) : octokit.request.endpoint(route, parameters);
+  const requestMethod = typeof route === "function" ? route : octokit.request;
+  const method = options.method;
+  const headers = options.headers;
+  let url = options.url;
+  return {
+    [Symbol.asyncIterator]: () => ({
+      async next() {
+        if (!url)
+          return { done: true };
+        try {
+          const response = await requestMethod({ method, url, headers });
+          const normalizedResponse = normalizePaginatedListResponse(response);
+          url = ((normalizedResponse.headers.link || "").match(
+            /<([^>]+)>;\s*rel="next"/
+          ) || [])[1];
+          return { value: normalizedResponse };
+        } catch (error) {
+          if (error.status !== 409)
+            throw error;
+          url = "";
+          return {
+            value: {
+              status: 200,
+              headers: {},
+              data: []
+            }
+          };
+        }
+      }
+    })
+  };
+}
+
+// pkg/dist-src/paginate.js
+function paginate(octokit, route, parameters, mapFn) {
+  if (typeof parameters === "function") {
+    mapFn = parameters;
+    parameters = void 0;
+  }
+  return gather(
+    octokit,
+    [],
+    iterator(octokit, route, parameters)[Symbol.asyncIterator](),
+    mapFn
+  );
+}
+function gather(octokit, results, iterator2, mapFn) {
+  return iterator2.next().then((result) => {
+    if (result.done) {
+      return results;
+    }
+    let earlyExit = false;
+    function done() {
+      earlyExit = true;
+    }
+    results = results.concat(
+      mapFn ? mapFn(result.value, done) : result.value.data
+    );
+    if (earlyExit) {
+      return results;
+    }
+    return gather(octokit, results, iterator2, mapFn);
+  });
+}
+
+// pkg/dist-src/compose-paginate.js
+var composePaginateRest = Object.assign(paginate, {
+  iterator
+});
+
+// pkg/dist-src/generated/paginating-endpoints.js
+var paginatingEndpoints = [
+  "GET /app/hook/deliveries",
+  "GET /app/installation-requests",
+  "GET /app/installations",
+  "GET /enterprises/{enterprise}/dependabot/alerts",
+  "GET /enterprises/{enterprise}/secret-scanning/alerts",
+  "GET /events",
+  "GET /gists",
+  "GET /gists/public",
+  "GET /gists/starred",
+  "GET /gists/{gist_id}/comments",
+  "GET /gists/{gist_id}/commits",
+  "GET /gists/{gist_id}/forks",
+  "GET /installation/repositories",
+  "GET /issues",
+  "GET /licenses",
+  "GET /marketplace_listing/plans",
+  "GET /marketplace_listing/plans/{plan_id}/accounts",
+  "GET /marketplace_listing/stubbed/plans",
+  "GET /marketplace_listing/stubbed/plans/{plan_id}/accounts",
+  "GET /networks/{owner}/{repo}/events",
+  "GET /notifications",
+  "GET /organizations",
+  "GET /organizations/{org}/personal-access-token-requests",
+  "GET /organizations/{org}/personal-access-token-requests/{pat_request_id}/repositories",
+  "GET /organizations/{org}/personal-access-tokens",
+  "GET /organizations/{org}/personal-access-tokens/{pat_id}/repositories",
+  "GET /orgs/{org}/actions/cache/usage-by-repository",
+  "GET /orgs/{org}/actions/permissions/repositories",
+  "GET /orgs/{org}/actions/required_workflows",
+  "GET /orgs/{org}/actions/runners",
+  "GET /orgs/{org}/actions/secrets",
+  "GET /orgs/{org}/actions/secrets/{secret_name}/repositories",
+  "GET /orgs/{org}/actions/variables",
+  "GET /orgs/{org}/actions/variables/{name}/repositories",
+  "GET /orgs/{org}/blocks",
+  "GET /orgs/{org}/code-scanning/alerts",
+  "GET /orgs/{org}/codespaces",
+  "GET /orgs/{org}/codespaces/secrets",
+  "GET /orgs/{org}/codespaces/secrets/{secret_name}/repositories",
+  "GET /orgs/{org}/dependabot/alerts",
+  "GET /orgs/{org}/dependabot/secrets",
+  "GET /orgs/{org}/dependabot/secrets/{secret_name}/repositories",
+  "GET /orgs/{org}/events",
+  "GET /orgs/{org}/failed_invitations",
+  "GET /orgs/{org}/hooks",
+  "GET /orgs/{org}/hooks/{hook_id}/deliveries",
+  "GET /orgs/{org}/installations",
+  "GET /orgs/{org}/invitations",
+  "GET /orgs/{org}/invitations/{invitation_id}/teams",
+  "GET /orgs/{org}/issues",
+  "GET /orgs/{org}/members",
+  "GET /orgs/{org}/members/{username}/codespaces",
+  "GET /orgs/{org}/migrations",
+  "GET /orgs/{org}/migrations/{migration_id}/repositories",
+  "GET /orgs/{org}/outside_collaborators",
+  "GET /orgs/{org}/packages",
+  "GET /orgs/{org}/packages/{package_type}/{package_name}/versions",
+  "GET /orgs/{org}/projects",
+  "GET /orgs/{org}/public_members",
+  "GET /orgs/{org}/repos",
+  "GET /orgs/{org}/secret-scanning/alerts",
+  "GET /orgs/{org}/teams",
+  "GET /orgs/{org}/teams/{team_slug}/discussions",
+  "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments",
+  "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}/reactions",
+  "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/reactions",
+  "GET /orgs/{org}/teams/{team_slug}/invitations",
+  "GET /orgs/{org}/teams/{team_slug}/members",
+  "GET /orgs/{org}/teams/{team_slug}/projects",
+  "GET /orgs/{org}/teams/{team_slug}/repos",
+  "GET /orgs/{org}/teams/{team_slug}/teams",
+  "GET /projects/columns/{column_id}/cards",
+  "GET /projects/{project_id}/collaborators",
+  "GET /projects/{project_id}/columns",
+  "GET /repos/{org}/{repo}/actions/required_workflows",
+  "GET /repos/{owner}/{repo}/actions/artifacts",
+  "GET /repos/{owner}/{repo}/actions/caches",
+  "GET /repos/{owner}/{repo}/actions/organization-secrets",
+  "GET /repos/{owner}/{repo}/actions/organization-variables",
+  "GET /repos/{owner}/{repo}/actions/required_workflows/{required_workflow_id_for_repo}/runs",
+  "GET /repos/{owner}/{repo}/actions/runners",
+  "GET /repos/{owner}/{repo}/actions/runs",
+  "GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts",
+  "GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/jobs",
+  "GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs",
+  "GET /repos/{owner}/{repo}/actions/secrets",
+  "GET /repos/{owner}/{repo}/actions/variables",
+  "GET /repos/{owner}/{repo}/actions/workflows",
+  "GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs",
+  "GET /repos/{owner}/{repo}/assignees",
+  "GET /repos/{owner}/{repo}/branches",
+  "GET /repos/{owner}/{repo}/check-runs/{check_run_id}/annotations",
+  "GET /repos/{owner}/{repo}/check-suites/{check_suite_id}/check-runs",
+  "GET /repos/{owner}/{repo}/code-scanning/alerts",
+  "GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/instances",
+  "GET /repos/{owner}/{repo}/code-scanning/analyses",
+  "GET /repos/{owner}/{repo}/codespaces",
+  "GET /repos/{owner}/{repo}/codespaces/devcontainers",
+  "GET /repos/{owner}/{repo}/codespaces/secrets",
+  "GET /repos/{owner}/{repo}/collaborators",
+  "GET /repos/{owner}/{repo}/comments",
+  "GET /repos/{owner}/{repo}/comments/{comment_id}/reactions",
+  "GET /repos/{owner}/{repo}/commits",
+  "GET /repos/{owner}/{repo}/commits/{commit_sha}/comments",
+  "GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls",
+  "GET /repos/{owner}/{repo}/commits/{ref}/check-runs",
+  "GET /repos/{owner}/{repo}/commits/{ref}/check-suites",
+  "GET /repos/{owner}/{repo}/commits/{ref}/status",
+  "GET /repos/{owner}/{repo}/commits/{ref}/statuses",
+  "GET /repos/{owner}/{repo}/contributors",
+  "GET /repos/{owner}/{repo}/dependabot/alerts",
+  "GET /repos/{owner}/{repo}/dependabot/secrets",
+  "GET /repos/{owner}/{repo}/deployments",
+  "GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses",
+  "GET /repos/{owner}/{repo}/environments",
+  "GET /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies",
+  "GET /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules/apps",
+  "GET /repos/{owner}/{repo}/events",
+  "GET /repos/{owner}/{repo}/forks",
+  "GET /repos/{owner}/{repo}/hooks",
+  "GET /repos/{owner}/{repo}/hooks/{hook_id}/deliveries",
+  "GET /repos/{owner}/{repo}/invitations",
+  "GET /repos/{owner}/{repo}/issues",
+  "GET /repos/{owner}/{repo}/issues/comments",
+  "GET /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions",
+  "GET /repos/{owner}/{repo}/issues/events",
+  "GET /repos/{owner}/{repo}/issues/{issue_number}/comments",
+  "GET /repos/{owner}/{repo}/issues/{issue_number}/events",
+  "GET /repos/{owner}/{repo}/issues/{issue_number}/labels",
+  "GET /repos/{owner}/{repo}/issues/{issue_number}/reactions",
+  "GET /repos/{owner}/{repo}/issues/{issue_number}/timeline",
+  "GET /repos/{owner}/{repo}/keys",
+  "GET /repos/{owner}/{repo}/labels",
+  "GET /repos/{owner}/{repo}/milestones",
+  "GET /repos/{owner}/{repo}/milestones/{milestone_number}/labels",
+  "GET /repos/{owner}/{repo}/notifications",
+  "GET /repos/{owner}/{repo}/pages/builds",
+  "GET /repos/{owner}/{repo}/projects",
+  "GET /repos/{owner}/{repo}/pulls",
+  "GET /repos/{owner}/{repo}/pulls/comments",
+  "GET /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions",
+  "GET /repos/{owner}/{repo}/pulls/{pull_number}/comments",
+  "GET /repos/{owner}/{repo}/pulls/{pull_number}/commits",
+  "GET /repos/{owner}/{repo}/pulls/{pull_number}/files",
+  "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews",
+  "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/comments",
+  "GET /repos/{owner}/{repo}/releases",
+  "GET /repos/{owner}/{repo}/releases/{release_id}/assets",
+  "GET /repos/{owner}/{repo}/releases/{release_id}/reactions",
+  "GET /repos/{owner}/{repo}/secret-scanning/alerts",
+  "GET /repos/{owner}/{repo}/secret-scanning/alerts/{alert_number}/locations",
+  "GET /repos/{owner}/{repo}/security-advisories",
+  "GET /repos/{owner}/{repo}/stargazers",
+  "GET /repos/{owner}/{repo}/subscribers",
+  "GET /repos/{owner}/{repo}/tags",
+  "GET /repos/{owner}/{repo}/teams",
+  "GET /repos/{owner}/{repo}/topics",
+  "GET /repositories",
+  "GET /repositories/{repository_id}/environments/{environment_name}/secrets",
+  "GET /repositories/{repository_id}/environments/{environment_name}/variables",
+  "GET /search/code",
+  "GET /search/commits",
+  "GET /search/issues",
+  "GET /search/labels",
+  "GET /search/repositories",
+  "GET /search/topics",
+  "GET /search/users",
+  "GET /teams/{team_id}/discussions",
+  "GET /teams/{team_id}/discussions/{discussion_number}/comments",
+  "GET /teams/{team_id}/discussions/{discussion_number}/comments/{comment_number}/reactions",
+  "GET /teams/{team_id}/discussions/{discussion_number}/reactions",
+  "GET /teams/{team_id}/invitations",
+  "GET /teams/{team_id}/members",
+  "GET /teams/{team_id}/projects",
+  "GET /teams/{team_id}/repos",
+  "GET /teams/{team_id}/teams",
+  "GET /user/blocks",
+  "GET /user/codespaces",
+  "GET /user/codespaces/secrets",
+  "GET /user/emails",
+  "GET /user/followers",
+  "GET /user/following",
+  "GET /user/gpg_keys",
+  "GET /user/installations",
+  "GET /user/installations/{installation_id}/repositories",
+  "GET /user/issues",
+  "GET /user/keys",
+  "GET /user/marketplace_purchases",
+  "GET /user/marketplace_purchases/stubbed",
+  "GET /user/memberships/orgs",
+  "GET /user/migrations",
+  "GET /user/migrations/{migration_id}/repositories",
+  "GET /user/orgs",
+  "GET /user/packages",
+  "GET /user/packages/{package_type}/{package_name}/versions",
+  "GET /user/public_emails",
+  "GET /user/repos",
+  "GET /user/repository_invitations",
+  "GET /user/social_accounts",
+  "GET /user/ssh_signing_keys",
+  "GET /user/starred",
+  "GET /user/subscriptions",
+  "GET /user/teams",
+  "GET /users",
+  "GET /users/{username}/events",
+  "GET /users/{username}/events/orgs/{org}",
+  "GET /users/{username}/events/public",
+  "GET /users/{username}/followers",
+  "GET /users/{username}/following",
+  "GET /users/{username}/gists",
+  "GET /users/{username}/gpg_keys",
+  "GET /users/{username}/keys",
+  "GET /users/{username}/orgs",
+  "GET /users/{username}/packages",
+  "GET /users/{username}/projects",
+  "GET /users/{username}/received_events",
+  "GET /users/{username}/received_events/public",
+  "GET /users/{username}/repos",
+  "GET /users/{username}/social_accounts",
+  "GET /users/{username}/ssh_signing_keys",
+  "GET /users/{username}/starred",
+  "GET /users/{username}/subscriptions"
+];
+
+// pkg/dist-src/paginating-endpoints.js
+function isPaginatingEndpoint(arg) {
+  if (typeof arg === "string") {
+    return paginatingEndpoints.includes(arg);
+  } else {
+    return false;
+  }
+}
+
+// pkg/dist-src/index.js
+function paginateRest(octokit) {
+  return {
+    paginate: Object.assign(paginate.bind(null, octokit), {
+      iterator: iterator.bind(null, octokit)
+    })
+  };
+}
+paginateRest.VERSION = VERSION;
+// Annotate the CommonJS export names for ESM import in node:
+0 && (0);
+
+
+/***/ }),
+
+/***/ 4923:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+const Endpoints = {
+  actions: {
+    addCustomLabelsToSelfHostedRunnerForOrg: ["POST /orgs/{org}/actions/runners/{runner_id}/labels"],
+    addCustomLabelsToSelfHostedRunnerForRepo: ["POST /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"],
+    addSelectedRepoToOrgSecret: ["PUT /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id}"],
+    addSelectedRepoToOrgVariable: ["PUT /orgs/{org}/actions/variables/{name}/repositories/{repository_id}"],
+    addSelectedRepoToRequiredWorkflow: ["PUT /orgs/{org}/actions/required_workflows/{required_workflow_id}/repositories/{repository_id}"],
+    approveWorkflowRun: ["POST /repos/{owner}/{repo}/actions/runs/{run_id}/approve"],
+    cancelWorkflowRun: ["POST /repos/{owner}/{repo}/actions/runs/{run_id}/cancel"],
+    createEnvironmentVariable: ["POST /repositories/{repository_id}/environments/{environment_name}/variables"],
+    createOrUpdateEnvironmentSecret: ["PUT /repositories/{repository_id}/environments/{environment_name}/secrets/{secret_name}"],
+    createOrUpdateOrgSecret: ["PUT /orgs/{org}/actions/secrets/{secret_name}"],
+    createOrUpdateRepoSecret: ["PUT /repos/{owner}/{repo}/actions/secrets/{secret_name}"],
+    createOrgVariable: ["POST /orgs/{org}/actions/variables"],
+    createRegistrationTokenForOrg: ["POST /orgs/{org}/actions/runners/registration-token"],
+    createRegistrationTokenForRepo: ["POST /repos/{owner}/{repo}/actions/runners/registration-token"],
+    createRemoveTokenForOrg: ["POST /orgs/{org}/actions/runners/remove-token"],
+    createRemoveTokenForRepo: ["POST /repos/{owner}/{repo}/actions/runners/remove-token"],
+    createRepoVariable: ["POST /repos/{owner}/{repo}/actions/variables"],
+    createRequiredWorkflow: ["POST /orgs/{org}/actions/required_workflows"],
+    createWorkflowDispatch: ["POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches"],
+    deleteActionsCacheById: ["DELETE /repos/{owner}/{repo}/actions/caches/{cache_id}"],
+    deleteActionsCacheByKey: ["DELETE /repos/{owner}/{repo}/actions/caches{?key,ref}"],
+    deleteArtifact: ["DELETE /repos/{owner}/{repo}/actions/artifacts/{artifact_id}"],
+    deleteEnvironmentSecret: ["DELETE /repositories/{repository_id}/environments/{environment_name}/secrets/{secret_name}"],
+    deleteEnvironmentVariable: ["DELETE /repositories/{repository_id}/environments/{environment_name}/variables/{name}"],
+    deleteOrgSecret: ["DELETE /orgs/{org}/actions/secrets/{secret_name}"],
+    deleteOrgVariable: ["DELETE /orgs/{org}/actions/variables/{name}"],
+    deleteRepoSecret: ["DELETE /repos/{owner}/{repo}/actions/secrets/{secret_name}"],
+    deleteRepoVariable: ["DELETE /repos/{owner}/{repo}/actions/variables/{name}"],
+    deleteRequiredWorkflow: ["DELETE /orgs/{org}/actions/required_workflows/{required_workflow_id}"],
+    deleteSelfHostedRunnerFromOrg: ["DELETE /orgs/{org}/actions/runners/{runner_id}"],
+    deleteSelfHostedRunnerFromRepo: ["DELETE /repos/{owner}/{repo}/actions/runners/{runner_id}"],
+    deleteWorkflowRun: ["DELETE /repos/{owner}/{repo}/actions/runs/{run_id}"],
+    deleteWorkflowRunLogs: ["DELETE /repos/{owner}/{repo}/actions/runs/{run_id}/logs"],
+    disableSelectedRepositoryGithubActionsOrganization: ["DELETE /orgs/{org}/actions/permissions/repositories/{repository_id}"],
+    disableWorkflow: ["PUT /repos/{owner}/{repo}/actions/workflows/{workflow_id}/disable"],
+    downloadArtifact: ["GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/{archive_format}"],
+    downloadJobLogsForWorkflowRun: ["GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs"],
+    downloadWorkflowRunAttemptLogs: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/logs"],
+    downloadWorkflowRunLogs: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs"],
+    enableSelectedRepositoryGithubActionsOrganization: ["PUT /orgs/{org}/actions/permissions/repositories/{repository_id}"],
+    enableWorkflow: ["PUT /repos/{owner}/{repo}/actions/workflows/{workflow_id}/enable"],
+    getActionsCacheList: ["GET /repos/{owner}/{repo}/actions/caches"],
+    getActionsCacheUsage: ["GET /repos/{owner}/{repo}/actions/cache/usage"],
+    getActionsCacheUsageByRepoForOrg: ["GET /orgs/{org}/actions/cache/usage-by-repository"],
+    getActionsCacheUsageForOrg: ["GET /orgs/{org}/actions/cache/usage"],
+    getAllowedActionsOrganization: ["GET /orgs/{org}/actions/permissions/selected-actions"],
+    getAllowedActionsRepository: ["GET /repos/{owner}/{repo}/actions/permissions/selected-actions"],
+    getArtifact: ["GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}"],
+    getEnvironmentPublicKey: ["GET /repositories/{repository_id}/environments/{environment_name}/secrets/public-key"],
+    getEnvironmentSecret: ["GET /repositories/{repository_id}/environments/{environment_name}/secrets/{secret_name}"],
+    getEnvironmentVariable: ["GET /repositories/{repository_id}/environments/{environment_name}/variables/{name}"],
+    getGithubActionsDefaultWorkflowPermissionsOrganization: ["GET /orgs/{org}/actions/permissions/workflow"],
+    getGithubActionsDefaultWorkflowPermissionsRepository: ["GET /repos/{owner}/{repo}/actions/permissions/workflow"],
+    getGithubActionsPermissionsOrganization: ["GET /orgs/{org}/actions/permissions"],
+    getGithubActionsPermissionsRepository: ["GET /repos/{owner}/{repo}/actions/permissions"],
+    getJobForWorkflowRun: ["GET /repos/{owner}/{repo}/actions/jobs/{job_id}"],
+    getOrgPublicKey: ["GET /orgs/{org}/actions/secrets/public-key"],
+    getOrgSecret: ["GET /orgs/{org}/actions/secrets/{secret_name}"],
+    getOrgVariable: ["GET /orgs/{org}/actions/variables/{name}"],
+    getPendingDeploymentsForRun: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}/pending_deployments"],
+    getRepoPermissions: ["GET /repos/{owner}/{repo}/actions/permissions", {}, {
+      renamed: ["actions", "getGithubActionsPermissionsRepository"]
+    }],
+    getRepoPublicKey: ["GET /repos/{owner}/{repo}/actions/secrets/public-key"],
+    getRepoRequiredWorkflow: ["GET /repos/{org}/{repo}/actions/required_workflows/{required_workflow_id_for_repo}"],
+    getRepoRequiredWorkflowUsage: ["GET /repos/{org}/{repo}/actions/required_workflows/{required_workflow_id_for_repo}/timing"],
+    getRepoSecret: ["GET /repos/{owner}/{repo}/actions/secrets/{secret_name}"],
+    getRepoVariable: ["GET /repos/{owner}/{repo}/actions/variables/{name}"],
+    getRequiredWorkflow: ["GET /orgs/{org}/actions/required_workflows/{required_workflow_id}"],
+    getReviewsForRun: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}/approvals"],
+    getSelfHostedRunnerForOrg: ["GET /orgs/{org}/actions/runners/{runner_id}"],
+    getSelfHostedRunnerForRepo: ["GET /repos/{owner}/{repo}/actions/runners/{runner_id}"],
+    getWorkflow: ["GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}"],
+    getWorkflowAccessToRepository: ["GET /repos/{owner}/{repo}/actions/permissions/access"],
+    getWorkflowRun: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}"],
+    getWorkflowRunAttempt: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}"],
+    getWorkflowRunUsage: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}/timing"],
+    getWorkflowUsage: ["GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/timing"],
+    listArtifactsForRepo: ["GET /repos/{owner}/{repo}/actions/artifacts"],
+    listEnvironmentSecrets: ["GET /repositories/{repository_id}/environments/{environment_name}/secrets"],
+    listEnvironmentVariables: ["GET /repositories/{repository_id}/environments/{environment_name}/variables"],
+    listJobsForWorkflowRun: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs"],
+    listJobsForWorkflowRunAttempt: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/jobs"],
+    listLabelsForSelfHostedRunnerForOrg: ["GET /orgs/{org}/actions/runners/{runner_id}/labels"],
+    listLabelsForSelfHostedRunnerForRepo: ["GET /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"],
+    listOrgSecrets: ["GET /orgs/{org}/actions/secrets"],
+    listOrgVariables: ["GET /orgs/{org}/actions/variables"],
+    listRepoOrganizationSecrets: ["GET /repos/{owner}/{repo}/actions/organization-secrets"],
+    listRepoOrganizationVariables: ["GET /repos/{owner}/{repo}/actions/organization-variables"],
+    listRepoRequiredWorkflows: ["GET /repos/{org}/{repo}/actions/required_workflows"],
+    listRepoSecrets: ["GET /repos/{owner}/{repo}/actions/secrets"],
+    listRepoVariables: ["GET /repos/{owner}/{repo}/actions/variables"],
+    listRepoWorkflows: ["GET /repos/{owner}/{repo}/actions/workflows"],
+    listRequiredWorkflowRuns: ["GET /repos/{owner}/{repo}/actions/required_workflows/{required_workflow_id_for_repo}/runs"],
+    listRequiredWorkflows: ["GET /orgs/{org}/actions/required_workflows"],
+    listRunnerApplicationsForOrg: ["GET /orgs/{org}/actions/runners/downloads"],
+    listRunnerApplicationsForRepo: ["GET /repos/{owner}/{repo}/actions/runners/downloads"],
+    listSelectedReposForOrgSecret: ["GET /orgs/{org}/actions/secrets/{secret_name}/repositories"],
+    listSelectedReposForOrgVariable: ["GET /orgs/{org}/actions/variables/{name}/repositories"],
+    listSelectedRepositoriesEnabledGithubActionsOrganization: ["GET /orgs/{org}/actions/permissions/repositories"],
+    listSelectedRepositoriesRequiredWorkflow: ["GET /orgs/{org}/actions/required_workflows/{required_workflow_id}/repositories"],
+    listSelfHostedRunnersForOrg: ["GET /orgs/{org}/actions/runners"],
+    listSelfHostedRunnersForRepo: ["GET /repos/{owner}/{repo}/actions/runners"],
+    listWorkflowRunArtifacts: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts"],
+    listWorkflowRuns: ["GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs"],
+    listWorkflowRunsForRepo: ["GET /repos/{owner}/{repo}/actions/runs"],
+    reRunJobForWorkflowRun: ["POST /repos/{owner}/{repo}/actions/jobs/{job_id}/rerun"],
+    reRunWorkflow: ["POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun"],
+    reRunWorkflowFailedJobs: ["POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun-failed-jobs"],
+    removeAllCustomLabelsFromSelfHostedRunnerForOrg: ["DELETE /orgs/{org}/actions/runners/{runner_id}/labels"],
+    removeAllCustomLabelsFromSelfHostedRunnerForRepo: ["DELETE /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"],
+    removeCustomLabelFromSelfHostedRunnerForOrg: ["DELETE /orgs/{org}/actions/runners/{runner_id}/labels/{name}"],
+    removeCustomLabelFromSelfHostedRunnerForRepo: ["DELETE /repos/{owner}/{repo}/actions/runners/{runner_id}/labels/{name}"],
+    removeSelectedRepoFromOrgSecret: ["DELETE /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id}"],
+    removeSelectedRepoFromOrgVariable: ["DELETE /orgs/{org}/actions/variables/{name}/repositories/{repository_id}"],
+    removeSelectedRepoFromRequiredWorkflow: ["DELETE /orgs/{org}/actions/required_workflows/{required_workflow_id}/repositories/{repository_id}"],
+    reviewCustomGatesForRun: ["POST /repos/{owner}/{repo}/actions/runs/{run_id}/deployment_protection_rule"],
+    reviewPendingDeploymentsForRun: ["POST /repos/{owner}/{repo}/actions/runs/{run_id}/pending_deployments"],
+    setAllowedActionsOrganization: ["PUT /orgs/{org}/actions/permissions/selected-actions"],
+    setAllowedActionsRepository: ["PUT /repos/{owner}/{repo}/actions/permissions/selected-actions"],
+    setCustomLabelsForSelfHostedRunnerForOrg: ["PUT /orgs/{org}/actions/runners/{runner_id}/labels"],
+    setCustomLabelsForSelfHostedRunnerForRepo: ["PUT /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"],
+    setGithubActionsDefaultWorkflowPermissionsOrganization: ["PUT /orgs/{org}/actions/permissions/workflow"],
+    setGithubActionsDefaultWorkflowPermissionsRepository: ["PUT /repos/{owner}/{repo}/actions/permissions/workflow"],
+    setGithubActionsPermissionsOrganization: ["PUT /orgs/{org}/actions/permissions"],
+    setGithubActionsPermissionsRepository: ["PUT /repos/{owner}/{repo}/actions/permissions"],
+    setSelectedReposForOrgSecret: ["PUT /orgs/{org}/actions/secrets/{secret_name}/repositories"],
+    setSelectedReposForOrgVariable: ["PUT /orgs/{org}/actions/variables/{name}/repositories"],
+    setSelectedReposToRequiredWorkflow: ["PUT /orgs/{org}/actions/required_workflows/{required_workflow_id}/repositories"],
+    setSelectedRepositoriesEnabledGithubActionsOrganization: ["PUT /orgs/{org}/actions/permissions/repositories"],
+    setWorkflowAccessToRepository: ["PUT /repos/{owner}/{repo}/actions/permissions/access"],
+    updateEnvironmentVariable: ["PATCH /repositories/{repository_id}/environments/{environment_name}/variables/{name}"],
+    updateOrgVariable: ["PATCH /orgs/{org}/actions/variables/{name}"],
+    updateRepoVariable: ["PATCH /repos/{owner}/{repo}/actions/variables/{name}"],
+    updateRequiredWorkflow: ["PATCH /orgs/{org}/actions/required_workflows/{required_workflow_id}"]
+  },
+  activity: {
+    checkRepoIsStarredByAuthenticatedUser: ["GET /user/starred/{owner}/{repo}"],
+    deleteRepoSubscription: ["DELETE /repos/{owner}/{repo}/subscription"],
+    deleteThreadSubscription: ["DELETE /notifications/threads/{thread_id}/subscription"],
+    getFeeds: ["GET /feeds"],
+    getRepoSubscription: ["GET /repos/{owner}/{repo}/subscription"],
+    getThread: ["GET /notifications/threads/{thread_id}"],
+    getThreadSubscriptionForAuthenticatedUser: ["GET /notifications/threads/{thread_id}/subscription"],
+    listEventsForAuthenticatedUser: ["GET /users/{username}/events"],
+    listNotificationsForAuthenticatedUser: ["GET /notifications"],
+    listOrgEventsForAuthenticatedUser: ["GET /users/{username}/events/orgs/{org}"],
+    listPublicEvents: ["GET /events"],
+    listPublicEventsForRepoNetwork: ["GET /networks/{owner}/{repo}/events"],
+    listPublicEventsForUser: ["GET /users/{username}/events/public"],
+    listPublicOrgEvents: ["GET /orgs/{org}/events"],
+    listReceivedEventsForUser: ["GET /users/{username}/received_events"],
+    listReceivedPublicEventsForUser: ["GET /users/{username}/received_events/public"],
+    listRepoEvents: ["GET /repos/{owner}/{repo}/events"],
+    listRepoNotificationsForAuthenticatedUser: ["GET /repos/{owner}/{repo}/notifications"],
+    listReposStarredByAuthenticatedUser: ["GET /user/starred"],
+    listReposStarredByUser: ["GET /users/{username}/starred"],
+    listReposWatchedByUser: ["GET /users/{username}/subscriptions"],
+    listStargazersForRepo: ["GET /repos/{owner}/{repo}/stargazers"],
+    listWatchedReposForAuthenticatedUser: ["GET /user/subscriptions"],
+    listWatchersForRepo: ["GET /repos/{owner}/{repo}/subscribers"],
+    markNotificationsAsRead: ["PUT /notifications"],
+    markRepoNotificationsAsRead: ["PUT /repos/{owner}/{repo}/notifications"],
+    markThreadAsRead: ["PATCH /notifications/threads/{thread_id}"],
+    setRepoSubscription: ["PUT /repos/{owner}/{repo}/subscription"],
+    setThreadSubscription: ["PUT /notifications/threads/{thread_id}/subscription"],
+    starRepoForAuthenticatedUser: ["PUT /user/starred/{owner}/{repo}"],
+    unstarRepoForAuthenticatedUser: ["DELETE /user/starred/{owner}/{repo}"]
+  },
+  apps: {
+    addRepoToInstallation: ["PUT /user/installations/{installation_id}/repositories/{repository_id}", {}, {
+      renamed: ["apps", "addRepoToInstallationForAuthenticatedUser"]
+    }],
+    addRepoToInstallationForAuthenticatedUser: ["PUT /user/installations/{installation_id}/repositories/{repository_id}"],
+    checkToken: ["POST /applications/{client_id}/token"],
+    createFromManifest: ["POST /app-manifests/{code}/conversions"],
+    createInstallationAccessToken: ["POST /app/installations/{installation_id}/access_tokens"],
+    deleteAuthorization: ["DELETE /applications/{client_id}/grant"],
+    deleteInstallation: ["DELETE /app/installations/{installation_id}"],
+    deleteToken: ["DELETE /applications/{client_id}/token"],
+    getAuthenticated: ["GET /app"],
+    getBySlug: ["GET /apps/{app_slug}"],
+    getInstallation: ["GET /app/installations/{installation_id}"],
+    getOrgInstallation: ["GET /orgs/{org}/installation"],
+    getRepoInstallation: ["GET /repos/{owner}/{repo}/installation"],
+    getSubscriptionPlanForAccount: ["GET /marketplace_listing/accounts/{account_id}"],
+    getSubscriptionPlanForAccountStubbed: ["GET /marketplace_listing/stubbed/accounts/{account_id}"],
+    getUserInstallation: ["GET /users/{username}/installation"],
+    getWebhookConfigForApp: ["GET /app/hook/config"],
+    getWebhookDelivery: ["GET /app/hook/deliveries/{delivery_id}"],
+    listAccountsForPlan: ["GET /marketplace_listing/plans/{plan_id}/accounts"],
+    listAccountsForPlanStubbed: ["GET /marketplace_listing/stubbed/plans/{plan_id}/accounts"],
+    listInstallationReposForAuthenticatedUser: ["GET /user/installations/{installation_id}/repositories"],
+    listInstallationRequestsForAuthenticatedApp: ["GET /app/installation-requests"],
+    listInstallations: ["GET /app/installations"],
+    listInstallationsForAuthenticatedUser: ["GET /user/installations"],
+    listPlans: ["GET /marketplace_listing/plans"],
+    listPlansStubbed: ["GET /marketplace_listing/stubbed/plans"],
+    listReposAccessibleToInstallation: ["GET /installation/repositories"],
+    listSubscriptionsForAuthenticatedUser: ["GET /user/marketplace_purchases"],
+    listSubscriptionsForAuthenticatedUserStubbed: ["GET /user/marketplace_purchases/stubbed"],
+    listWebhookDeliveries: ["GET /app/hook/deliveries"],
+    redeliverWebhookDelivery: ["POST /app/hook/deliveries/{delivery_id}/attempts"],
+    removeRepoFromInstallation: ["DELETE /user/installations/{installation_id}/repositories/{repository_id}", {}, {
+      renamed: ["apps", "removeRepoFromInstallationForAuthenticatedUser"]
+    }],
+    removeRepoFromInstallationForAuthenticatedUser: ["DELETE /user/installations/{installation_id}/repositories/{repository_id}"],
+    resetToken: ["PATCH /applications/{client_id}/token"],
+    revokeInstallationAccessToken: ["DELETE /installation/token"],
+    scopeToken: ["POST /applications/{client_id}/token/scoped"],
+    suspendInstallation: ["PUT /app/installations/{installation_id}/suspended"],
+    unsuspendInstallation: ["DELETE /app/installations/{installation_id}/suspended"],
+    updateWebhookConfigForApp: ["PATCH /app/hook/config"]
+  },
+  billing: {
+    getGithubActionsBillingOrg: ["GET /orgs/{org}/settings/billing/actions"],
+    getGithubActionsBillingUser: ["GET /users/{username}/settings/billing/actions"],
+    getGithubPackagesBillingOrg: ["GET /orgs/{org}/settings/billing/packages"],
+    getGithubPackagesBillingUser: ["GET /users/{username}/settings/billing/packages"],
+    getSharedStorageBillingOrg: ["GET /orgs/{org}/settings/billing/shared-storage"],
+    getSharedStorageBillingUser: ["GET /users/{username}/settings/billing/shared-storage"]
+  },
+  checks: {
+    create: ["POST /repos/{owner}/{repo}/check-runs"],
+    createSuite: ["POST /repos/{owner}/{repo}/check-suites"],
+    get: ["GET /repos/{owner}/{repo}/check-runs/{check_run_id}"],
+    getSuite: ["GET /repos/{owner}/{repo}/check-suites/{check_suite_id}"],
+    listAnnotations: ["GET /repos/{owner}/{repo}/check-runs/{check_run_id}/annotations"],
+    listForRef: ["GET /repos/{owner}/{repo}/commits/{ref}/check-runs"],
+    listForSuite: ["GET /repos/{owner}/{repo}/check-suites/{check_suite_id}/check-runs"],
+    listSuitesForRef: ["GET /repos/{owner}/{repo}/commits/{ref}/check-suites"],
+    rerequestRun: ["POST /repos/{owner}/{repo}/check-runs/{check_run_id}/rerequest"],
+    rerequestSuite: ["POST /repos/{owner}/{repo}/check-suites/{check_suite_id}/rerequest"],
+    setSuitesPreferences: ["PATCH /repos/{owner}/{repo}/check-suites/preferences"],
+    update: ["PATCH /repos/{owner}/{repo}/check-runs/{check_run_id}"]
+  },
+  codeScanning: {
+    deleteAnalysis: ["DELETE /repos/{owner}/{repo}/code-scanning/analyses/{analysis_id}{?confirm_delete}"],
+    getAlert: ["GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}", {}, {
+      renamedParameters: {
+        alert_id: "alert_number"
+      }
+    }],
+    getAnalysis: ["GET /repos/{owner}/{repo}/code-scanning/analyses/{analysis_id}"],
+    getCodeqlDatabase: ["GET /repos/{owner}/{repo}/code-scanning/codeql/databases/{language}"],
+    getDefaultSetup: ["GET /repos/{owner}/{repo}/code-scanning/default-setup"],
+    getSarif: ["GET /repos/{owner}/{repo}/code-scanning/sarifs/{sarif_id}"],
+    listAlertInstances: ["GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/instances"],
+    listAlertsForOrg: ["GET /orgs/{org}/code-scanning/alerts"],
+    listAlertsForRepo: ["GET /repos/{owner}/{repo}/code-scanning/alerts"],
+    listAlertsInstances: ["GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/instances", {}, {
+      renamed: ["codeScanning", "listAlertInstances"]
+    }],
+    listCodeqlDatabases: ["GET /repos/{owner}/{repo}/code-scanning/codeql/databases"],
+    listRecentAnalyses: ["GET /repos/{owner}/{repo}/code-scanning/analyses"],
+    updateAlert: ["PATCH /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}"],
+    updateDefaultSetup: ["PATCH /repos/{owner}/{repo}/code-scanning/default-setup"],
+    uploadSarif: ["POST /repos/{owner}/{repo}/code-scanning/sarifs"]
+  },
+  codesOfConduct: {
+    getAllCodesOfConduct: ["GET /codes_of_conduct"],
+    getConductCode: ["GET /codes_of_conduct/{key}"]
+  },
+  codespaces: {
+    addRepositoryForSecretForAuthenticatedUser: ["PUT /user/codespaces/secrets/{secret_name}/repositories/{repository_id}"],
+    addSelectedRepoToOrgSecret: ["PUT /orgs/{org}/codespaces/secrets/{secret_name}/repositories/{repository_id}"],
+    codespaceMachinesForAuthenticatedUser: ["GET /user/codespaces/{codespace_name}/machines"],
+    createForAuthenticatedUser: ["POST /user/codespaces"],
+    createOrUpdateOrgSecret: ["PUT /orgs/{org}/codespaces/secrets/{secret_name}"],
+    createOrUpdateRepoSecret: ["PUT /repos/{owner}/{repo}/codespaces/secrets/{secret_name}"],
+    createOrUpdateSecretForAuthenticatedUser: ["PUT /user/codespaces/secrets/{secret_name}"],
+    createWithPrForAuthenticatedUser: ["POST /repos/{owner}/{repo}/pulls/{pull_number}/codespaces"],
+    createWithRepoForAuthenticatedUser: ["POST /repos/{owner}/{repo}/codespaces"],
+    deleteCodespacesBillingUsers: ["DELETE /orgs/{org}/codespaces/billing/selected_users"],
+    deleteForAuthenticatedUser: ["DELETE /user/codespaces/{codespace_name}"],
+    deleteFromOrganization: ["DELETE /orgs/{org}/members/{username}/codespaces/{codespace_name}"],
+    deleteOrgSecret: ["DELETE /orgs/{org}/codespaces/secrets/{secret_name}"],
+    deleteRepoSecret: ["DELETE /repos/{owner}/{repo}/codespaces/secrets/{secret_name}"],
+    deleteSecretForAuthenticatedUser: ["DELETE /user/codespaces/secrets/{secret_name}"],
+    exportForAuthenticatedUser: ["POST /user/codespaces/{codespace_name}/exports"],
+    getCodespacesForUserInOrg: ["GET /orgs/{org}/members/{username}/codespaces"],
+    getExportDetailsForAuthenticatedUser: ["GET /user/codespaces/{codespace_name}/exports/{export_id}"],
+    getForAuthenticatedUser: ["GET /user/codespaces/{codespace_name}"],
+    getOrgPublicKey: ["GET /orgs/{org}/codespaces/secrets/public-key"],
+    getOrgSecret: ["GET /orgs/{org}/codespaces/secrets/{secret_name}"],
+    getPublicKeyForAuthenticatedUser: ["GET /user/codespaces/secrets/public-key"],
+    getRepoPublicKey: ["GET /repos/{owner}/{repo}/codespaces/secrets/public-key"],
+    getRepoSecret: ["GET /repos/{owner}/{repo}/codespaces/secrets/{secret_name}"],
+    getSecretForAuthenticatedUser: ["GET /user/codespaces/secrets/{secret_name}"],
+    listDevcontainersInRepositoryForAuthenticatedUser: ["GET /repos/{owner}/{repo}/codespaces/devcontainers"],
+    listForAuthenticatedUser: ["GET /user/codespaces"],
+    listInOrganization: ["GET /orgs/{org}/codespaces", {}, {
+      renamedParameters: {
+        org_id: "org"
+      }
+    }],
+    listInRepositoryForAuthenticatedUser: ["GET /repos/{owner}/{repo}/codespaces"],
+    listOrgSecrets: ["GET /orgs/{org}/codespaces/secrets"],
+    listRepoSecrets: ["GET /repos/{owner}/{repo}/codespaces/secrets"],
+    listRepositoriesForSecretForAuthenticatedUser: ["GET /user/codespaces/secrets/{secret_name}/repositories"],
+    listSecretsForAuthenticatedUser: ["GET /user/codespaces/secrets"],
+    listSelectedReposForOrgSecret: ["GET /orgs/{org}/codespaces/secrets/{secret_name}/repositories"],
+    preFlightWithRepoForAuthenticatedUser: ["GET /repos/{owner}/{repo}/codespaces/new"],
+    publishForAuthenticatedUser: ["POST /user/codespaces/{codespace_name}/publish"],
+    removeRepositoryForSecretForAuthenticatedUser: ["DELETE /user/codespaces/secrets/{secret_name}/repositories/{repository_id}"],
+    removeSelectedRepoFromOrgSecret: ["DELETE /orgs/{org}/codespaces/secrets/{secret_name}/repositories/{repository_id}"],
+    repoMachinesForAuthenticatedUser: ["GET /repos/{owner}/{repo}/codespaces/machines"],
+    setCodespacesBilling: ["PUT /orgs/{org}/codespaces/billing"],
+    setCodespacesBillingUsers: ["POST /orgs/{org}/codespaces/billing/selected_users"],
+    setRepositoriesForSecretForAuthenticatedUser: ["PUT /user/codespaces/secrets/{secret_name}/repositories"],
+    setSelectedReposForOrgSecret: ["PUT /orgs/{org}/codespaces/secrets/{secret_name}/repositories"],
+    startForAuthenticatedUser: ["POST /user/codespaces/{codespace_name}/start"],
+    stopForAuthenticatedUser: ["POST /user/codespaces/{codespace_name}/stop"],
+    stopInOrganization: ["POST /orgs/{org}/members/{username}/codespaces/{codespace_name}/stop"],
+    updateForAuthenticatedUser: ["PATCH /user/codespaces/{codespace_name}"]
+  },
+  dependabot: {
+    addSelectedRepoToOrgSecret: ["PUT /orgs/{org}/dependabot/secrets/{secret_name}/repositories/{repository_id}"],
+    createOrUpdateOrgSecret: ["PUT /orgs/{org}/dependabot/secrets/{secret_name}"],
+    createOrUpdateRepoSecret: ["PUT /repos/{owner}/{repo}/dependabot/secrets/{secret_name}"],
+    deleteOrgSecret: ["DELETE /orgs/{org}/dependabot/secrets/{secret_name}"],
+    deleteRepoSecret: ["DELETE /repos/{owner}/{repo}/dependabot/secrets/{secret_name}"],
+    getAlert: ["GET /repos/{owner}/{repo}/dependabot/alerts/{alert_number}"],
+    getOrgPublicKey: ["GET /orgs/{org}/dependabot/secrets/public-key"],
+    getOrgSecret: ["GET /orgs/{org}/dependabot/secrets/{secret_name}"],
+    getRepoPublicKey: ["GET /repos/{owner}/{repo}/dependabot/secrets/public-key"],
+    getRepoSecret: ["GET /repos/{owner}/{repo}/dependabot/secrets/{secret_name}"],
+    listAlertsForEnterprise: ["GET /enterprises/{enterprise}/dependabot/alerts"],
+    listAlertsForOrg: ["GET /orgs/{org}/dependabot/alerts"],
+    listAlertsForRepo: ["GET /repos/{owner}/{repo}/dependabot/alerts"],
+    listOrgSecrets: ["GET /orgs/{org}/dependabot/secrets"],
+    listRepoSecrets: ["GET /repos/{owner}/{repo}/dependabot/secrets"],
+    listSelectedReposForOrgSecret: ["GET /orgs/{org}/dependabot/secrets/{secret_name}/repositories"],
+    removeSelectedRepoFromOrgSecret: ["DELETE /orgs/{org}/dependabot/secrets/{secret_name}/repositories/{repository_id}"],
+    setSelectedReposForOrgSecret: ["PUT /orgs/{org}/dependabot/secrets/{secret_name}/repositories"],
+    updateAlert: ["PATCH /repos/{owner}/{repo}/dependabot/alerts/{alert_number}"]
+  },
+  dependencyGraph: {
+    createRepositorySnapshot: ["POST /repos/{owner}/{repo}/dependency-graph/snapshots"],
+    diffRange: ["GET /repos/{owner}/{repo}/dependency-graph/compare/{basehead}"],
+    exportSbom: ["GET /repos/{owner}/{repo}/dependency-graph/sbom"]
+  },
+  emojis: {
+    get: ["GET /emojis"]
+  },
+  gists: {
+    checkIsStarred: ["GET /gists/{gist_id}/star"],
+    create: ["POST /gists"],
+    createComment: ["POST /gists/{gist_id}/comments"],
+    delete: ["DELETE /gists/{gist_id}"],
+    deleteComment: ["DELETE /gists/{gist_id}/comments/{comment_id}"],
+    fork: ["POST /gists/{gist_id}/forks"],
+    get: ["GET /gists/{gist_id}"],
+    getComment: ["GET /gists/{gist_id}/comments/{comment_id}"],
+    getRevision: ["GET /gists/{gist_id}/{sha}"],
+    list: ["GET /gists"],
+    listComments: ["GET /gists/{gist_id}/comments"],
+    listCommits: ["GET /gists/{gist_id}/commits"],
+    listForUser: ["GET /users/{username}/gists"],
+    listForks: ["GET /gists/{gist_id}/forks"],
+    listPublic: ["GET /gists/public"],
+    listStarred: ["GET /gists/starred"],
+    star: ["PUT /gists/{gist_id}/star"],
+    unstar: ["DELETE /gists/{gist_id}/star"],
+    update: ["PATCH /gists/{gist_id}"],
+    updateComment: ["PATCH /gists/{gist_id}/comments/{comment_id}"]
+  },
+  git: {
+    createBlob: ["POST /repos/{owner}/{repo}/git/blobs"],
+    createCommit: ["POST /repos/{owner}/{repo}/git/commits"],
+    createRef: ["POST /repos/{owner}/{repo}/git/refs"],
+    createTag: ["POST /repos/{owner}/{repo}/git/tags"],
+    createTree: ["POST /repos/{owner}/{repo}/git/trees"],
+    deleteRef: ["DELETE /repos/{owner}/{repo}/git/refs/{ref}"],
+    getBlob: ["GET /repos/{owner}/{repo}/git/blobs/{file_sha}"],
+    getCommit: ["GET /repos/{owner}/{repo}/git/commits/{commit_sha}"],
+    getRef: ["GET /repos/{owner}/{repo}/git/ref/{ref}"],
+    getTag: ["GET /repos/{owner}/{repo}/git/tags/{tag_sha}"],
+    getTree: ["GET /repos/{owner}/{repo}/git/trees/{tree_sha}"],
+    listMatchingRefs: ["GET /repos/{owner}/{repo}/git/matching-refs/{ref}"],
+    updateRef: ["PATCH /repos/{owner}/{repo}/git/refs/{ref}"]
+  },
+  gitignore: {
+    getAllTemplates: ["GET /gitignore/templates"],
+    getTemplate: ["GET /gitignore/templates/{name}"]
+  },
+  interactions: {
+    getRestrictionsForAuthenticatedUser: ["GET /user/interaction-limits"],
+    getRestrictionsForOrg: ["GET /orgs/{org}/interaction-limits"],
+    getRestrictionsForRepo: ["GET /repos/{owner}/{repo}/interaction-limits"],
+    getRestrictionsForYourPublicRepos: ["GET /user/interaction-limits", {}, {
+      renamed: ["interactions", "getRestrictionsForAuthenticatedUser"]
+    }],
+    removeRestrictionsForAuthenticatedUser: ["DELETE /user/interaction-limits"],
+    removeRestrictionsForOrg: ["DELETE /orgs/{org}/interaction-limits"],
+    removeRestrictionsForRepo: ["DELETE /repos/{owner}/{repo}/interaction-limits"],
+    removeRestrictionsForYourPublicRepos: ["DELETE /user/interaction-limits", {}, {
+      renamed: ["interactions", "removeRestrictionsForAuthenticatedUser"]
+    }],
+    setRestrictionsForAuthenticatedUser: ["PUT /user/interaction-limits"],
+    setRestrictionsForOrg: ["PUT /orgs/{org}/interaction-limits"],
+    setRestrictionsForRepo: ["PUT /repos/{owner}/{repo}/interaction-limits"],
+    setRestrictionsForYourPublicRepos: ["PUT /user/interaction-limits", {}, {
+      renamed: ["interactions", "setRestrictionsForAuthenticatedUser"]
+    }]
+  },
+  issues: {
+    addAssignees: ["POST /repos/{owner}/{repo}/issues/{issue_number}/assignees"],
+    addLabels: ["POST /repos/{owner}/{repo}/issues/{issue_number}/labels"],
+    checkUserCanBeAssigned: ["GET /repos/{owner}/{repo}/assignees/{assignee}"],
+    checkUserCanBeAssignedToIssue: ["GET /repos/{owner}/{repo}/issues/{issue_number}/assignees/{assignee}"],
+    create: ["POST /repos/{owner}/{repo}/issues"],
+    createComment: ["POST /repos/{owner}/{repo}/issues/{issue_number}/comments"],
+    createLabel: ["POST /repos/{owner}/{repo}/labels"],
+    createMilestone: ["POST /repos/{owner}/{repo}/milestones"],
+    deleteComment: ["DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}"],
+    deleteLabel: ["DELETE /repos/{owner}/{repo}/labels/{name}"],
+    deleteMilestone: ["DELETE /repos/{owner}/{repo}/milestones/{milestone_number}"],
+    get: ["GET /repos/{owner}/{repo}/issues/{issue_number}"],
+    getComment: ["GET /repos/{owner}/{repo}/issues/comments/{comment_id}"],
+    getEvent: ["GET /repos/{owner}/{repo}/issues/events/{event_id}"],
+    getLabel: ["GET /repos/{owner}/{repo}/labels/{name}"],
+    getMilestone: ["GET /repos/{owner}/{repo}/milestones/{milestone_number}"],
+    list: ["GET /issues"],
+    listAssignees: ["GET /repos/{owner}/{repo}/assignees"],
+    listComments: ["GET /repos/{owner}/{repo}/issues/{issue_number}/comments"],
+    listCommentsForRepo: ["GET /repos/{owner}/{repo}/issues/comments"],
+    listEvents: ["GET /repos/{owner}/{repo}/issues/{issue_number}/events"],
+    listEventsForRepo: ["GET /repos/{owner}/{repo}/issues/events"],
+    listEventsForTimeline: ["GET /repos/{owner}/{repo}/issues/{issue_number}/timeline"],
+    listForAuthenticatedUser: ["GET /user/issues"],
+    listForOrg: ["GET /orgs/{org}/issues"],
+    listForRepo: ["GET /repos/{owner}/{repo}/issues"],
+    listLabelsForMilestone: ["GET /repos/{owner}/{repo}/milestones/{milestone_number}/labels"],
+    listLabelsForRepo: ["GET /repos/{owner}/{repo}/labels"],
+    listLabelsOnIssue: ["GET /repos/{owner}/{repo}/issues/{issue_number}/labels"],
+    listMilestones: ["GET /repos/{owner}/{repo}/milestones"],
+    lock: ["PUT /repos/{owner}/{repo}/issues/{issue_number}/lock"],
+    removeAllLabels: ["DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels"],
+    removeAssignees: ["DELETE /repos/{owner}/{repo}/issues/{issue_number}/assignees"],
+    removeLabel: ["DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}"],
+    setLabels: ["PUT /repos/{owner}/{repo}/issues/{issue_number}/labels"],
+    unlock: ["DELETE /repos/{owner}/{repo}/issues/{issue_number}/lock"],
+    update: ["PATCH /repos/{owner}/{repo}/issues/{issue_number}"],
+    updateComment: ["PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}"],
+    updateLabel: ["PATCH /repos/{owner}/{repo}/labels/{name}"],
+    updateMilestone: ["PATCH /repos/{owner}/{repo}/milestones/{milestone_number}"]
+  },
+  licenses: {
+    get: ["GET /licenses/{license}"],
+    getAllCommonlyUsed: ["GET /licenses"],
+    getForRepo: ["GET /repos/{owner}/{repo}/license"]
+  },
+  markdown: {
+    render: ["POST /markdown"],
+    renderRaw: ["POST /markdown/raw", {
+      headers: {
+        "content-type": "text/plain; charset=utf-8"
+      }
+    }]
+  },
+  meta: {
+    get: ["GET /meta"],
+    getAllVersions: ["GET /versions"],
+    getOctocat: ["GET /octocat"],
+    getZen: ["GET /zen"],
+    root: ["GET /"]
+  },
+  migrations: {
+    cancelImport: ["DELETE /repos/{owner}/{repo}/import"],
+    deleteArchiveForAuthenticatedUser: ["DELETE /user/migrations/{migration_id}/archive"],
+    deleteArchiveForOrg: ["DELETE /orgs/{org}/migrations/{migration_id}/archive"],
+    downloadArchiveForOrg: ["GET /orgs/{org}/migrations/{migration_id}/archive"],
+    getArchiveForAuthenticatedUser: ["GET /user/migrations/{migration_id}/archive"],
+    getCommitAuthors: ["GET /repos/{owner}/{repo}/import/authors"],
+    getImportStatus: ["GET /repos/{owner}/{repo}/import"],
+    getLargeFiles: ["GET /repos/{owner}/{repo}/import/large_files"],
+    getStatusForAuthenticatedUser: ["GET /user/migrations/{migration_id}"],
+    getStatusForOrg: ["GET /orgs/{org}/migrations/{migration_id}"],
+    listForAuthenticatedUser: ["GET /user/migrations"],
+    listForOrg: ["GET /orgs/{org}/migrations"],
+    listReposForAuthenticatedUser: ["GET /user/migrations/{migration_id}/repositories"],
+    listReposForOrg: ["GET /orgs/{org}/migrations/{migration_id}/repositories"],
+    listReposForUser: ["GET /user/migrations/{migration_id}/repositories", {}, {
+      renamed: ["migrations", "listReposForAuthenticatedUser"]
+    }],
+    mapCommitAuthor: ["PATCH /repos/{owner}/{repo}/import/authors/{author_id}"],
+    setLfsPreference: ["PATCH /repos/{owner}/{repo}/import/lfs"],
+    startForAuthenticatedUser: ["POST /user/migrations"],
+    startForOrg: ["POST /orgs/{org}/migrations"],
+    startImport: ["PUT /repos/{owner}/{repo}/import"],
+    unlockRepoForAuthenticatedUser: ["DELETE /user/migrations/{migration_id}/repos/{repo_name}/lock"],
+    unlockRepoForOrg: ["DELETE /orgs/{org}/migrations/{migration_id}/repos/{repo_name}/lock"],
+    updateImport: ["PATCH /repos/{owner}/{repo}/import"]
+  },
+  orgs: {
+    addSecurityManagerTeam: ["PUT /orgs/{org}/security-managers/teams/{team_slug}"],
+    blockUser: ["PUT /orgs/{org}/blocks/{username}"],
+    cancelInvitation: ["DELETE /orgs/{org}/invitations/{invitation_id}"],
+    checkBlockedUser: ["GET /orgs/{org}/blocks/{username}"],
+    checkMembershipForUser: ["GET /orgs/{org}/members/{username}"],
+    checkPublicMembershipForUser: ["GET /orgs/{org}/public_members/{username}"],
+    convertMemberToOutsideCollaborator: ["PUT /orgs/{org}/outside_collaborators/{username}"],
+    createInvitation: ["POST /orgs/{org}/invitations"],
+    createWebhook: ["POST /orgs/{org}/hooks"],
+    delete: ["DELETE /orgs/{org}"],
+    deleteWebhook: ["DELETE /orgs/{org}/hooks/{hook_id}"],
+    enableOrDisableSecurityProductOnAllOrgRepos: ["POST /orgs/{org}/{security_product}/{enablement}"],
+    get: ["GET /orgs/{org}"],
+    getMembershipForAuthenticatedUser: ["GET /user/memberships/orgs/{org}"],
+    getMembershipForUser: ["GET /orgs/{org}/memberships/{username}"],
+    getWebhook: ["GET /orgs/{org}/hooks/{hook_id}"],
+    getWebhookConfigForOrg: ["GET /orgs/{org}/hooks/{hook_id}/config"],
+    getWebhookDelivery: ["GET /orgs/{org}/hooks/{hook_id}/deliveries/{delivery_id}"],
+    list: ["GET /organizations"],
+    listAppInstallations: ["GET /orgs/{org}/installations"],
+    listBlockedUsers: ["GET /orgs/{org}/blocks"],
+    listFailedInvitations: ["GET /orgs/{org}/failed_invitations"],
+    listForAuthenticatedUser: ["GET /user/orgs"],
+    listForUser: ["GET /users/{username}/orgs"],
+    listInvitationTeams: ["GET /orgs/{org}/invitations/{invitation_id}/teams"],
+    listMembers: ["GET /orgs/{org}/members"],
+    listMembershipsForAuthenticatedUser: ["GET /user/memberships/orgs"],
+    listOutsideCollaborators: ["GET /orgs/{org}/outside_collaborators"],
+    listPatGrantRepositories: ["GET /organizations/{org}/personal-access-tokens/{pat_id}/repositories"],
+    listPatGrantRequestRepositories: ["GET /organizations/{org}/personal-access-token-requests/{pat_request_id}/repositories"],
+    listPatGrantRequests: ["GET /organizations/{org}/personal-access-token-requests"],
+    listPatGrants: ["GET /organizations/{org}/personal-access-tokens"],
+    listPendingInvitations: ["GET /orgs/{org}/invitations"],
+    listPublicMembers: ["GET /orgs/{org}/public_members"],
+    listSecurityManagerTeams: ["GET /orgs/{org}/security-managers"],
+    listWebhookDeliveries: ["GET /orgs/{org}/hooks/{hook_id}/deliveries"],
+    listWebhooks: ["GET /orgs/{org}/hooks"],
+    pingWebhook: ["POST /orgs/{org}/hooks/{hook_id}/pings"],
+    redeliverWebhookDelivery: ["POST /orgs/{org}/hooks/{hook_id}/deliveries/{delivery_id}/attempts"],
+    removeMember: ["DELETE /orgs/{org}/members/{username}"],
+    removeMembershipForUser: ["DELETE /orgs/{org}/memberships/{username}"],
+    removeOutsideCollaborator: ["DELETE /orgs/{org}/outside_collaborators/{username}"],
+    removePublicMembershipForAuthenticatedUser: ["DELETE /orgs/{org}/public_members/{username}"],
+    removeSecurityManagerTeam: ["DELETE /orgs/{org}/security-managers/teams/{team_slug}"],
+    reviewPatGrantRequest: ["POST /organizations/{org}/personal-access-token-requests/{pat_request_id}"],
+    reviewPatGrantRequestsInBulk: ["POST /organizations/{org}/personal-access-token-requests"],
+    setMembershipForUser: ["PUT /orgs/{org}/memberships/{username}"],
+    setPublicMembershipForAuthenticatedUser: ["PUT /orgs/{org}/public_members/{username}"],
+    unblockUser: ["DELETE /orgs/{org}/blocks/{username}"],
+    update: ["PATCH /orgs/{org}"],
+    updateMembershipForAuthenticatedUser: ["PATCH /user/memberships/orgs/{org}"],
+    updatePatAccess: ["POST /organizations/{org}/personal-access-tokens/{pat_id}"],
+    updatePatAccesses: ["POST /organizations/{org}/personal-access-tokens"],
+    updateWebhook: ["PATCH /orgs/{org}/hooks/{hook_id}"],
+    updateWebhookConfigForOrg: ["PATCH /orgs/{org}/hooks/{hook_id}/config"]
+  },
+  packages: {
+    deletePackageForAuthenticatedUser: ["DELETE /user/packages/{package_type}/{package_name}"],
+    deletePackageForOrg: ["DELETE /orgs/{org}/packages/{package_type}/{package_name}"],
+    deletePackageForUser: ["DELETE /users/{username}/packages/{package_type}/{package_name}"],
+    deletePackageVersionForAuthenticatedUser: ["DELETE /user/packages/{package_type}/{package_name}/versions/{package_version_id}"],
+    deletePackageVersionForOrg: ["DELETE /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}"],
+    deletePackageVersionForUser: ["DELETE /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}"],
+    getAllPackageVersionsForAPackageOwnedByAnOrg: ["GET /orgs/{org}/packages/{package_type}/{package_name}/versions", {}, {
+      renamed: ["packages", "getAllPackageVersionsForPackageOwnedByOrg"]
+    }],
+    getAllPackageVersionsForAPackageOwnedByTheAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}/versions", {}, {
+      renamed: ["packages", "getAllPackageVersionsForPackageOwnedByAuthenticatedUser"]
+    }],
+    getAllPackageVersionsForPackageOwnedByAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}/versions"],
+    getAllPackageVersionsForPackageOwnedByOrg: ["GET /orgs/{org}/packages/{package_type}/{package_name}/versions"],
+    getAllPackageVersionsForPackageOwnedByUser: ["GET /users/{username}/packages/{package_type}/{package_name}/versions"],
+    getPackageForAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}"],
+    getPackageForOrganization: ["GET /orgs/{org}/packages/{package_type}/{package_name}"],
+    getPackageForUser: ["GET /users/{username}/packages/{package_type}/{package_name}"],
+    getPackageVersionForAuthenticatedUser: ["GET /user/packages/{package_type}/{package_name}/versions/{package_version_id}"],
+    getPackageVersionForOrganization: ["GET /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}"],
+    getPackageVersionForUser: ["GET /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}"],
+    listDockerMigrationConflictingPackagesForAuthenticatedUser: ["GET /user/docker/conflicts"],
+    listDockerMigrationConflictingPackagesForOrganization: ["GET /orgs/{org}/docker/conflicts"],
+    listDockerMigrationConflictingPackagesForUser: ["GET /users/{username}/docker/conflicts"],
+    listPackagesForAuthenticatedUser: ["GET /user/packages"],
+    listPackagesForOrganization: ["GET /orgs/{org}/packages"],
+    listPackagesForUser: ["GET /users/{username}/packages"],
+    restorePackageForAuthenticatedUser: ["POST /user/packages/{package_type}/{package_name}/restore{?token}"],
+    restorePackageForOrg: ["POST /orgs/{org}/packages/{package_type}/{package_name}/restore{?token}"],
+    restorePackageForUser: ["POST /users/{username}/packages/{package_type}/{package_name}/restore{?token}"],
+    restorePackageVersionForAuthenticatedUser: ["POST /user/packages/{package_type}/{package_name}/versions/{package_version_id}/restore"],
+    restorePackageVersionForOrg: ["POST /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}/restore"],
+    restorePackageVersionForUser: ["POST /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}/restore"]
+  },
+  projects: {
+    addCollaborator: ["PUT /projects/{project_id}/collaborators/{username}"],
+    createCard: ["POST /projects/columns/{column_id}/cards"],
+    createColumn: ["POST /projects/{project_id}/columns"],
+    createForAuthenticatedUser: ["POST /user/projects"],
+    createForOrg: ["POST /orgs/{org}/projects"],
+    createForRepo: ["POST /repos/{owner}/{repo}/projects"],
+    delete: ["DELETE /projects/{project_id}"],
+    deleteCard: ["DELETE /projects/columns/cards/{card_id}"],
+    deleteColumn: ["DELETE /projects/columns/{column_id}"],
+    get: ["GET /projects/{project_id}"],
+    getCard: ["GET /projects/columns/cards/{card_id}"],
+    getColumn: ["GET /projects/columns/{column_id}"],
+    getPermissionForUser: ["GET /projects/{project_id}/collaborators/{username}/permission"],
+    listCards: ["GET /projects/columns/{column_id}/cards"],
+    listCollaborators: ["GET /projects/{project_id}/collaborators"],
+    listColumns: ["GET /projects/{project_id}/columns"],
+    listForOrg: ["GET /orgs/{org}/projects"],
+    listForRepo: ["GET /repos/{owner}/{repo}/projects"],
+    listForUser: ["GET /users/{username}/projects"],
+    moveCard: ["POST /projects/columns/cards/{card_id}/moves"],
+    moveColumn: ["POST /projects/columns/{column_id}/moves"],
+    removeCollaborator: ["DELETE /projects/{project_id}/collaborators/{username}"],
+    update: ["PATCH /projects/{project_id}"],
+    updateCard: ["PATCH /projects/columns/cards/{card_id}"],
+    updateColumn: ["PATCH /projects/columns/{column_id}"]
+  },
+  pulls: {
+    checkIfMerged: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/merge"],
+    create: ["POST /repos/{owner}/{repo}/pulls"],
+    createReplyForReviewComment: ["POST /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies"],
+    createReview: ["POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews"],
+    createReviewComment: ["POST /repos/{owner}/{repo}/pulls/{pull_number}/comments"],
+    deletePendingReview: ["DELETE /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}"],
+    deleteReviewComment: ["DELETE /repos/{owner}/{repo}/pulls/comments/{comment_id}"],
+    dismissReview: ["PUT /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/dismissals"],
+    get: ["GET /repos/{owner}/{repo}/pulls/{pull_number}"],
+    getReview: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}"],
+    getReviewComment: ["GET /repos/{owner}/{repo}/pulls/comments/{comment_id}"],
+    list: ["GET /repos/{owner}/{repo}/pulls"],
+    listCommentsForReview: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/comments"],
+    listCommits: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/commits"],
+    listFiles: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/files"],
+    listRequestedReviewers: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers"],
+    listReviewComments: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/comments"],
+    listReviewCommentsForRepo: ["GET /repos/{owner}/{repo}/pulls/comments"],
+    listReviews: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews"],
+    merge: ["PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge"],
+    removeRequestedReviewers: ["DELETE /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers"],
+    requestReviewers: ["POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers"],
+    submitReview: ["POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/events"],
+    update: ["PATCH /repos/{owner}/{repo}/pulls/{pull_number}"],
+    updateBranch: ["PUT /repos/{owner}/{repo}/pulls/{pull_number}/update-branch"],
+    updateReview: ["PUT /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}"],
+    updateReviewComment: ["PATCH /repos/{owner}/{repo}/pulls/comments/{comment_id}"]
+  },
+  rateLimit: {
+    get: ["GET /rate_limit"]
+  },
+  reactions: {
+    createForCommitComment: ["POST /repos/{owner}/{repo}/comments/{comment_id}/reactions"],
+    createForIssue: ["POST /repos/{owner}/{repo}/issues/{issue_number}/reactions"],
+    createForIssueComment: ["POST /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions"],
+    createForPullRequestReviewComment: ["POST /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions"],
+    createForRelease: ["POST /repos/{owner}/{repo}/releases/{release_id}/reactions"],
+    createForTeamDiscussionCommentInOrg: ["POST /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}/reactions"],
+    createForTeamDiscussionInOrg: ["POST /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/reactions"],
+    deleteForCommitComment: ["DELETE /repos/{owner}/{repo}/comments/{comment_id}/reactions/{reaction_id}"],
+    deleteForIssue: ["DELETE /repos/{owner}/{repo}/issues/{issue_number}/reactions/{reaction_id}"],
+    deleteForIssueComment: ["DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions/{reaction_id}"],
+    deleteForPullRequestComment: ["DELETE /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions/{reaction_id}"],
+    deleteForRelease: ["DELETE /repos/{owner}/{repo}/releases/{release_id}/reactions/{reaction_id}"],
+    deleteForTeamDiscussion: ["DELETE /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/reactions/{reaction_id}"],
+    deleteForTeamDiscussionComment: ["DELETE /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}/reactions/{reaction_id}"],
+    listForCommitComment: ["GET /repos/{owner}/{repo}/comments/{comment_id}/reactions"],
+    listForIssue: ["GET /repos/{owner}/{repo}/issues/{issue_number}/reactions"],
+    listForIssueComment: ["GET /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions"],
+    listForPullRequestReviewComment: ["GET /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions"],
+    listForRelease: ["GET /repos/{owner}/{repo}/releases/{release_id}/reactions"],
+    listForTeamDiscussionCommentInOrg: ["GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}/reactions"],
+    listForTeamDiscussionInOrg: ["GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/reactions"]
+  },
+  repos: {
+    acceptInvitation: ["PATCH /user/repository_invitations/{invitation_id}", {}, {
+      renamed: ["repos", "acceptInvitationForAuthenticatedUser"]
+    }],
+    acceptInvitationForAuthenticatedUser: ["PATCH /user/repository_invitations/{invitation_id}"],
+    addAppAccessRestrictions: ["POST /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/apps", {}, {
+      mapToData: "apps"
+    }],
+    addCollaborator: ["PUT /repos/{owner}/{repo}/collaborators/{username}"],
+    addStatusCheckContexts: ["POST /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts", {}, {
+      mapToData: "contexts"
+    }],
+    addTeamAccessRestrictions: ["POST /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams", {}, {
+      mapToData: "teams"
+    }],
+    addUserAccessRestrictions: ["POST /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users", {}, {
+      mapToData: "users"
+    }],
+    checkCollaborator: ["GET /repos/{owner}/{repo}/collaborators/{username}"],
+    checkVulnerabilityAlerts: ["GET /repos/{owner}/{repo}/vulnerability-alerts"],
+    codeownersErrors: ["GET /repos/{owner}/{repo}/codeowners/errors"],
+    compareCommits: ["GET /repos/{owner}/{repo}/compare/{base}...{head}"],
+    compareCommitsWithBasehead: ["GET /repos/{owner}/{repo}/compare/{basehead}"],
+    createAutolink: ["POST /repos/{owner}/{repo}/autolinks"],
+    createCommitComment: ["POST /repos/{owner}/{repo}/commits/{commit_sha}/comments"],
+    createCommitSignatureProtection: ["POST /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures"],
+    createCommitStatus: ["POST /repos/{owner}/{repo}/statuses/{sha}"],
+    createDeployKey: ["POST /repos/{owner}/{repo}/keys"],
+    createDeployment: ["POST /repos/{owner}/{repo}/deployments"],
+    createDeploymentBranchPolicy: ["POST /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies"],
+    createDeploymentProtectionRule: ["POST /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules"],
+    createDeploymentStatus: ["POST /repos/{owner}/{repo}/deployments/{deployment_id}/statuses"],
+    createDispatchEvent: ["POST /repos/{owner}/{repo}/dispatches"],
+    createForAuthenticatedUser: ["POST /user/repos"],
+    createFork: ["POST /repos/{owner}/{repo}/forks"],
+    createInOrg: ["POST /orgs/{org}/repos"],
+    createOrUpdateEnvironment: ["PUT /repos/{owner}/{repo}/environments/{environment_name}"],
+    createOrUpdateFileContents: ["PUT /repos/{owner}/{repo}/contents/{path}"],
+    createOrgRuleset: ["POST /orgs/{org}/rulesets"],
+    createPagesDeployment: ["POST /repos/{owner}/{repo}/pages/deployment"],
+    createPagesSite: ["POST /repos/{owner}/{repo}/pages"],
+    createRelease: ["POST /repos/{owner}/{repo}/releases"],
+    createRepoRuleset: ["POST /repos/{owner}/{repo}/rulesets"],
+    createTagProtection: ["POST /repos/{owner}/{repo}/tags/protection"],
+    createUsingTemplate: ["POST /repos/{template_owner}/{template_repo}/generate"],
+    createWebhook: ["POST /repos/{owner}/{repo}/hooks"],
+    declineInvitation: ["DELETE /user/repository_invitations/{invitation_id}", {}, {
+      renamed: ["repos", "declineInvitationForAuthenticatedUser"]
+    }],
+    declineInvitationForAuthenticatedUser: ["DELETE /user/repository_invitations/{invitation_id}"],
+    delete: ["DELETE /repos/{owner}/{repo}"],
+    deleteAccessRestrictions: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection/restrictions"],
+    deleteAdminBranchProtection: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins"],
+    deleteAnEnvironment: ["DELETE /repos/{owner}/{repo}/environments/{environment_name}"],
+    deleteAutolink: ["DELETE /repos/{owner}/{repo}/autolinks/{autolink_id}"],
+    deleteBranchProtection: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection"],
+    deleteCommitComment: ["DELETE /repos/{owner}/{repo}/comments/{comment_id}"],
+    deleteCommitSignatureProtection: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures"],
+    deleteDeployKey: ["DELETE /repos/{owner}/{repo}/keys/{key_id}"],
+    deleteDeployment: ["DELETE /repos/{owner}/{repo}/deployments/{deployment_id}"],
+    deleteDeploymentBranchPolicy: ["DELETE /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies/{branch_policy_id}"],
+    deleteFile: ["DELETE /repos/{owner}/{repo}/contents/{path}"],
+    deleteInvitation: ["DELETE /repos/{owner}/{repo}/invitations/{invitation_id}"],
+    deleteOrgRuleset: ["DELETE /orgs/{org}/rulesets/{ruleset_id}"],
+    deletePagesSite: ["DELETE /repos/{owner}/{repo}/pages"],
+    deletePullRequestReviewProtection: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection/required_pull_request_reviews"],
+    deleteRelease: ["DELETE /repos/{owner}/{repo}/releases/{release_id}"],
+    deleteReleaseAsset: ["DELETE /repos/{owner}/{repo}/releases/assets/{asset_id}"],
+    deleteRepoRuleset: ["DELETE /repos/{owner}/{repo}/rulesets/{ruleset_id}"],
+    deleteTagProtection: ["DELETE /repos/{owner}/{repo}/tags/protection/{tag_protection_id}"],
+    deleteWebhook: ["DELETE /repos/{owner}/{repo}/hooks/{hook_id}"],
+    disableAutomatedSecurityFixes: ["DELETE /repos/{owner}/{repo}/automated-security-fixes"],
+    disableDeploymentProtectionRule: ["DELETE /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules/{protection_rule_id}"],
+    disableLfsForRepo: ["DELETE /repos/{owner}/{repo}/lfs"],
+    disableVulnerabilityAlerts: ["DELETE /repos/{owner}/{repo}/vulnerability-alerts"],
+    downloadArchive: ["GET /repos/{owner}/{repo}/zipball/{ref}", {}, {
+      renamed: ["repos", "downloadZipballArchive"]
+    }],
+    downloadTarballArchive: ["GET /repos/{owner}/{repo}/tarball/{ref}"],
+    downloadZipballArchive: ["GET /repos/{owner}/{repo}/zipball/{ref}"],
+    enableAutomatedSecurityFixes: ["PUT /repos/{owner}/{repo}/automated-security-fixes"],
+    enableLfsForRepo: ["PUT /repos/{owner}/{repo}/lfs"],
+    enableVulnerabilityAlerts: ["PUT /repos/{owner}/{repo}/vulnerability-alerts"],
+    generateReleaseNotes: ["POST /repos/{owner}/{repo}/releases/generate-notes"],
+    get: ["GET /repos/{owner}/{repo}"],
+    getAccessRestrictions: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions"],
+    getAdminBranchProtection: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins"],
+    getAllDeploymentProtectionRules: ["GET /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules"],
+    getAllEnvironments: ["GET /repos/{owner}/{repo}/environments"],
+    getAllStatusCheckContexts: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts"],
+    getAllTopics: ["GET /repos/{owner}/{repo}/topics"],
+    getAppsWithAccessToProtectedBranch: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/apps"],
+    getAutolink: ["GET /repos/{owner}/{repo}/autolinks/{autolink_id}"],
+    getBranch: ["GET /repos/{owner}/{repo}/branches/{branch}"],
+    getBranchProtection: ["GET /repos/{owner}/{repo}/branches/{branch}/protection"],
+    getBranchRules: ["GET /repos/{owner}/{repo}/rules/branches/{branch}"],
+    getClones: ["GET /repos/{owner}/{repo}/traffic/clones"],
+    getCodeFrequencyStats: ["GET /repos/{owner}/{repo}/stats/code_frequency"],
+    getCollaboratorPermissionLevel: ["GET /repos/{owner}/{repo}/collaborators/{username}/permission"],
+    getCombinedStatusForRef: ["GET /repos/{owner}/{repo}/commits/{ref}/status"],
+    getCommit: ["GET /repos/{owner}/{repo}/commits/{ref}"],
+    getCommitActivityStats: ["GET /repos/{owner}/{repo}/stats/commit_activity"],
+    getCommitComment: ["GET /repos/{owner}/{repo}/comments/{comment_id}"],
+    getCommitSignatureProtection: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures"],
+    getCommunityProfileMetrics: ["GET /repos/{owner}/{repo}/community/profile"],
+    getContent: ["GET /repos/{owner}/{repo}/contents/{path}"],
+    getContributorsStats: ["GET /repos/{owner}/{repo}/stats/contributors"],
+    getCustomDeploymentProtectionRule: ["GET /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules/{protection_rule_id}"],
+    getDeployKey: ["GET /repos/{owner}/{repo}/keys/{key_id}"],
+    getDeployment: ["GET /repos/{owner}/{repo}/deployments/{deployment_id}"],
+    getDeploymentBranchPolicy: ["GET /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies/{branch_policy_id}"],
+    getDeploymentStatus: ["GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses/{status_id}"],
+    getEnvironment: ["GET /repos/{owner}/{repo}/environments/{environment_name}"],
+    getLatestPagesBuild: ["GET /repos/{owner}/{repo}/pages/builds/latest"],
+    getLatestRelease: ["GET /repos/{owner}/{repo}/releases/latest"],
+    getOrgRuleset: ["GET /orgs/{org}/rulesets/{ruleset_id}"],
+    getOrgRulesets: ["GET /orgs/{org}/rulesets"],
+    getPages: ["GET /repos/{owner}/{repo}/pages"],
+    getPagesBuild: ["GET /repos/{owner}/{repo}/pages/builds/{build_id}"],
+    getPagesHealthCheck: ["GET /repos/{owner}/{repo}/pages/health"],
+    getParticipationStats: ["GET /repos/{owner}/{repo}/stats/participation"],
+    getPullRequestReviewProtection: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/required_pull_request_reviews"],
+    getPunchCardStats: ["GET /repos/{owner}/{repo}/stats/punch_card"],
+    getReadme: ["GET /repos/{owner}/{repo}/readme"],
+    getReadmeInDirectory: ["GET /repos/{owner}/{repo}/readme/{dir}"],
+    getRelease: ["GET /repos/{owner}/{repo}/releases/{release_id}"],
+    getReleaseAsset: ["GET /repos/{owner}/{repo}/releases/assets/{asset_id}"],
+    getReleaseByTag: ["GET /repos/{owner}/{repo}/releases/tags/{tag}"],
+    getRepoRuleset: ["GET /repos/{owner}/{repo}/rulesets/{ruleset_id}"],
+    getRepoRulesets: ["GET /repos/{owner}/{repo}/rulesets"],
+    getStatusChecksProtection: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks"],
+    getTeamsWithAccessToProtectedBranch: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams"],
+    getTopPaths: ["GET /repos/{owner}/{repo}/traffic/popular/paths"],
+    getTopReferrers: ["GET /repos/{owner}/{repo}/traffic/popular/referrers"],
+    getUsersWithAccessToProtectedBranch: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users"],
+    getViews: ["GET /repos/{owner}/{repo}/traffic/views"],
+    getWebhook: ["GET /repos/{owner}/{repo}/hooks/{hook_id}"],
+    getWebhookConfigForRepo: ["GET /repos/{owner}/{repo}/hooks/{hook_id}/config"],
+    getWebhookDelivery: ["GET /repos/{owner}/{repo}/hooks/{hook_id}/deliveries/{delivery_id}"],
+    listAutolinks: ["GET /repos/{owner}/{repo}/autolinks"],
+    listBranches: ["GET /repos/{owner}/{repo}/branches"],
+    listBranchesForHeadCommit: ["GET /repos/{owner}/{repo}/commits/{commit_sha}/branches-where-head"],
+    listCollaborators: ["GET /repos/{owner}/{repo}/collaborators"],
+    listCommentsForCommit: ["GET /repos/{owner}/{repo}/commits/{commit_sha}/comments"],
+    listCommitCommentsForRepo: ["GET /repos/{owner}/{repo}/comments"],
+    listCommitStatusesForRef: ["GET /repos/{owner}/{repo}/commits/{ref}/statuses"],
+    listCommits: ["GET /repos/{owner}/{repo}/commits"],
+    listContributors: ["GET /repos/{owner}/{repo}/contributors"],
+    listCustomDeploymentRuleIntegrations: ["GET /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules/apps"],
+    listDeployKeys: ["GET /repos/{owner}/{repo}/keys"],
+    listDeploymentBranchPolicies: ["GET /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies"],
+    listDeploymentStatuses: ["GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses"],
+    listDeployments: ["GET /repos/{owner}/{repo}/deployments"],
+    listForAuthenticatedUser: ["GET /user/repos"],
+    listForOrg: ["GET /orgs/{org}/repos"],
+    listForUser: ["GET /users/{username}/repos"],
+    listForks: ["GET /repos/{owner}/{repo}/forks"],
+    listInvitations: ["GET /repos/{owner}/{repo}/invitations"],
+    listInvitationsForAuthenticatedUser: ["GET /user/repository_invitations"],
+    listLanguages: ["GET /repos/{owner}/{repo}/languages"],
+    listPagesBuilds: ["GET /repos/{owner}/{repo}/pages/builds"],
+    listPublic: ["GET /repositories"],
+    listPullRequestsAssociatedWithCommit: ["GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls"],
+    listReleaseAssets: ["GET /repos/{owner}/{repo}/releases/{release_id}/assets"],
+    listReleases: ["GET /repos/{owner}/{repo}/releases"],
+    listTagProtection: ["GET /repos/{owner}/{repo}/tags/protection"],
+    listTags: ["GET /repos/{owner}/{repo}/tags"],
+    listTeams: ["GET /repos/{owner}/{repo}/teams"],
+    listWebhookDeliveries: ["GET /repos/{owner}/{repo}/hooks/{hook_id}/deliveries"],
+    listWebhooks: ["GET /repos/{owner}/{repo}/hooks"],
+    merge: ["POST /repos/{owner}/{repo}/merges"],
+    mergeUpstream: ["POST /repos/{owner}/{repo}/merge-upstream"],
+    pingWebhook: ["POST /repos/{owner}/{repo}/hooks/{hook_id}/pings"],
+    redeliverWebhookDelivery: ["POST /repos/{owner}/{repo}/hooks/{hook_id}/deliveries/{delivery_id}/attempts"],
+    removeAppAccessRestrictions: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/apps", {}, {
+      mapToData: "apps"
+    }],
+    removeCollaborator: ["DELETE /repos/{owner}/{repo}/collaborators/{username}"],
+    removeStatusCheckContexts: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts", {}, {
+      mapToData: "contexts"
+    }],
+    removeStatusCheckProtection: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks"],
+    removeTeamAccessRestrictions: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams", {}, {
+      mapToData: "teams"
+    }],
+    removeUserAccessRestrictions: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users", {}, {
+      mapToData: "users"
+    }],
+    renameBranch: ["POST /repos/{owner}/{repo}/branches/{branch}/rename"],
+    replaceAllTopics: ["PUT /repos/{owner}/{repo}/topics"],
+    requestPagesBuild: ["POST /repos/{owner}/{repo}/pages/builds"],
+    setAdminBranchProtection: ["POST /repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins"],
+    setAppAccessRestrictions: ["PUT /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/apps", {}, {
+      mapToData: "apps"
+    }],
+    setStatusCheckContexts: ["PUT /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts", {}, {
+      mapToData: "contexts"
+    }],
+    setTeamAccessRestrictions: ["PUT /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams", {}, {
+      mapToData: "teams"
+    }],
+    setUserAccessRestrictions: ["PUT /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users", {}, {
+      mapToData: "users"
+    }],
+    testPushWebhook: ["POST /repos/{owner}/{repo}/hooks/{hook_id}/tests"],
+    transfer: ["POST /repos/{owner}/{repo}/transfer"],
+    update: ["PATCH /repos/{owner}/{repo}"],
+    updateBranchProtection: ["PUT /repos/{owner}/{repo}/branches/{branch}/protection"],
+    updateCommitComment: ["PATCH /repos/{owner}/{repo}/comments/{comment_id}"],
+    updateDeploymentBranchPolicy: ["PUT /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies/{branch_policy_id}"],
+    updateInformationAboutPagesSite: ["PUT /repos/{owner}/{repo}/pages"],
+    updateInvitation: ["PATCH /repos/{owner}/{repo}/invitations/{invitation_id}"],
+    updateOrgRuleset: ["PUT /orgs/{org}/rulesets/{ruleset_id}"],
+    updatePullRequestReviewProtection: ["PATCH /repos/{owner}/{repo}/branches/{branch}/protection/required_pull_request_reviews"],
+    updateRelease: ["PATCH /repos/{owner}/{repo}/releases/{release_id}"],
+    updateReleaseAsset: ["PATCH /repos/{owner}/{repo}/releases/assets/{asset_id}"],
+    updateRepoRuleset: ["PUT /repos/{owner}/{repo}/rulesets/{ruleset_id}"],
+    updateStatusCheckPotection: ["PATCH /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks", {}, {
+      renamed: ["repos", "updateStatusCheckProtection"]
+    }],
+    updateStatusCheckProtection: ["PATCH /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks"],
+    updateWebhook: ["PATCH /repos/{owner}/{repo}/hooks/{hook_id}"],
+    updateWebhookConfigForRepo: ["PATCH /repos/{owner}/{repo}/hooks/{hook_id}/config"],
+    uploadReleaseAsset: ["POST /repos/{owner}/{repo}/releases/{release_id}/assets{?name,label}", {
+      baseUrl: "https://uploads.github.com"
+    }]
+  },
+  search: {
+    code: ["GET /search/code"],
+    commits: ["GET /search/commits"],
+    issuesAndPullRequests: ["GET /search/issues"],
+    labels: ["GET /search/labels"],
+    repos: ["GET /search/repositories"],
+    topics: ["GET /search/topics"],
+    users: ["GET /search/users"]
+  },
+  secretScanning: {
+    getAlert: ["GET /repos/{owner}/{repo}/secret-scanning/alerts/{alert_number}"],
+    listAlertsForEnterprise: ["GET /enterprises/{enterprise}/secret-scanning/alerts"],
+    listAlertsForOrg: ["GET /orgs/{org}/secret-scanning/alerts"],
+    listAlertsForRepo: ["GET /repos/{owner}/{repo}/secret-scanning/alerts"],
+    listLocationsForAlert: ["GET /repos/{owner}/{repo}/secret-scanning/alerts/{alert_number}/locations"],
+    updateAlert: ["PATCH /repos/{owner}/{repo}/secret-scanning/alerts/{alert_number}"]
+  },
+  securityAdvisories: {
+    createPrivateVulnerabilityReport: ["POST /repos/{owner}/{repo}/security-advisories/reports"],
+    createRepositoryAdvisory: ["POST /repos/{owner}/{repo}/security-advisories"],
+    getRepositoryAdvisory: ["GET /repos/{owner}/{repo}/security-advisories/{ghsa_id}"],
+    listRepositoryAdvisories: ["GET /repos/{owner}/{repo}/security-advisories"],
+    updateRepositoryAdvisory: ["PATCH /repos/{owner}/{repo}/security-advisories/{ghsa_id}"]
+  },
+  teams: {
+    addOrUpdateMembershipForUserInOrg: ["PUT /orgs/{org}/teams/{team_slug}/memberships/{username}"],
+    addOrUpdateProjectPermissionsInOrg: ["PUT /orgs/{org}/teams/{team_slug}/projects/{project_id}"],
+    addOrUpdateRepoPermissionsInOrg: ["PUT /orgs/{org}/teams/{team_slug}/repos/{owner}/{repo}"],
+    checkPermissionsForProjectInOrg: ["GET /orgs/{org}/teams/{team_slug}/projects/{project_id}"],
+    checkPermissionsForRepoInOrg: ["GET /orgs/{org}/teams/{team_slug}/repos/{owner}/{repo}"],
+    create: ["POST /orgs/{org}/teams"],
+    createDiscussionCommentInOrg: ["POST /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments"],
+    createDiscussionInOrg: ["POST /orgs/{org}/teams/{team_slug}/discussions"],
+    deleteDiscussionCommentInOrg: ["DELETE /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}"],
+    deleteDiscussionInOrg: ["DELETE /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}"],
+    deleteInOrg: ["DELETE /orgs/{org}/teams/{team_slug}"],
+    getByName: ["GET /orgs/{org}/teams/{team_slug}"],
+    getDiscussionCommentInOrg: ["GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}"],
+    getDiscussionInOrg: ["GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}"],
+    getMembershipForUserInOrg: ["GET /orgs/{org}/teams/{team_slug}/memberships/{username}"],
+    list: ["GET /orgs/{org}/teams"],
+    listChildInOrg: ["GET /orgs/{org}/teams/{team_slug}/teams"],
+    listDiscussionCommentsInOrg: ["GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments"],
+    listDiscussionsInOrg: ["GET /orgs/{org}/teams/{team_slug}/discussions"],
+    listForAuthenticatedUser: ["GET /user/teams"],
+    listMembersInOrg: ["GET /orgs/{org}/teams/{team_slug}/members"],
+    listPendingInvitationsInOrg: ["GET /orgs/{org}/teams/{team_slug}/invitations"],
+    listProjectsInOrg: ["GET /orgs/{org}/teams/{team_slug}/projects"],
+    listReposInOrg: ["GET /orgs/{org}/teams/{team_slug}/repos"],
+    removeMembershipForUserInOrg: ["DELETE /orgs/{org}/teams/{team_slug}/memberships/{username}"],
+    removeProjectInOrg: ["DELETE /orgs/{org}/teams/{team_slug}/projects/{project_id}"],
+    removeRepoInOrg: ["DELETE /orgs/{org}/teams/{team_slug}/repos/{owner}/{repo}"],
+    updateDiscussionCommentInOrg: ["PATCH /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}"],
+    updateDiscussionInOrg: ["PATCH /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}"],
+    updateInOrg: ["PATCH /orgs/{org}/teams/{team_slug}"]
+  },
+  users: {
+    addEmailForAuthenticated: ["POST /user/emails", {}, {
+      renamed: ["users", "addEmailForAuthenticatedUser"]
+    }],
+    addEmailForAuthenticatedUser: ["POST /user/emails"],
+    addSocialAccountForAuthenticatedUser: ["POST /user/social_accounts"],
+    block: ["PUT /user/blocks/{username}"],
+    checkBlocked: ["GET /user/blocks/{username}"],
+    checkFollowingForUser: ["GET /users/{username}/following/{target_user}"],
+    checkPersonIsFollowedByAuthenticated: ["GET /user/following/{username}"],
+    createGpgKeyForAuthenticated: ["POST /user/gpg_keys", {}, {
+      renamed: ["users", "createGpgKeyForAuthenticatedUser"]
+    }],
+    createGpgKeyForAuthenticatedUser: ["POST /user/gpg_keys"],
+    createPublicSshKeyForAuthenticated: ["POST /user/keys", {}, {
+      renamed: ["users", "createPublicSshKeyForAuthenticatedUser"]
+    }],
+    createPublicSshKeyForAuthenticatedUser: ["POST /user/keys"],
+    createSshSigningKeyForAuthenticatedUser: ["POST /user/ssh_signing_keys"],
+    deleteEmailForAuthenticated: ["DELETE /user/emails", {}, {
+      renamed: ["users", "deleteEmailForAuthenticatedUser"]
+    }],
+    deleteEmailForAuthenticatedUser: ["DELETE /user/emails"],
+    deleteGpgKeyForAuthenticated: ["DELETE /user/gpg_keys/{gpg_key_id}", {}, {
+      renamed: ["users", "deleteGpgKeyForAuthenticatedUser"]
+    }],
+    deleteGpgKeyForAuthenticatedUser: ["DELETE /user/gpg_keys/{gpg_key_id}"],
+    deletePublicSshKeyForAuthenticated: ["DELETE /user/keys/{key_id}", {}, {
+      renamed: ["users", "deletePublicSshKeyForAuthenticatedUser"]
+    }],
+    deletePublicSshKeyForAuthenticatedUser: ["DELETE /user/keys/{key_id}"],
+    deleteSocialAccountForAuthenticatedUser: ["DELETE /user/social_accounts"],
+    deleteSshSigningKeyForAuthenticatedUser: ["DELETE /user/ssh_signing_keys/{ssh_signing_key_id}"],
+    follow: ["PUT /user/following/{username}"],
+    getAuthenticated: ["GET /user"],
+    getByUsername: ["GET /users/{username}"],
+    getContextForUser: ["GET /users/{username}/hovercard"],
+    getGpgKeyForAuthenticated: ["GET /user/gpg_keys/{gpg_key_id}", {}, {
+      renamed: ["users", "getGpgKeyForAuthenticatedUser"]
+    }],
+    getGpgKeyForAuthenticatedUser: ["GET /user/gpg_keys/{gpg_key_id}"],
+    getPublicSshKeyForAuthenticated: ["GET /user/keys/{key_id}", {}, {
+      renamed: ["users", "getPublicSshKeyForAuthenticatedUser"]
+    }],
+    getPublicSshKeyForAuthenticatedUser: ["GET /user/keys/{key_id}"],
+    getSshSigningKeyForAuthenticatedUser: ["GET /user/ssh_signing_keys/{ssh_signing_key_id}"],
+    list: ["GET /users"],
+    listBlockedByAuthenticated: ["GET /user/blocks", {}, {
+      renamed: ["users", "listBlockedByAuthenticatedUser"]
+    }],
+    listBlockedByAuthenticatedUser: ["GET /user/blocks"],
+    listEmailsForAuthenticated: ["GET /user/emails", {}, {
+      renamed: ["users", "listEmailsForAuthenticatedUser"]
+    }],
+    listEmailsForAuthenticatedUser: ["GET /user/emails"],
+    listFollowedByAuthenticated: ["GET /user/following", {}, {
+      renamed: ["users", "listFollowedByAuthenticatedUser"]
+    }],
+    listFollowedByAuthenticatedUser: ["GET /user/following"],
+    listFollowersForAuthenticatedUser: ["GET /user/followers"],
+    listFollowersForUser: ["GET /users/{username}/followers"],
+    listFollowingForUser: ["GET /users/{username}/following"],
+    listGpgKeysForAuthenticated: ["GET /user/gpg_keys", {}, {
+      renamed: ["users", "listGpgKeysForAuthenticatedUser"]
+    }],
+    listGpgKeysForAuthenticatedUser: ["GET /user/gpg_keys"],
+    listGpgKeysForUser: ["GET /users/{username}/gpg_keys"],
+    listPublicEmailsForAuthenticated: ["GET /user/public_emails", {}, {
+      renamed: ["users", "listPublicEmailsForAuthenticatedUser"]
+    }],
+    listPublicEmailsForAuthenticatedUser: ["GET /user/public_emails"],
+    listPublicKeysForUser: ["GET /users/{username}/keys"],
+    listPublicSshKeysForAuthenticated: ["GET /user/keys", {}, {
+      renamed: ["users", "listPublicSshKeysForAuthenticatedUser"]
+    }],
+    listPublicSshKeysForAuthenticatedUser: ["GET /user/keys"],
+    listSocialAccountsForAuthenticatedUser: ["GET /user/social_accounts"],
+    listSocialAccountsForUser: ["GET /users/{username}/social_accounts"],
+    listSshSigningKeysForAuthenticatedUser: ["GET /user/ssh_signing_keys"],
+    listSshSigningKeysForUser: ["GET /users/{username}/ssh_signing_keys"],
+    setPrimaryEmailVisibilityForAuthenticated: ["PATCH /user/email/visibility", {}, {
+      renamed: ["users", "setPrimaryEmailVisibilityForAuthenticatedUser"]
+    }],
+    setPrimaryEmailVisibilityForAuthenticatedUser: ["PATCH /user/email/visibility"],
+    unblock: ["DELETE /user/blocks/{username}"],
+    unfollow: ["DELETE /user/following/{username}"],
+    updateAuthenticated: ["PATCH /user"]
+  }
+};
+
+const VERSION = "7.1.2";
+
+function endpointsToMethods(octokit, endpointsMap) {
+  const newMethods = {};
+  for (const [scope, endpoints] of Object.entries(endpointsMap)) {
+    for (const [methodName, endpoint] of Object.entries(endpoints)) {
+      const [route, defaults, decorations] = endpoint;
+      const [method, url] = route.split(/ /);
+      const endpointDefaults = Object.assign({
+        method,
+        url
+      }, defaults);
+      if (!newMethods[scope]) {
+        newMethods[scope] = {};
+      }
+      const scopeMethods = newMethods[scope];
+      if (decorations) {
+        scopeMethods[methodName] = decorate(octokit, scope, methodName, endpointDefaults, decorations);
+        continue;
+      }
+      scopeMethods[methodName] = octokit.request.defaults(endpointDefaults);
+    }
+  }
+  return newMethods;
+}
+function decorate(octokit, scope, methodName, defaults, decorations) {
+  const requestWithDefaults = octokit.request.defaults(defaults);
+  /* istanbul ignore next */
+  function withDecorations(...args) {
+    // @ts-ignore https://github.com/microsoft/TypeScript/issues/25488
+    let options = requestWithDefaults.endpoint.merge(...args);
+    // There are currently no other decorations than `.mapToData`
+    if (decorations.mapToData) {
+      options = Object.assign({}, options, {
+        data: options[decorations.mapToData],
+        [decorations.mapToData]: undefined
+      });
+      return requestWithDefaults(options);
+    }
+    if (decorations.renamed) {
+      const [newScope, newMethodName] = decorations.renamed;
+      octokit.log.warn(`octokit.${scope}.${methodName}() has been renamed to octokit.${newScope}.${newMethodName}()`);
+    }
+    if (decorations.deprecated) {
+      octokit.log.warn(decorations.deprecated);
+    }
+    if (decorations.renamedParameters) {
+      // @ts-ignore https://github.com/microsoft/TypeScript/issues/25488
+      const options = requestWithDefaults.endpoint.merge(...args);
+      for (const [name, alias] of Object.entries(decorations.renamedParameters)) {
+        if (name in options) {
+          octokit.log.warn(`"${name}" parameter is deprecated for "octokit.${scope}.${methodName}()". Use "${alias}" instead`);
+          if (!(alias in options)) {
+            options[alias] = options[name];
+          }
+          delete options[name];
+        }
+      }
+      return requestWithDefaults(options);
+    }
+    // @ts-ignore https://github.com/microsoft/TypeScript/issues/25488
+    return requestWithDefaults(...args);
+  }
+  return Object.assign(withDecorations, requestWithDefaults);
+}
+
+function restEndpointMethods(octokit) {
+  const api = endpointsToMethods(octokit, Endpoints);
+  return {
+    rest: api
+  };
+}
+restEndpointMethods.VERSION = VERSION;
+function legacyRestEndpointMethods(octokit) {
+  const api = endpointsToMethods(octokit, Endpoints);
+  return {
+    ...api,
+    rest: api
+  };
+}
+legacyRestEndpointMethods.VERSION = VERSION;
+
+exports.legacyRestEndpointMethods = legacyRestEndpointMethods;
+exports.restEndpointMethods = restEndpointMethods;
+//# sourceMappingURL=index.js.map
+
+
+/***/ }),
+
+/***/ 6239:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var deprecation = __nccwpck_require__(8932);
+var once = _interopDefault(__nccwpck_require__(1223));
+
+const logOnceCode = once(deprecation => console.warn(deprecation));
+const logOnceHeaders = once(deprecation => console.warn(deprecation));
+/**
+ * Error with extra properties to help with debugging
+ */
+class RequestError extends Error {
+  constructor(message, statusCode, options) {
+    super(message);
+    // Maintains proper stack trace (only available on V8)
+    /* istanbul ignore next */
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, this.constructor);
+    }
+    this.name = "HttpError";
+    this.status = statusCode;
+    let headers;
+    if ("headers" in options && typeof options.headers !== "undefined") {
+      headers = options.headers;
+    }
+    if ("response" in options) {
+      this.response = options.response;
+      headers = options.response.headers;
+    }
+    // redact request credentials without mutating original request options
+    const requestCopy = Object.assign({}, options.request);
+    if (options.request.headers.authorization) {
+      requestCopy.headers = Object.assign({}, options.request.headers, {
+        authorization: options.request.headers.authorization.replace(/ .*$/, " [REDACTED]")
+      });
+    }
+    requestCopy.url = requestCopy.url
+    // client_id & client_secret can be passed as URL query parameters to increase rate limit
+    // see https://developer.github.com/v3/#increasing-the-unauthenticated-rate-limit-for-oauth-applications
+    .replace(/\bclient_secret=\w+/g, "client_secret=[REDACTED]")
+    // OAuth tokens can be passed as URL query parameters, although it is not recommended
+    // see https://developer.github.com/v3/#oauth2-token-sent-in-a-header
+    .replace(/\baccess_token=\w+/g, "access_token=[REDACTED]");
+    this.request = requestCopy;
+    // deprecations
+    Object.defineProperty(this, "code", {
+      get() {
+        logOnceCode(new deprecation.Deprecation("[@octokit/request-error] `error.code` is deprecated, use `error.status`."));
+        return statusCode;
+      }
+    });
+    Object.defineProperty(this, "headers", {
+      get() {
+        logOnceHeaders(new deprecation.Deprecation("[@octokit/request-error] `error.headers` is deprecated, use `error.response.headers`."));
+        return headers || {};
+      }
+    });
+  }
+}
+
+exports.RequestError = RequestError;
+//# sourceMappingURL=index.js.map
+
+
+/***/ }),
+
+/***/ 6206:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// pkg/dist-src/index.js
+var dist_src_exports = {};
+__export(dist_src_exports, {
+  request: () => request
+});
+module.exports = __toCommonJS(dist_src_exports);
+var import_endpoint = __nccwpck_require__(6065);
+var import_universal_user_agent = __nccwpck_require__(5030);
+
+// pkg/dist-src/version.js
+var VERSION = "6.2.5";
+
+// pkg/dist-src/fetch-wrapper.js
+var import_is_plain_object = __nccwpck_require__(3287);
+var import_node_fetch = __toESM(__nccwpck_require__(467));
+var import_request_error = __nccwpck_require__(6239);
+
+// pkg/dist-src/get-buffer-response.js
+function getBufferResponse(response) {
+  return response.arrayBuffer();
+}
+
+// pkg/dist-src/fetch-wrapper.js
+function fetchWrapper(requestOptions) {
+  const log = requestOptions.request && requestOptions.request.log ? requestOptions.request.log : console;
+  if ((0, import_is_plain_object.isPlainObject)(requestOptions.body) || Array.isArray(requestOptions.body)) {
+    requestOptions.body = JSON.stringify(requestOptions.body);
+  }
+  let headers = {};
+  let status;
+  let url;
+  const fetch = requestOptions.request && requestOptions.request.fetch || globalThis.fetch || /* istanbul ignore next */
+  import_node_fetch.default;
+  return fetch(
+    requestOptions.url,
+    Object.assign(
+      {
+        method: requestOptions.method,
+        body: requestOptions.body,
+        headers: requestOptions.headers,
+        redirect: requestOptions.redirect,
+        // duplex must be set if request.body is ReadableStream or Async Iterables.
+        // See https://fetch.spec.whatwg.org/#dom-requestinit-duplex.
+        ...requestOptions.body && { duplex: "half" }
+      },
+      // `requestOptions.request.agent` type is incompatible
+      // see https://github.com/octokit/types.ts/pull/264
+      requestOptions.request
+    )
+  ).then(async (response) => {
+    url = response.url;
+    status = response.status;
+    for (const keyAndValue of response.headers) {
+      headers[keyAndValue[0]] = keyAndValue[1];
+    }
+    if ("deprecation" in headers) {
+      const matches = headers.link && headers.link.match(/<([^>]+)>; rel="deprecation"/);
+      const deprecationLink = matches && matches.pop();
+      log.warn(
+        `[@octokit/request] "${requestOptions.method} ${requestOptions.url}" is deprecated. It is scheduled to be removed on ${headers.sunset}${deprecationLink ? `. See ${deprecationLink}` : ""}`
+      );
+    }
+    if (status === 204 || status === 205) {
+      return;
+    }
+    if (requestOptions.method === "HEAD") {
+      if (status < 400) {
+        return;
+      }
+      throw new import_request_error.RequestError(response.statusText, status, {
+        response: {
+          url,
+          status,
+          headers,
+          data: void 0
+        },
+        request: requestOptions
+      });
+    }
+    if (status === 304) {
+      throw new import_request_error.RequestError("Not modified", status, {
+        response: {
+          url,
+          status,
+          headers,
+          data: await getResponseData(response)
+        },
+        request: requestOptions
+      });
+    }
+    if (status >= 400) {
+      const data = await getResponseData(response);
+      const error = new import_request_error.RequestError(toErrorMessage(data), status, {
+        response: {
+          url,
+          status,
+          headers,
+          data
+        },
+        request: requestOptions
+      });
+      throw error;
+    }
+    return getResponseData(response);
+  }).then((data) => {
+    return {
+      status,
+      url,
+      headers,
+      data
+    };
+  }).catch((error) => {
+    if (error instanceof import_request_error.RequestError)
+      throw error;
+    else if (error.name === "AbortError")
+      throw error;
+    throw new import_request_error.RequestError(error.message, 500, {
+      request: requestOptions
+    });
+  });
+}
+async function getResponseData(response) {
+  const contentType = response.headers.get("content-type");
+  if (/application\/json/.test(contentType)) {
+    return response.json();
+  }
+  if (!contentType || /^text\/|charset=utf-8$/.test(contentType)) {
+    return response.text();
+  }
+  return getBufferResponse(response);
+}
+function toErrorMessage(data) {
+  if (typeof data === "string")
+    return data;
+  if ("message" in data) {
+    if (Array.isArray(data.errors)) {
+      return `${data.message}: ${data.errors.map(JSON.stringify).join(", ")}`;
+    }
+    return data.message;
+  }
+  return `Unknown error: ${JSON.stringify(data)}`;
+}
+
+// pkg/dist-src/with-defaults.js
+function withDefaults(oldEndpoint, newDefaults) {
+  const endpoint2 = oldEndpoint.defaults(newDefaults);
+  const newApi = function(route, parameters) {
+    const endpointOptions = endpoint2.merge(route, parameters);
+    if (!endpointOptions.request || !endpointOptions.request.hook) {
+      return fetchWrapper(endpoint2.parse(endpointOptions));
+    }
+    const request2 = (route2, parameters2) => {
+      return fetchWrapper(
+        endpoint2.parse(endpoint2.merge(route2, parameters2))
+      );
+    };
+    Object.assign(request2, {
+      endpoint: endpoint2,
+      defaults: withDefaults.bind(null, endpoint2)
+    });
+    return endpointOptions.request.hook(request2, endpointOptions);
+  };
+  return Object.assign(newApi, {
+    endpoint: endpoint2,
+    defaults: withDefaults.bind(null, endpoint2)
+  });
+}
+
+// pkg/dist-src/index.js
+var request = withDefaults(import_endpoint.endpoint, {
+  headers: {
+    "user-agent": `octokit-request.js/${VERSION} ${(0, import_universal_user_agent.getUserAgent)()}`
+  }
+});
+// Annotate the CommonJS export names for ESM import in node:
+0 && (0);
 
 
 /***/ }),
@@ -49179,6 +54004,2035 @@ exports.Deprecation = Deprecation;
 
 /***/ }),
 
+/***/ 6863:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+module.exports = realpath
+realpath.realpath = realpath
+realpath.sync = realpathSync
+realpath.realpathSync = realpathSync
+realpath.monkeypatch = monkeypatch
+realpath.unmonkeypatch = unmonkeypatch
+
+var fs = __nccwpck_require__(7147)
+var origRealpath = fs.realpath
+var origRealpathSync = fs.realpathSync
+
+var version = process.version
+var ok = /^v[0-5]\./.test(version)
+var old = __nccwpck_require__(1734)
+
+function newError (er) {
+  return er && er.syscall === 'realpath' && (
+    er.code === 'ELOOP' ||
+    er.code === 'ENOMEM' ||
+    er.code === 'ENAMETOOLONG'
+  )
+}
+
+function realpath (p, cache, cb) {
+  if (ok) {
+    return origRealpath(p, cache, cb)
+  }
+
+  if (typeof cache === 'function') {
+    cb = cache
+    cache = null
+  }
+  origRealpath(p, cache, function (er, result) {
+    if (newError(er)) {
+      old.realpath(p, cache, cb)
+    } else {
+      cb(er, result)
+    }
+  })
+}
+
+function realpathSync (p, cache) {
+  if (ok) {
+    return origRealpathSync(p, cache)
+  }
+
+  try {
+    return origRealpathSync(p, cache)
+  } catch (er) {
+    if (newError(er)) {
+      return old.realpathSync(p, cache)
+    } else {
+      throw er
+    }
+  }
+}
+
+function monkeypatch () {
+  fs.realpath = realpath
+  fs.realpathSync = realpathSync
+}
+
+function unmonkeypatch () {
+  fs.realpath = origRealpath
+  fs.realpathSync = origRealpathSync
+}
+
+
+/***/ }),
+
+/***/ 1734:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+var pathModule = __nccwpck_require__(1017);
+var isWindows = process.platform === 'win32';
+var fs = __nccwpck_require__(7147);
+
+// JavaScript implementation of realpath, ported from node pre-v6
+
+var DEBUG = process.env.NODE_DEBUG && /fs/.test(process.env.NODE_DEBUG);
+
+function rethrow() {
+  // Only enable in debug mode. A backtrace uses ~1000 bytes of heap space and
+  // is fairly slow to generate.
+  var callback;
+  if (DEBUG) {
+    var backtrace = new Error;
+    callback = debugCallback;
+  } else
+    callback = missingCallback;
+
+  return callback;
+
+  function debugCallback(err) {
+    if (err) {
+      backtrace.message = err.message;
+      err = backtrace;
+      missingCallback(err);
+    }
+  }
+
+  function missingCallback(err) {
+    if (err) {
+      if (process.throwDeprecation)
+        throw err;  // Forgot a callback but don't know where? Use NODE_DEBUG=fs
+      else if (!process.noDeprecation) {
+        var msg = 'fs: missing callback ' + (err.stack || err.message);
+        if (process.traceDeprecation)
+          console.trace(msg);
+        else
+          console.error(msg);
+      }
+    }
+  }
+}
+
+function maybeCallback(cb) {
+  return typeof cb === 'function' ? cb : rethrow();
+}
+
+var normalize = pathModule.normalize;
+
+// Regexp that finds the next partion of a (partial) path
+// result is [base_with_slash, base], e.g. ['somedir/', 'somedir']
+if (isWindows) {
+  var nextPartRe = /(.*?)(?:[\/\\]+|$)/g;
+} else {
+  var nextPartRe = /(.*?)(?:[\/]+|$)/g;
+}
+
+// Regex to find the device root, including trailing slash. E.g. 'c:\\'.
+if (isWindows) {
+  var splitRootRe = /^(?:[a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/][^\\\/]+)?[\\\/]*/;
+} else {
+  var splitRootRe = /^[\/]*/;
+}
+
+exports.realpathSync = function realpathSync(p, cache) {
+  // make p is absolute
+  p = pathModule.resolve(p);
+
+  if (cache && Object.prototype.hasOwnProperty.call(cache, p)) {
+    return cache[p];
+  }
+
+  var original = p,
+      seenLinks = {},
+      knownHard = {};
+
+  // current character position in p
+  var pos;
+  // the partial path so far, including a trailing slash if any
+  var current;
+  // the partial path without a trailing slash (except when pointing at a root)
+  var base;
+  // the partial path scanned in the previous round, with slash
+  var previous;
+
+  start();
+
+  function start() {
+    // Skip over roots
+    var m = splitRootRe.exec(p);
+    pos = m[0].length;
+    current = m[0];
+    base = m[0];
+    previous = '';
+
+    // On windows, check that the root exists. On unix there is no need.
+    if (isWindows && !knownHard[base]) {
+      fs.lstatSync(base);
+      knownHard[base] = true;
+    }
+  }
+
+  // walk down the path, swapping out linked pathparts for their real
+  // values
+  // NB: p.length changes.
+  while (pos < p.length) {
+    // find the next part
+    nextPartRe.lastIndex = pos;
+    var result = nextPartRe.exec(p);
+    previous = current;
+    current += result[0];
+    base = previous + result[1];
+    pos = nextPartRe.lastIndex;
+
+    // continue if not a symlink
+    if (knownHard[base] || (cache && cache[base] === base)) {
+      continue;
+    }
+
+    var resolvedLink;
+    if (cache && Object.prototype.hasOwnProperty.call(cache, base)) {
+      // some known symbolic link.  no need to stat again.
+      resolvedLink = cache[base];
+    } else {
+      var stat = fs.lstatSync(base);
+      if (!stat.isSymbolicLink()) {
+        knownHard[base] = true;
+        if (cache) cache[base] = base;
+        continue;
+      }
+
+      // read the link if it wasn't read before
+      // dev/ino always return 0 on windows, so skip the check.
+      var linkTarget = null;
+      if (!isWindows) {
+        var id = stat.dev.toString(32) + ':' + stat.ino.toString(32);
+        if (seenLinks.hasOwnProperty(id)) {
+          linkTarget = seenLinks[id];
+        }
+      }
+      if (linkTarget === null) {
+        fs.statSync(base);
+        linkTarget = fs.readlinkSync(base);
+      }
+      resolvedLink = pathModule.resolve(previous, linkTarget);
+      // track this, if given a cache.
+      if (cache) cache[base] = resolvedLink;
+      if (!isWindows) seenLinks[id] = linkTarget;
+    }
+
+    // resolve the link, then start over
+    p = pathModule.resolve(resolvedLink, p.slice(pos));
+    start();
+  }
+
+  if (cache) cache[original] = p;
+
+  return p;
+};
+
+
+exports.realpath = function realpath(p, cache, cb) {
+  if (typeof cb !== 'function') {
+    cb = maybeCallback(cache);
+    cache = null;
+  }
+
+  // make p is absolute
+  p = pathModule.resolve(p);
+
+  if (cache && Object.prototype.hasOwnProperty.call(cache, p)) {
+    return process.nextTick(cb.bind(null, null, cache[p]));
+  }
+
+  var original = p,
+      seenLinks = {},
+      knownHard = {};
+
+  // current character position in p
+  var pos;
+  // the partial path so far, including a trailing slash if any
+  var current;
+  // the partial path without a trailing slash (except when pointing at a root)
+  var base;
+  // the partial path scanned in the previous round, with slash
+  var previous;
+
+  start();
+
+  function start() {
+    // Skip over roots
+    var m = splitRootRe.exec(p);
+    pos = m[0].length;
+    current = m[0];
+    base = m[0];
+    previous = '';
+
+    // On windows, check that the root exists. On unix there is no need.
+    if (isWindows && !knownHard[base]) {
+      fs.lstat(base, function(err) {
+        if (err) return cb(err);
+        knownHard[base] = true;
+        LOOP();
+      });
+    } else {
+      process.nextTick(LOOP);
+    }
+  }
+
+  // walk down the path, swapping out linked pathparts for their real
+  // values
+  function LOOP() {
+    // stop if scanned past end of path
+    if (pos >= p.length) {
+      if (cache) cache[original] = p;
+      return cb(null, p);
+    }
+
+    // find the next part
+    nextPartRe.lastIndex = pos;
+    var result = nextPartRe.exec(p);
+    previous = current;
+    current += result[0];
+    base = previous + result[1];
+    pos = nextPartRe.lastIndex;
+
+    // continue if not a symlink
+    if (knownHard[base] || (cache && cache[base] === base)) {
+      return process.nextTick(LOOP);
+    }
+
+    if (cache && Object.prototype.hasOwnProperty.call(cache, base)) {
+      // known symbolic link.  no need to stat again.
+      return gotResolvedLink(cache[base]);
+    }
+
+    return fs.lstat(base, gotStat);
+  }
+
+  function gotStat(err, stat) {
+    if (err) return cb(err);
+
+    // if not a symlink, skip to the next path part
+    if (!stat.isSymbolicLink()) {
+      knownHard[base] = true;
+      if (cache) cache[base] = base;
+      return process.nextTick(LOOP);
+    }
+
+    // stat & read the link if not read before
+    // call gotTarget as soon as the link target is known
+    // dev/ino always return 0 on windows, so skip the check.
+    if (!isWindows) {
+      var id = stat.dev.toString(32) + ':' + stat.ino.toString(32);
+      if (seenLinks.hasOwnProperty(id)) {
+        return gotTarget(null, seenLinks[id], base);
+      }
+    }
+    fs.stat(base, function(err) {
+      if (err) return cb(err);
+
+      fs.readlink(base, function(err, target) {
+        if (!isWindows) seenLinks[id] = target;
+        gotTarget(err, target);
+      });
+    });
+  }
+
+  function gotTarget(err, target, base) {
+    if (err) return cb(err);
+
+    var resolvedLink = pathModule.resolve(previous, target);
+    if (cache) cache[base] = resolvedLink;
+    gotResolvedLink(resolvedLink);
+  }
+
+  function gotResolvedLink(resolvedLink) {
+    // resolve the link, then start over
+    p = pathModule.resolve(resolvedLink, p.slice(pos));
+    start();
+  }
+};
+
+
+/***/ }),
+
+/***/ 7625:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+exports.setopts = setopts
+exports.ownProp = ownProp
+exports.makeAbs = makeAbs
+exports.finish = finish
+exports.mark = mark
+exports.isIgnored = isIgnored
+exports.childrenIgnored = childrenIgnored
+
+function ownProp (obj, field) {
+  return Object.prototype.hasOwnProperty.call(obj, field)
+}
+
+var fs = __nccwpck_require__(7147)
+var path = __nccwpck_require__(1017)
+var minimatch = __nccwpck_require__(3973)
+var isAbsolute = __nccwpck_require__(8714)
+var Minimatch = minimatch.Minimatch
+
+function alphasort (a, b) {
+  return a.localeCompare(b, 'en')
+}
+
+function setupIgnores (self, options) {
+  self.ignore = options.ignore || []
+
+  if (!Array.isArray(self.ignore))
+    self.ignore = [self.ignore]
+
+  if (self.ignore.length) {
+    self.ignore = self.ignore.map(ignoreMap)
+  }
+}
+
+// ignore patterns are always in dot:true mode.
+function ignoreMap (pattern) {
+  var gmatcher = null
+  if (pattern.slice(-3) === '/**') {
+    var gpattern = pattern.replace(/(\/\*\*)+$/, '')
+    gmatcher = new Minimatch(gpattern, { dot: true })
+  }
+
+  return {
+    matcher: new Minimatch(pattern, { dot: true }),
+    gmatcher: gmatcher
+  }
+}
+
+function setopts (self, pattern, options) {
+  if (!options)
+    options = {}
+
+  // base-matching: just use globstar for that.
+  if (options.matchBase && -1 === pattern.indexOf("/")) {
+    if (options.noglobstar) {
+      throw new Error("base matching requires globstar")
+    }
+    pattern = "**/" + pattern
+  }
+
+  self.silent = !!options.silent
+  self.pattern = pattern
+  self.strict = options.strict !== false
+  self.realpath = !!options.realpath
+  self.realpathCache = options.realpathCache || Object.create(null)
+  self.follow = !!options.follow
+  self.dot = !!options.dot
+  self.mark = !!options.mark
+  self.nodir = !!options.nodir
+  if (self.nodir)
+    self.mark = true
+  self.sync = !!options.sync
+  self.nounique = !!options.nounique
+  self.nonull = !!options.nonull
+  self.nosort = !!options.nosort
+  self.nocase = !!options.nocase
+  self.stat = !!options.stat
+  self.noprocess = !!options.noprocess
+  self.absolute = !!options.absolute
+  self.fs = options.fs || fs
+
+  self.maxLength = options.maxLength || Infinity
+  self.cache = options.cache || Object.create(null)
+  self.statCache = options.statCache || Object.create(null)
+  self.symlinks = options.symlinks || Object.create(null)
+
+  setupIgnores(self, options)
+
+  self.changedCwd = false
+  var cwd = process.cwd()
+  if (!ownProp(options, "cwd"))
+    self.cwd = cwd
+  else {
+    self.cwd = path.resolve(options.cwd)
+    self.changedCwd = self.cwd !== cwd
+  }
+
+  self.root = options.root || path.resolve(self.cwd, "/")
+  self.root = path.resolve(self.root)
+  if (process.platform === "win32")
+    self.root = self.root.replace(/\\/g, "/")
+
+  // TODO: is an absolute `cwd` supposed to be resolved against `root`?
+  // e.g. { cwd: '/test', root: __dirname } === path.join(__dirname, '/test')
+  self.cwdAbs = isAbsolute(self.cwd) ? self.cwd : makeAbs(self, self.cwd)
+  if (process.platform === "win32")
+    self.cwdAbs = self.cwdAbs.replace(/\\/g, "/")
+  self.nomount = !!options.nomount
+
+  // disable comments and negation in Minimatch.
+  // Note that they are not supported in Glob itself anyway.
+  options.nonegate = true
+  options.nocomment = true
+  // always treat \ in patterns as escapes, not path separators
+  options.allowWindowsEscape = false
+
+  self.minimatch = new Minimatch(pattern, options)
+  self.options = self.minimatch.options
+}
+
+function finish (self) {
+  var nou = self.nounique
+  var all = nou ? [] : Object.create(null)
+
+  for (var i = 0, l = self.matches.length; i < l; i ++) {
+    var matches = self.matches[i]
+    if (!matches || Object.keys(matches).length === 0) {
+      if (self.nonull) {
+        // do like the shell, and spit out the literal glob
+        var literal = self.minimatch.globSet[i]
+        if (nou)
+          all.push(literal)
+        else
+          all[literal] = true
+      }
+    } else {
+      // had matches
+      var m = Object.keys(matches)
+      if (nou)
+        all.push.apply(all, m)
+      else
+        m.forEach(function (m) {
+          all[m] = true
+        })
+    }
+  }
+
+  if (!nou)
+    all = Object.keys(all)
+
+  if (!self.nosort)
+    all = all.sort(alphasort)
+
+  // at *some* point we statted all of these
+  if (self.mark) {
+    for (var i = 0; i < all.length; i++) {
+      all[i] = self._mark(all[i])
+    }
+    if (self.nodir) {
+      all = all.filter(function (e) {
+        var notDir = !(/\/$/.test(e))
+        var c = self.cache[e] || self.cache[makeAbs(self, e)]
+        if (notDir && c)
+          notDir = c !== 'DIR' && !Array.isArray(c)
+        return notDir
+      })
+    }
+  }
+
+  if (self.ignore.length)
+    all = all.filter(function(m) {
+      return !isIgnored(self, m)
+    })
+
+  self.found = all
+}
+
+function mark (self, p) {
+  var abs = makeAbs(self, p)
+  var c = self.cache[abs]
+  var m = p
+  if (c) {
+    var isDir = c === 'DIR' || Array.isArray(c)
+    var slash = p.slice(-1) === '/'
+
+    if (isDir && !slash)
+      m += '/'
+    else if (!isDir && slash)
+      m = m.slice(0, -1)
+
+    if (m !== p) {
+      var mabs = makeAbs(self, m)
+      self.statCache[mabs] = self.statCache[abs]
+      self.cache[mabs] = self.cache[abs]
+    }
+  }
+
+  return m
+}
+
+// lotta situps...
+function makeAbs (self, f) {
+  var abs = f
+  if (f.charAt(0) === '/') {
+    abs = path.join(self.root, f)
+  } else if (isAbsolute(f) || f === '') {
+    abs = f
+  } else if (self.changedCwd) {
+    abs = path.resolve(self.cwd, f)
+  } else {
+    abs = path.resolve(f)
+  }
+
+  if (process.platform === 'win32')
+    abs = abs.replace(/\\/g, '/')
+
+  return abs
+}
+
+
+// Return true, if pattern ends with globstar '**', for the accompanying parent directory.
+// Ex:- If node_modules/** is the pattern, add 'node_modules' to ignore list along with it's contents
+function isIgnored (self, path) {
+  if (!self.ignore.length)
+    return false
+
+  return self.ignore.some(function(item) {
+    return item.matcher.match(path) || !!(item.gmatcher && item.gmatcher.match(path))
+  })
+}
+
+function childrenIgnored (self, path) {
+  if (!self.ignore.length)
+    return false
+
+  return self.ignore.some(function(item) {
+    return !!(item.gmatcher && item.gmatcher.match(path))
+  })
+}
+
+
+/***/ }),
+
+/***/ 1957:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+// Approach:
+//
+// 1. Get the minimatch set
+// 2. For each pattern in the set, PROCESS(pattern, false)
+// 3. Store matches per-set, then uniq them
+//
+// PROCESS(pattern, inGlobStar)
+// Get the first [n] items from pattern that are all strings
+// Join these together.  This is PREFIX.
+//   If there is no more remaining, then stat(PREFIX) and
+//   add to matches if it succeeds.  END.
+//
+// If inGlobStar and PREFIX is symlink and points to dir
+//   set ENTRIES = []
+// else readdir(PREFIX) as ENTRIES
+//   If fail, END
+//
+// with ENTRIES
+//   If pattern[n] is GLOBSTAR
+//     // handle the case where the globstar match is empty
+//     // by pruning it out, and testing the resulting pattern
+//     PROCESS(pattern[0..n] + pattern[n+1 .. $], false)
+//     // handle other cases.
+//     for ENTRY in ENTRIES (not dotfiles)
+//       // attach globstar + tail onto the entry
+//       // Mark that this entry is a globstar match
+//       PROCESS(pattern[0..n] + ENTRY + pattern[n .. $], true)
+//
+//   else // not globstar
+//     for ENTRY in ENTRIES (not dotfiles, unless pattern[n] is dot)
+//       Test ENTRY against pattern[n]
+//       If fails, continue
+//       If passes, PROCESS(pattern[0..n] + item + pattern[n+1 .. $])
+//
+// Caveat:
+//   Cache all stats and readdirs results to minimize syscall.  Since all
+//   we ever care about is existence and directory-ness, we can just keep
+//   `true` for files, and [children,...] for directories, or `false` for
+//   things that don't exist.
+
+module.exports = glob
+
+var rp = __nccwpck_require__(6863)
+var minimatch = __nccwpck_require__(3973)
+var Minimatch = minimatch.Minimatch
+var inherits = __nccwpck_require__(4124)
+var EE = (__nccwpck_require__(2361).EventEmitter)
+var path = __nccwpck_require__(1017)
+var assert = __nccwpck_require__(9491)
+var isAbsolute = __nccwpck_require__(8714)
+var globSync = __nccwpck_require__(9010)
+var common = __nccwpck_require__(7625)
+var setopts = common.setopts
+var ownProp = common.ownProp
+var inflight = __nccwpck_require__(2492)
+var util = __nccwpck_require__(3837)
+var childrenIgnored = common.childrenIgnored
+var isIgnored = common.isIgnored
+
+var once = __nccwpck_require__(1223)
+
+function glob (pattern, options, cb) {
+  if (typeof options === 'function') cb = options, options = {}
+  if (!options) options = {}
+
+  if (options.sync) {
+    if (cb)
+      throw new TypeError('callback provided to sync glob')
+    return globSync(pattern, options)
+  }
+
+  return new Glob(pattern, options, cb)
+}
+
+glob.sync = globSync
+var GlobSync = glob.GlobSync = globSync.GlobSync
+
+// old api surface
+glob.glob = glob
+
+function extend (origin, add) {
+  if (add === null || typeof add !== 'object') {
+    return origin
+  }
+
+  var keys = Object.keys(add)
+  var i = keys.length
+  while (i--) {
+    origin[keys[i]] = add[keys[i]]
+  }
+  return origin
+}
+
+glob.hasMagic = function (pattern, options_) {
+  var options = extend({}, options_)
+  options.noprocess = true
+
+  var g = new Glob(pattern, options)
+  var set = g.minimatch.set
+
+  if (!pattern)
+    return false
+
+  if (set.length > 1)
+    return true
+
+  for (var j = 0; j < set[0].length; j++) {
+    if (typeof set[0][j] !== 'string')
+      return true
+  }
+
+  return false
+}
+
+glob.Glob = Glob
+inherits(Glob, EE)
+function Glob (pattern, options, cb) {
+  if (typeof options === 'function') {
+    cb = options
+    options = null
+  }
+
+  if (options && options.sync) {
+    if (cb)
+      throw new TypeError('callback provided to sync glob')
+    return new GlobSync(pattern, options)
+  }
+
+  if (!(this instanceof Glob))
+    return new Glob(pattern, options, cb)
+
+  setopts(this, pattern, options)
+  this._didRealPath = false
+
+  // process each pattern in the minimatch set
+  var n = this.minimatch.set.length
+
+  // The matches are stored as {<filename>: true,...} so that
+  // duplicates are automagically pruned.
+  // Later, we do an Object.keys() on these.
+  // Keep them as a list so we can fill in when nonull is set.
+  this.matches = new Array(n)
+
+  if (typeof cb === 'function') {
+    cb = once(cb)
+    this.on('error', cb)
+    this.on('end', function (matches) {
+      cb(null, matches)
+    })
+  }
+
+  var self = this
+  this._processing = 0
+
+  this._emitQueue = []
+  this._processQueue = []
+  this.paused = false
+
+  if (this.noprocess)
+    return this
+
+  if (n === 0)
+    return done()
+
+  var sync = true
+  for (var i = 0; i < n; i ++) {
+    this._process(this.minimatch.set[i], i, false, done)
+  }
+  sync = false
+
+  function done () {
+    --self._processing
+    if (self._processing <= 0) {
+      if (sync) {
+        process.nextTick(function () {
+          self._finish()
+        })
+      } else {
+        self._finish()
+      }
+    }
+  }
+}
+
+Glob.prototype._finish = function () {
+  assert(this instanceof Glob)
+  if (this.aborted)
+    return
+
+  if (this.realpath && !this._didRealpath)
+    return this._realpath()
+
+  common.finish(this)
+  this.emit('end', this.found)
+}
+
+Glob.prototype._realpath = function () {
+  if (this._didRealpath)
+    return
+
+  this._didRealpath = true
+
+  var n = this.matches.length
+  if (n === 0)
+    return this._finish()
+
+  var self = this
+  for (var i = 0; i < this.matches.length; i++)
+    this._realpathSet(i, next)
+
+  function next () {
+    if (--n === 0)
+      self._finish()
+  }
+}
+
+Glob.prototype._realpathSet = function (index, cb) {
+  var matchset = this.matches[index]
+  if (!matchset)
+    return cb()
+
+  var found = Object.keys(matchset)
+  var self = this
+  var n = found.length
+
+  if (n === 0)
+    return cb()
+
+  var set = this.matches[index] = Object.create(null)
+  found.forEach(function (p, i) {
+    // If there's a problem with the stat, then it means that
+    // one or more of the links in the realpath couldn't be
+    // resolved.  just return the abs value in that case.
+    p = self._makeAbs(p)
+    rp.realpath(p, self.realpathCache, function (er, real) {
+      if (!er)
+        set[real] = true
+      else if (er.syscall === 'stat')
+        set[p] = true
+      else
+        self.emit('error', er) // srsly wtf right here
+
+      if (--n === 0) {
+        self.matches[index] = set
+        cb()
+      }
+    })
+  })
+}
+
+Glob.prototype._mark = function (p) {
+  return common.mark(this, p)
+}
+
+Glob.prototype._makeAbs = function (f) {
+  return common.makeAbs(this, f)
+}
+
+Glob.prototype.abort = function () {
+  this.aborted = true
+  this.emit('abort')
+}
+
+Glob.prototype.pause = function () {
+  if (!this.paused) {
+    this.paused = true
+    this.emit('pause')
+  }
+}
+
+Glob.prototype.resume = function () {
+  if (this.paused) {
+    this.emit('resume')
+    this.paused = false
+    if (this._emitQueue.length) {
+      var eq = this._emitQueue.slice(0)
+      this._emitQueue.length = 0
+      for (var i = 0; i < eq.length; i ++) {
+        var e = eq[i]
+        this._emitMatch(e[0], e[1])
+      }
+    }
+    if (this._processQueue.length) {
+      var pq = this._processQueue.slice(0)
+      this._processQueue.length = 0
+      for (var i = 0; i < pq.length; i ++) {
+        var p = pq[i]
+        this._processing--
+        this._process(p[0], p[1], p[2], p[3])
+      }
+    }
+  }
+}
+
+Glob.prototype._process = function (pattern, index, inGlobStar, cb) {
+  assert(this instanceof Glob)
+  assert(typeof cb === 'function')
+
+  if (this.aborted)
+    return
+
+  this._processing++
+  if (this.paused) {
+    this._processQueue.push([pattern, index, inGlobStar, cb])
+    return
+  }
+
+  //console.error('PROCESS %d', this._processing, pattern)
+
+  // Get the first [n] parts of pattern that are all strings.
+  var n = 0
+  while (typeof pattern[n] === 'string') {
+    n ++
+  }
+  // now n is the index of the first one that is *not* a string.
+
+  // see if there's anything else
+  var prefix
+  switch (n) {
+    // if not, then this is rather simple
+    case pattern.length:
+      this._processSimple(pattern.join('/'), index, cb)
+      return
+
+    case 0:
+      // pattern *starts* with some non-trivial item.
+      // going to readdir(cwd), but not include the prefix in matches.
+      prefix = null
+      break
+
+    default:
+      // pattern has some string bits in the front.
+      // whatever it starts with, whether that's 'absolute' like /foo/bar,
+      // or 'relative' like '../baz'
+      prefix = pattern.slice(0, n).join('/')
+      break
+  }
+
+  var remain = pattern.slice(n)
+
+  // get the list of entries.
+  var read
+  if (prefix === null)
+    read = '.'
+  else if (isAbsolute(prefix) ||
+      isAbsolute(pattern.map(function (p) {
+        return typeof p === 'string' ? p : '[*]'
+      }).join('/'))) {
+    if (!prefix || !isAbsolute(prefix))
+      prefix = '/' + prefix
+    read = prefix
+  } else
+    read = prefix
+
+  var abs = this._makeAbs(read)
+
+  //if ignored, skip _processing
+  if (childrenIgnored(this, read))
+    return cb()
+
+  var isGlobStar = remain[0] === minimatch.GLOBSTAR
+  if (isGlobStar)
+    this._processGlobStar(prefix, read, abs, remain, index, inGlobStar, cb)
+  else
+    this._processReaddir(prefix, read, abs, remain, index, inGlobStar, cb)
+}
+
+Glob.prototype._processReaddir = function (prefix, read, abs, remain, index, inGlobStar, cb) {
+  var self = this
+  this._readdir(abs, inGlobStar, function (er, entries) {
+    return self._processReaddir2(prefix, read, abs, remain, index, inGlobStar, entries, cb)
+  })
+}
+
+Glob.prototype._processReaddir2 = function (prefix, read, abs, remain, index, inGlobStar, entries, cb) {
+
+  // if the abs isn't a dir, then nothing can match!
+  if (!entries)
+    return cb()
+
+  // It will only match dot entries if it starts with a dot, or if
+  // dot is set.  Stuff like @(.foo|.bar) isn't allowed.
+  var pn = remain[0]
+  var negate = !!this.minimatch.negate
+  var rawGlob = pn._glob
+  var dotOk = this.dot || rawGlob.charAt(0) === '.'
+
+  var matchedEntries = []
+  for (var i = 0; i < entries.length; i++) {
+    var e = entries[i]
+    if (e.charAt(0) !== '.' || dotOk) {
+      var m
+      if (negate && !prefix) {
+        m = !e.match(pn)
+      } else {
+        m = e.match(pn)
+      }
+      if (m)
+        matchedEntries.push(e)
+    }
+  }
+
+  //console.error('prd2', prefix, entries, remain[0]._glob, matchedEntries)
+
+  var len = matchedEntries.length
+  // If there are no matched entries, then nothing matches.
+  if (len === 0)
+    return cb()
+
+  // if this is the last remaining pattern bit, then no need for
+  // an additional stat *unless* the user has specified mark or
+  // stat explicitly.  We know they exist, since readdir returned
+  // them.
+
+  if (remain.length === 1 && !this.mark && !this.stat) {
+    if (!this.matches[index])
+      this.matches[index] = Object.create(null)
+
+    for (var i = 0; i < len; i ++) {
+      var e = matchedEntries[i]
+      if (prefix) {
+        if (prefix !== '/')
+          e = prefix + '/' + e
+        else
+          e = prefix + e
+      }
+
+      if (e.charAt(0) === '/' && !this.nomount) {
+        e = path.join(this.root, e)
+      }
+      this._emitMatch(index, e)
+    }
+    // This was the last one, and no stats were needed
+    return cb()
+  }
+
+  // now test all matched entries as stand-ins for that part
+  // of the pattern.
+  remain.shift()
+  for (var i = 0; i < len; i ++) {
+    var e = matchedEntries[i]
+    var newPattern
+    if (prefix) {
+      if (prefix !== '/')
+        e = prefix + '/' + e
+      else
+        e = prefix + e
+    }
+    this._process([e].concat(remain), index, inGlobStar, cb)
+  }
+  cb()
+}
+
+Glob.prototype._emitMatch = function (index, e) {
+  if (this.aborted)
+    return
+
+  if (isIgnored(this, e))
+    return
+
+  if (this.paused) {
+    this._emitQueue.push([index, e])
+    return
+  }
+
+  var abs = isAbsolute(e) ? e : this._makeAbs(e)
+
+  if (this.mark)
+    e = this._mark(e)
+
+  if (this.absolute)
+    e = abs
+
+  if (this.matches[index][e])
+    return
+
+  if (this.nodir) {
+    var c = this.cache[abs]
+    if (c === 'DIR' || Array.isArray(c))
+      return
+  }
+
+  this.matches[index][e] = true
+
+  var st = this.statCache[abs]
+  if (st)
+    this.emit('stat', e, st)
+
+  this.emit('match', e)
+}
+
+Glob.prototype._readdirInGlobStar = function (abs, cb) {
+  if (this.aborted)
+    return
+
+  // follow all symlinked directories forever
+  // just proceed as if this is a non-globstar situation
+  if (this.follow)
+    return this._readdir(abs, false, cb)
+
+  var lstatkey = 'lstat\0' + abs
+  var self = this
+  var lstatcb = inflight(lstatkey, lstatcb_)
+
+  if (lstatcb)
+    self.fs.lstat(abs, lstatcb)
+
+  function lstatcb_ (er, lstat) {
+    if (er && er.code === 'ENOENT')
+      return cb()
+
+    var isSym = lstat && lstat.isSymbolicLink()
+    self.symlinks[abs] = isSym
+
+    // If it's not a symlink or a dir, then it's definitely a regular file.
+    // don't bother doing a readdir in that case.
+    if (!isSym && lstat && !lstat.isDirectory()) {
+      self.cache[abs] = 'FILE'
+      cb()
+    } else
+      self._readdir(abs, false, cb)
+  }
+}
+
+Glob.prototype._readdir = function (abs, inGlobStar, cb) {
+  if (this.aborted)
+    return
+
+  cb = inflight('readdir\0'+abs+'\0'+inGlobStar, cb)
+  if (!cb)
+    return
+
+  //console.error('RD %j %j', +inGlobStar, abs)
+  if (inGlobStar && !ownProp(this.symlinks, abs))
+    return this._readdirInGlobStar(abs, cb)
+
+  if (ownProp(this.cache, abs)) {
+    var c = this.cache[abs]
+    if (!c || c === 'FILE')
+      return cb()
+
+    if (Array.isArray(c))
+      return cb(null, c)
+  }
+
+  var self = this
+  self.fs.readdir(abs, readdirCb(this, abs, cb))
+}
+
+function readdirCb (self, abs, cb) {
+  return function (er, entries) {
+    if (er)
+      self._readdirError(abs, er, cb)
+    else
+      self._readdirEntries(abs, entries, cb)
+  }
+}
+
+Glob.prototype._readdirEntries = function (abs, entries, cb) {
+  if (this.aborted)
+    return
+
+  // if we haven't asked to stat everything, then just
+  // assume that everything in there exists, so we can avoid
+  // having to stat it a second time.
+  if (!this.mark && !this.stat) {
+    for (var i = 0; i < entries.length; i ++) {
+      var e = entries[i]
+      if (abs === '/')
+        e = abs + e
+      else
+        e = abs + '/' + e
+      this.cache[e] = true
+    }
+  }
+
+  this.cache[abs] = entries
+  return cb(null, entries)
+}
+
+Glob.prototype._readdirError = function (f, er, cb) {
+  if (this.aborted)
+    return
+
+  // handle errors, and cache the information
+  switch (er.code) {
+    case 'ENOTSUP': // https://github.com/isaacs/node-glob/issues/205
+    case 'ENOTDIR': // totally normal. means it *does* exist.
+      var abs = this._makeAbs(f)
+      this.cache[abs] = 'FILE'
+      if (abs === this.cwdAbs) {
+        var error = new Error(er.code + ' invalid cwd ' + this.cwd)
+        error.path = this.cwd
+        error.code = er.code
+        this.emit('error', error)
+        this.abort()
+      }
+      break
+
+    case 'ENOENT': // not terribly unusual
+    case 'ELOOP':
+    case 'ENAMETOOLONG':
+    case 'UNKNOWN':
+      this.cache[this._makeAbs(f)] = false
+      break
+
+    default: // some unusual error.  Treat as failure.
+      this.cache[this._makeAbs(f)] = false
+      if (this.strict) {
+        this.emit('error', er)
+        // If the error is handled, then we abort
+        // if not, we threw out of here
+        this.abort()
+      }
+      if (!this.silent)
+        console.error('glob error', er)
+      break
+  }
+
+  return cb()
+}
+
+Glob.prototype._processGlobStar = function (prefix, read, abs, remain, index, inGlobStar, cb) {
+  var self = this
+  this._readdir(abs, inGlobStar, function (er, entries) {
+    self._processGlobStar2(prefix, read, abs, remain, index, inGlobStar, entries, cb)
+  })
+}
+
+
+Glob.prototype._processGlobStar2 = function (prefix, read, abs, remain, index, inGlobStar, entries, cb) {
+  //console.error('pgs2', prefix, remain[0], entries)
+
+  // no entries means not a dir, so it can never have matches
+  // foo.txt/** doesn't match foo.txt
+  if (!entries)
+    return cb()
+
+  // test without the globstar, and with every child both below
+  // and replacing the globstar.
+  var remainWithoutGlobStar = remain.slice(1)
+  var gspref = prefix ? [ prefix ] : []
+  var noGlobStar = gspref.concat(remainWithoutGlobStar)
+
+  // the noGlobStar pattern exits the inGlobStar state
+  this._process(noGlobStar, index, false, cb)
+
+  var isSym = this.symlinks[abs]
+  var len = entries.length
+
+  // If it's a symlink, and we're in a globstar, then stop
+  if (isSym && inGlobStar)
+    return cb()
+
+  for (var i = 0; i < len; i++) {
+    var e = entries[i]
+    if (e.charAt(0) === '.' && !this.dot)
+      continue
+
+    // these two cases enter the inGlobStar state
+    var instead = gspref.concat(entries[i], remainWithoutGlobStar)
+    this._process(instead, index, true, cb)
+
+    var below = gspref.concat(entries[i], remain)
+    this._process(below, index, true, cb)
+  }
+
+  cb()
+}
+
+Glob.prototype._processSimple = function (prefix, index, cb) {
+  // XXX review this.  Shouldn't it be doing the mounting etc
+  // before doing stat?  kinda weird?
+  var self = this
+  this._stat(prefix, function (er, exists) {
+    self._processSimple2(prefix, index, er, exists, cb)
+  })
+}
+Glob.prototype._processSimple2 = function (prefix, index, er, exists, cb) {
+
+  //console.error('ps2', prefix, exists)
+
+  if (!this.matches[index])
+    this.matches[index] = Object.create(null)
+
+  // If it doesn't exist, then just mark the lack of results
+  if (!exists)
+    return cb()
+
+  if (prefix && isAbsolute(prefix) && !this.nomount) {
+    var trail = /[\/\\]$/.test(prefix)
+    if (prefix.charAt(0) === '/') {
+      prefix = path.join(this.root, prefix)
+    } else {
+      prefix = path.resolve(this.root, prefix)
+      if (trail)
+        prefix += '/'
+    }
+  }
+
+  if (process.platform === 'win32')
+    prefix = prefix.replace(/\\/g, '/')
+
+  // Mark this as a match
+  this._emitMatch(index, prefix)
+  cb()
+}
+
+// Returns either 'DIR', 'FILE', or false
+Glob.prototype._stat = function (f, cb) {
+  var abs = this._makeAbs(f)
+  var needDir = f.slice(-1) === '/'
+
+  if (f.length > this.maxLength)
+    return cb()
+
+  if (!this.stat && ownProp(this.cache, abs)) {
+    var c = this.cache[abs]
+
+    if (Array.isArray(c))
+      c = 'DIR'
+
+    // It exists, but maybe not how we need it
+    if (!needDir || c === 'DIR')
+      return cb(null, c)
+
+    if (needDir && c === 'FILE')
+      return cb()
+
+    // otherwise we have to stat, because maybe c=true
+    // if we know it exists, but not what it is.
+  }
+
+  var exists
+  var stat = this.statCache[abs]
+  if (stat !== undefined) {
+    if (stat === false)
+      return cb(null, stat)
+    else {
+      var type = stat.isDirectory() ? 'DIR' : 'FILE'
+      if (needDir && type === 'FILE')
+        return cb()
+      else
+        return cb(null, type, stat)
+    }
+  }
+
+  var self = this
+  var statcb = inflight('stat\0' + abs, lstatcb_)
+  if (statcb)
+    self.fs.lstat(abs, statcb)
+
+  function lstatcb_ (er, lstat) {
+    if (lstat && lstat.isSymbolicLink()) {
+      // If it's a symlink, then treat it as the target, unless
+      // the target does not exist, then treat it as a file.
+      return self.fs.stat(abs, function (er, stat) {
+        if (er)
+          self._stat2(f, abs, null, lstat, cb)
+        else
+          self._stat2(f, abs, er, stat, cb)
+      })
+    } else {
+      self._stat2(f, abs, er, lstat, cb)
+    }
+  }
+}
+
+Glob.prototype._stat2 = function (f, abs, er, stat, cb) {
+  if (er && (er.code === 'ENOENT' || er.code === 'ENOTDIR')) {
+    this.statCache[abs] = false
+    return cb()
+  }
+
+  var needDir = f.slice(-1) === '/'
+  this.statCache[abs] = stat
+
+  if (abs.slice(-1) === '/' && stat && !stat.isDirectory())
+    return cb(null, false, stat)
+
+  var c = true
+  if (stat)
+    c = stat.isDirectory() ? 'DIR' : 'FILE'
+  this.cache[abs] = this.cache[abs] || c
+
+  if (needDir && c === 'FILE')
+    return cb()
+
+  return cb(null, c, stat)
+}
+
+
+/***/ }),
+
+/***/ 9010:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+module.exports = globSync
+globSync.GlobSync = GlobSync
+
+var rp = __nccwpck_require__(6863)
+var minimatch = __nccwpck_require__(3973)
+var Minimatch = minimatch.Minimatch
+var Glob = (__nccwpck_require__(1957).Glob)
+var util = __nccwpck_require__(3837)
+var path = __nccwpck_require__(1017)
+var assert = __nccwpck_require__(9491)
+var isAbsolute = __nccwpck_require__(8714)
+var common = __nccwpck_require__(7625)
+var setopts = common.setopts
+var ownProp = common.ownProp
+var childrenIgnored = common.childrenIgnored
+var isIgnored = common.isIgnored
+
+function globSync (pattern, options) {
+  if (typeof options === 'function' || arguments.length === 3)
+    throw new TypeError('callback provided to sync glob\n'+
+                        'See: https://github.com/isaacs/node-glob/issues/167')
+
+  return new GlobSync(pattern, options).found
+}
+
+function GlobSync (pattern, options) {
+  if (!pattern)
+    throw new Error('must provide pattern')
+
+  if (typeof options === 'function' || arguments.length === 3)
+    throw new TypeError('callback provided to sync glob\n'+
+                        'See: https://github.com/isaacs/node-glob/issues/167')
+
+  if (!(this instanceof GlobSync))
+    return new GlobSync(pattern, options)
+
+  setopts(this, pattern, options)
+
+  if (this.noprocess)
+    return this
+
+  var n = this.minimatch.set.length
+  this.matches = new Array(n)
+  for (var i = 0; i < n; i ++) {
+    this._process(this.minimatch.set[i], i, false)
+  }
+  this._finish()
+}
+
+GlobSync.prototype._finish = function () {
+  assert.ok(this instanceof GlobSync)
+  if (this.realpath) {
+    var self = this
+    this.matches.forEach(function (matchset, index) {
+      var set = self.matches[index] = Object.create(null)
+      for (var p in matchset) {
+        try {
+          p = self._makeAbs(p)
+          var real = rp.realpathSync(p, self.realpathCache)
+          set[real] = true
+        } catch (er) {
+          if (er.syscall === 'stat')
+            set[self._makeAbs(p)] = true
+          else
+            throw er
+        }
+      }
+    })
+  }
+  common.finish(this)
+}
+
+
+GlobSync.prototype._process = function (pattern, index, inGlobStar) {
+  assert.ok(this instanceof GlobSync)
+
+  // Get the first [n] parts of pattern that are all strings.
+  var n = 0
+  while (typeof pattern[n] === 'string') {
+    n ++
+  }
+  // now n is the index of the first one that is *not* a string.
+
+  // See if there's anything else
+  var prefix
+  switch (n) {
+    // if not, then this is rather simple
+    case pattern.length:
+      this._processSimple(pattern.join('/'), index)
+      return
+
+    case 0:
+      // pattern *starts* with some non-trivial item.
+      // going to readdir(cwd), but not include the prefix in matches.
+      prefix = null
+      break
+
+    default:
+      // pattern has some string bits in the front.
+      // whatever it starts with, whether that's 'absolute' like /foo/bar,
+      // or 'relative' like '../baz'
+      prefix = pattern.slice(0, n).join('/')
+      break
+  }
+
+  var remain = pattern.slice(n)
+
+  // get the list of entries.
+  var read
+  if (prefix === null)
+    read = '.'
+  else if (isAbsolute(prefix) ||
+      isAbsolute(pattern.map(function (p) {
+        return typeof p === 'string' ? p : '[*]'
+      }).join('/'))) {
+    if (!prefix || !isAbsolute(prefix))
+      prefix = '/' + prefix
+    read = prefix
+  } else
+    read = prefix
+
+  var abs = this._makeAbs(read)
+
+  //if ignored, skip processing
+  if (childrenIgnored(this, read))
+    return
+
+  var isGlobStar = remain[0] === minimatch.GLOBSTAR
+  if (isGlobStar)
+    this._processGlobStar(prefix, read, abs, remain, index, inGlobStar)
+  else
+    this._processReaddir(prefix, read, abs, remain, index, inGlobStar)
+}
+
+
+GlobSync.prototype._processReaddir = function (prefix, read, abs, remain, index, inGlobStar) {
+  var entries = this._readdir(abs, inGlobStar)
+
+  // if the abs isn't a dir, then nothing can match!
+  if (!entries)
+    return
+
+  // It will only match dot entries if it starts with a dot, or if
+  // dot is set.  Stuff like @(.foo|.bar) isn't allowed.
+  var pn = remain[0]
+  var negate = !!this.minimatch.negate
+  var rawGlob = pn._glob
+  var dotOk = this.dot || rawGlob.charAt(0) === '.'
+
+  var matchedEntries = []
+  for (var i = 0; i < entries.length; i++) {
+    var e = entries[i]
+    if (e.charAt(0) !== '.' || dotOk) {
+      var m
+      if (negate && !prefix) {
+        m = !e.match(pn)
+      } else {
+        m = e.match(pn)
+      }
+      if (m)
+        matchedEntries.push(e)
+    }
+  }
+
+  var len = matchedEntries.length
+  // If there are no matched entries, then nothing matches.
+  if (len === 0)
+    return
+
+  // if this is the last remaining pattern bit, then no need for
+  // an additional stat *unless* the user has specified mark or
+  // stat explicitly.  We know they exist, since readdir returned
+  // them.
+
+  if (remain.length === 1 && !this.mark && !this.stat) {
+    if (!this.matches[index])
+      this.matches[index] = Object.create(null)
+
+    for (var i = 0; i < len; i ++) {
+      var e = matchedEntries[i]
+      if (prefix) {
+        if (prefix.slice(-1) !== '/')
+          e = prefix + '/' + e
+        else
+          e = prefix + e
+      }
+
+      if (e.charAt(0) === '/' && !this.nomount) {
+        e = path.join(this.root, e)
+      }
+      this._emitMatch(index, e)
+    }
+    // This was the last one, and no stats were needed
+    return
+  }
+
+  // now test all matched entries as stand-ins for that part
+  // of the pattern.
+  remain.shift()
+  for (var i = 0; i < len; i ++) {
+    var e = matchedEntries[i]
+    var newPattern
+    if (prefix)
+      newPattern = [prefix, e]
+    else
+      newPattern = [e]
+    this._process(newPattern.concat(remain), index, inGlobStar)
+  }
+}
+
+
+GlobSync.prototype._emitMatch = function (index, e) {
+  if (isIgnored(this, e))
+    return
+
+  var abs = this._makeAbs(e)
+
+  if (this.mark)
+    e = this._mark(e)
+
+  if (this.absolute) {
+    e = abs
+  }
+
+  if (this.matches[index][e])
+    return
+
+  if (this.nodir) {
+    var c = this.cache[abs]
+    if (c === 'DIR' || Array.isArray(c))
+      return
+  }
+
+  this.matches[index][e] = true
+
+  if (this.stat)
+    this._stat(e)
+}
+
+
+GlobSync.prototype._readdirInGlobStar = function (abs) {
+  // follow all symlinked directories forever
+  // just proceed as if this is a non-globstar situation
+  if (this.follow)
+    return this._readdir(abs, false)
+
+  var entries
+  var lstat
+  var stat
+  try {
+    lstat = this.fs.lstatSync(abs)
+  } catch (er) {
+    if (er.code === 'ENOENT') {
+      // lstat failed, doesn't exist
+      return null
+    }
+  }
+
+  var isSym = lstat && lstat.isSymbolicLink()
+  this.symlinks[abs] = isSym
+
+  // If it's not a symlink or a dir, then it's definitely a regular file.
+  // don't bother doing a readdir in that case.
+  if (!isSym && lstat && !lstat.isDirectory())
+    this.cache[abs] = 'FILE'
+  else
+    entries = this._readdir(abs, false)
+
+  return entries
+}
+
+GlobSync.prototype._readdir = function (abs, inGlobStar) {
+  var entries
+
+  if (inGlobStar && !ownProp(this.symlinks, abs))
+    return this._readdirInGlobStar(abs)
+
+  if (ownProp(this.cache, abs)) {
+    var c = this.cache[abs]
+    if (!c || c === 'FILE')
+      return null
+
+    if (Array.isArray(c))
+      return c
+  }
+
+  try {
+    return this._readdirEntries(abs, this.fs.readdirSync(abs))
+  } catch (er) {
+    this._readdirError(abs, er)
+    return null
+  }
+}
+
+GlobSync.prototype._readdirEntries = function (abs, entries) {
+  // if we haven't asked to stat everything, then just
+  // assume that everything in there exists, so we can avoid
+  // having to stat it a second time.
+  if (!this.mark && !this.stat) {
+    for (var i = 0; i < entries.length; i ++) {
+      var e = entries[i]
+      if (abs === '/')
+        e = abs + e
+      else
+        e = abs + '/' + e
+      this.cache[e] = true
+    }
+  }
+
+  this.cache[abs] = entries
+
+  // mark and cache dir-ness
+  return entries
+}
+
+GlobSync.prototype._readdirError = function (f, er) {
+  // handle errors, and cache the information
+  switch (er.code) {
+    case 'ENOTSUP': // https://github.com/isaacs/node-glob/issues/205
+    case 'ENOTDIR': // totally normal. means it *does* exist.
+      var abs = this._makeAbs(f)
+      this.cache[abs] = 'FILE'
+      if (abs === this.cwdAbs) {
+        var error = new Error(er.code + ' invalid cwd ' + this.cwd)
+        error.path = this.cwd
+        error.code = er.code
+        throw error
+      }
+      break
+
+    case 'ENOENT': // not terribly unusual
+    case 'ELOOP':
+    case 'ENAMETOOLONG':
+    case 'UNKNOWN':
+      this.cache[this._makeAbs(f)] = false
+      break
+
+    default: // some unusual error.  Treat as failure.
+      this.cache[this._makeAbs(f)] = false
+      if (this.strict)
+        throw er
+      if (!this.silent)
+        console.error('glob error', er)
+      break
+  }
+}
+
+GlobSync.prototype._processGlobStar = function (prefix, read, abs, remain, index, inGlobStar) {
+
+  var entries = this._readdir(abs, inGlobStar)
+
+  // no entries means not a dir, so it can never have matches
+  // foo.txt/** doesn't match foo.txt
+  if (!entries)
+    return
+
+  // test without the globstar, and with every child both below
+  // and replacing the globstar.
+  var remainWithoutGlobStar = remain.slice(1)
+  var gspref = prefix ? [ prefix ] : []
+  var noGlobStar = gspref.concat(remainWithoutGlobStar)
+
+  // the noGlobStar pattern exits the inGlobStar state
+  this._process(noGlobStar, index, false)
+
+  var len = entries.length
+  var isSym = this.symlinks[abs]
+
+  // If it's a symlink, and we're in a globstar, then stop
+  if (isSym && inGlobStar)
+    return
+
+  for (var i = 0; i < len; i++) {
+    var e = entries[i]
+    if (e.charAt(0) === '.' && !this.dot)
+      continue
+
+    // these two cases enter the inGlobStar state
+    var instead = gspref.concat(entries[i], remainWithoutGlobStar)
+    this._process(instead, index, true)
+
+    var below = gspref.concat(entries[i], remain)
+    this._process(below, index, true)
+  }
+}
+
+GlobSync.prototype._processSimple = function (prefix, index) {
+  // XXX review this.  Shouldn't it be doing the mounting etc
+  // before doing stat?  kinda weird?
+  var exists = this._stat(prefix)
+
+  if (!this.matches[index])
+    this.matches[index] = Object.create(null)
+
+  // If it doesn't exist, then just mark the lack of results
+  if (!exists)
+    return
+
+  if (prefix && isAbsolute(prefix) && !this.nomount) {
+    var trail = /[\/\\]$/.test(prefix)
+    if (prefix.charAt(0) === '/') {
+      prefix = path.join(this.root, prefix)
+    } else {
+      prefix = path.resolve(this.root, prefix)
+      if (trail)
+        prefix += '/'
+    }
+  }
+
+  if (process.platform === 'win32')
+    prefix = prefix.replace(/\\/g, '/')
+
+  // Mark this as a match
+  this._emitMatch(index, prefix)
+}
+
+// Returns either 'DIR', 'FILE', or false
+GlobSync.prototype._stat = function (f) {
+  var abs = this._makeAbs(f)
+  var needDir = f.slice(-1) === '/'
+
+  if (f.length > this.maxLength)
+    return false
+
+  if (!this.stat && ownProp(this.cache, abs)) {
+    var c = this.cache[abs]
+
+    if (Array.isArray(c))
+      c = 'DIR'
+
+    // It exists, but maybe not how we need it
+    if (!needDir || c === 'DIR')
+      return c
+
+    if (needDir && c === 'FILE')
+      return false
+
+    // otherwise we have to stat, because maybe c=true
+    // if we know it exists, but not what it is.
+  }
+
+  var exists
+  var stat = this.statCache[abs]
+  if (!stat) {
+    var lstat
+    try {
+      lstat = this.fs.lstatSync(abs)
+    } catch (er) {
+      if (er && (er.code === 'ENOENT' || er.code === 'ENOTDIR')) {
+        this.statCache[abs] = false
+        return false
+      }
+    }
+
+    if (lstat && lstat.isSymbolicLink()) {
+      try {
+        stat = this.fs.statSync(abs)
+      } catch (er) {
+        stat = lstat
+      }
+    } else {
+      stat = lstat
+    }
+  }
+
+  this.statCache[abs] = stat
+
+  var c = true
+  if (stat)
+    c = stat.isDirectory() ? 'DIR' : 'FILE'
+
+  this.cache[abs] = this.cache[abs] || c
+
+  if (needDir && c === 'FILE')
+    return false
+
+  return c
+}
+
+GlobSync.prototype._mark = function (p) {
+  return common.mark(this, p)
+}
+
+GlobSync.prototype._makeAbs = function (f) {
+  return common.makeAbs(this, f)
+}
+
+
+/***/ }),
+
+/***/ 2492:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var wrappy = __nccwpck_require__(2940)
+var reqs = Object.create(null)
+var once = __nccwpck_require__(1223)
+
+module.exports = wrappy(inflight)
+
+function inflight (key, cb) {
+  if (reqs[key]) {
+    reqs[key].push(cb)
+    return null
+  } else {
+    reqs[key] = [cb]
+    return makeres(key)
+  }
+}
+
+function makeres (key) {
+  return once(function RES () {
+    var cbs = reqs[key]
+    var len = cbs.length
+    var args = slice(arguments)
+
+    // XXX It's somewhat ambiguous whether a new callback added in this
+    // pass should be queued for later execution if something in the
+    // list of callbacks throws, or if it should just be discarded.
+    // However, it's such an edge case that it hardly matters, and either
+    // choice is likely as surprising as the other.
+    // As it happens, we do go ahead and schedule it for later execution.
+    try {
+      for (var i = 0; i < len; i++) {
+        cbs[i].apply(null, args)
+      }
+    } finally {
+      if (cbs.length > len) {
+        // added more in the interim.
+        // de-zalgo, just in case, but don't call again.
+        cbs.splice(0, len)
+        process.nextTick(function () {
+          RES.apply(null, args)
+        })
+      } else {
+        delete reqs[key]
+      }
+    }
+  })
+}
+
+function slice (args) {
+  var length = args.length
+  var array = []
+
+  for (var i = 0; i < length; i++) array[i] = args[i]
+  return array
+}
+
+
+/***/ }),
+
+/***/ 4124:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+try {
+  var util = __nccwpck_require__(3837);
+  /* istanbul ignore next */
+  if (typeof util.inherits !== 'function') throw '';
+  module.exports = util.inherits;
+} catch (e) {
+  /* istanbul ignore next */
+  module.exports = __nccwpck_require__(8544);
+}
+
+
+/***/ }),
+
+/***/ 8544:
+/***/ ((module) => {
+
+if (typeof Object.create === 'function') {
+  // implementation from standard node.js 'util' module
+  module.exports = function inherits(ctor, superCtor) {
+    if (superCtor) {
+      ctor.super_ = superCtor
+      ctor.prototype = Object.create(superCtor.prototype, {
+        constructor: {
+          value: ctor,
+          enumerable: false,
+          writable: true,
+          configurable: true
+        }
+      })
+    }
+  };
+} else {
+  // old school shim for old browsers
+  module.exports = function inherits(ctor, superCtor) {
+    if (superCtor) {
+      ctor.super_ = superCtor
+      var TempCtor = function () {}
+      TempCtor.prototype = superCtor.prototype
+      ctor.prototype = new TempCtor()
+      ctor.prototype.constructor = ctor
+    }
+  }
+}
+
+
+/***/ }),
+
 /***/ 3287:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -52232,6 +59086,401 @@ function onceStrict (fn) {
   f.called = false
   return f
 }
+
+
+/***/ }),
+
+/***/ 8714:
+/***/ ((module) => {
+
+"use strict";
+
+
+function posix(path) {
+	return path.charAt(0) === '/';
+}
+
+function win32(path) {
+	// https://github.com/nodejs/node/blob/b3fcc245fb25539909ef1d5eaa01dbf92e168633/lib/path.js#L56
+	var splitDeviceRe = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
+	var result = splitDeviceRe.exec(path);
+	var device = result[1] || '';
+	var isUnc = Boolean(device && device.charAt(1) !== ':');
+
+	// UNC paths are always absolute
+	return Boolean(result[2] || isUnc);
+}
+
+module.exports = process.platform === 'win32' ? win32 : posix;
+module.exports.posix = posix;
+module.exports.win32 = win32;
+
+
+/***/ }),
+
+/***/ 4959:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const assert = __nccwpck_require__(9491)
+const path = __nccwpck_require__(1017)
+const fs = __nccwpck_require__(7147)
+let glob = undefined
+try {
+  glob = __nccwpck_require__(1957)
+} catch (_err) {
+  // treat glob as optional.
+}
+
+const defaultGlobOpts = {
+  nosort: true,
+  silent: true
+}
+
+// for EMFILE handling
+let timeout = 0
+
+const isWindows = (process.platform === "win32")
+
+const defaults = options => {
+  const methods = [
+    'unlink',
+    'chmod',
+    'stat',
+    'lstat',
+    'rmdir',
+    'readdir'
+  ]
+  methods.forEach(m => {
+    options[m] = options[m] || fs[m]
+    m = m + 'Sync'
+    options[m] = options[m] || fs[m]
+  })
+
+  options.maxBusyTries = options.maxBusyTries || 3
+  options.emfileWait = options.emfileWait || 1000
+  if (options.glob === false) {
+    options.disableGlob = true
+  }
+  if (options.disableGlob !== true && glob === undefined) {
+    throw Error('glob dependency not found, set `options.disableGlob = true` if intentional')
+  }
+  options.disableGlob = options.disableGlob || false
+  options.glob = options.glob || defaultGlobOpts
+}
+
+const rimraf = (p, options, cb) => {
+  if (typeof options === 'function') {
+    cb = options
+    options = {}
+  }
+
+  assert(p, 'rimraf: missing path')
+  assert.equal(typeof p, 'string', 'rimraf: path should be a string')
+  assert.equal(typeof cb, 'function', 'rimraf: callback function required')
+  assert(options, 'rimraf: invalid options argument provided')
+  assert.equal(typeof options, 'object', 'rimraf: options should be object')
+
+  defaults(options)
+
+  let busyTries = 0
+  let errState = null
+  let n = 0
+
+  const next = (er) => {
+    errState = errState || er
+    if (--n === 0)
+      cb(errState)
+  }
+
+  const afterGlob = (er, results) => {
+    if (er)
+      return cb(er)
+
+    n = results.length
+    if (n === 0)
+      return cb()
+
+    results.forEach(p => {
+      const CB = (er) => {
+        if (er) {
+          if ((er.code === "EBUSY" || er.code === "ENOTEMPTY" || er.code === "EPERM") &&
+              busyTries < options.maxBusyTries) {
+            busyTries ++
+            // try again, with the same exact callback as this one.
+            return setTimeout(() => rimraf_(p, options, CB), busyTries * 100)
+          }
+
+          // this one won't happen if graceful-fs is used.
+          if (er.code === "EMFILE" && timeout < options.emfileWait) {
+            return setTimeout(() => rimraf_(p, options, CB), timeout ++)
+          }
+
+          // already gone
+          if (er.code === "ENOENT") er = null
+        }
+
+        timeout = 0
+        next(er)
+      }
+      rimraf_(p, options, CB)
+    })
+  }
+
+  if (options.disableGlob || !glob.hasMagic(p))
+    return afterGlob(null, [p])
+
+  options.lstat(p, (er, stat) => {
+    if (!er)
+      return afterGlob(null, [p])
+
+    glob(p, options.glob, afterGlob)
+  })
+
+}
+
+// Two possible strategies.
+// 1. Assume it's a file.  unlink it, then do the dir stuff on EPERM or EISDIR
+// 2. Assume it's a directory.  readdir, then do the file stuff on ENOTDIR
+//
+// Both result in an extra syscall when you guess wrong.  However, there
+// are likely far more normal files in the world than directories.  This
+// is based on the assumption that a the average number of files per
+// directory is >= 1.
+//
+// If anyone ever complains about this, then I guess the strategy could
+// be made configurable somehow.  But until then, YAGNI.
+const rimraf_ = (p, options, cb) => {
+  assert(p)
+  assert(options)
+  assert(typeof cb === 'function')
+
+  // sunos lets the root user unlink directories, which is... weird.
+  // so we have to lstat here and make sure it's not a dir.
+  options.lstat(p, (er, st) => {
+    if (er && er.code === "ENOENT")
+      return cb(null)
+
+    // Windows can EPERM on stat.  Life is suffering.
+    if (er && er.code === "EPERM" && isWindows)
+      fixWinEPERM(p, options, er, cb)
+
+    if (st && st.isDirectory())
+      return rmdir(p, options, er, cb)
+
+    options.unlink(p, er => {
+      if (er) {
+        if (er.code === "ENOENT")
+          return cb(null)
+        if (er.code === "EPERM")
+          return (isWindows)
+            ? fixWinEPERM(p, options, er, cb)
+            : rmdir(p, options, er, cb)
+        if (er.code === "EISDIR")
+          return rmdir(p, options, er, cb)
+      }
+      return cb(er)
+    })
+  })
+}
+
+const fixWinEPERM = (p, options, er, cb) => {
+  assert(p)
+  assert(options)
+  assert(typeof cb === 'function')
+
+  options.chmod(p, 0o666, er2 => {
+    if (er2)
+      cb(er2.code === "ENOENT" ? null : er)
+    else
+      options.stat(p, (er3, stats) => {
+        if (er3)
+          cb(er3.code === "ENOENT" ? null : er)
+        else if (stats.isDirectory())
+          rmdir(p, options, er, cb)
+        else
+          options.unlink(p, cb)
+      })
+  })
+}
+
+const fixWinEPERMSync = (p, options, er) => {
+  assert(p)
+  assert(options)
+
+  try {
+    options.chmodSync(p, 0o666)
+  } catch (er2) {
+    if (er2.code === "ENOENT")
+      return
+    else
+      throw er
+  }
+
+  let stats
+  try {
+    stats = options.statSync(p)
+  } catch (er3) {
+    if (er3.code === "ENOENT")
+      return
+    else
+      throw er
+  }
+
+  if (stats.isDirectory())
+    rmdirSync(p, options, er)
+  else
+    options.unlinkSync(p)
+}
+
+const rmdir = (p, options, originalEr, cb) => {
+  assert(p)
+  assert(options)
+  assert(typeof cb === 'function')
+
+  // try to rmdir first, and only readdir on ENOTEMPTY or EEXIST (SunOS)
+  // if we guessed wrong, and it's not a directory, then
+  // raise the original error.
+  options.rmdir(p, er => {
+    if (er && (er.code === "ENOTEMPTY" || er.code === "EEXIST" || er.code === "EPERM"))
+      rmkids(p, options, cb)
+    else if (er && er.code === "ENOTDIR")
+      cb(originalEr)
+    else
+      cb(er)
+  })
+}
+
+const rmkids = (p, options, cb) => {
+  assert(p)
+  assert(options)
+  assert(typeof cb === 'function')
+
+  options.readdir(p, (er, files) => {
+    if (er)
+      return cb(er)
+    let n = files.length
+    if (n === 0)
+      return options.rmdir(p, cb)
+    let errState
+    files.forEach(f => {
+      rimraf(path.join(p, f), options, er => {
+        if (errState)
+          return
+        if (er)
+          return cb(errState = er)
+        if (--n === 0)
+          options.rmdir(p, cb)
+      })
+    })
+  })
+}
+
+// this looks simpler, and is strictly *faster*, but will
+// tie up the JavaScript thread and fail on excessively
+// deep directory trees.
+const rimrafSync = (p, options) => {
+  options = options || {}
+  defaults(options)
+
+  assert(p, 'rimraf: missing path')
+  assert.equal(typeof p, 'string', 'rimraf: path should be a string')
+  assert(options, 'rimraf: missing options')
+  assert.equal(typeof options, 'object', 'rimraf: options should be object')
+
+  let results
+
+  if (options.disableGlob || !glob.hasMagic(p)) {
+    results = [p]
+  } else {
+    try {
+      options.lstatSync(p)
+      results = [p]
+    } catch (er) {
+      results = glob.sync(p, options.glob)
+    }
+  }
+
+  if (!results.length)
+    return
+
+  for (let i = 0; i < results.length; i++) {
+    const p = results[i]
+
+    let st
+    try {
+      st = options.lstatSync(p)
+    } catch (er) {
+      if (er.code === "ENOENT")
+        return
+
+      // Windows can EPERM on stat.  Life is suffering.
+      if (er.code === "EPERM" && isWindows)
+        fixWinEPERMSync(p, options, er)
+    }
+
+    try {
+      // sunos lets the root user unlink directories, which is... weird.
+      if (st && st.isDirectory())
+        rmdirSync(p, options, null)
+      else
+        options.unlinkSync(p)
+    } catch (er) {
+      if (er.code === "ENOENT")
+        return
+      if (er.code === "EPERM")
+        return isWindows ? fixWinEPERMSync(p, options, er) : rmdirSync(p, options, er)
+      if (er.code !== "EISDIR")
+        throw er
+
+      rmdirSync(p, options, er)
+    }
+  }
+}
+
+const rmdirSync = (p, options, originalEr) => {
+  assert(p)
+  assert(options)
+
+  try {
+    options.rmdirSync(p)
+  } catch (er) {
+    if (er.code === "ENOENT")
+      return
+    if (er.code === "ENOTDIR")
+      throw originalEr
+    if (er.code === "ENOTEMPTY" || er.code === "EEXIST" || er.code === "EPERM")
+      rmkidsSync(p, options)
+  }
+}
+
+const rmkidsSync = (p, options) => {
+  assert(p)
+  assert(options)
+  options.readdirSync(p).forEach(f => rimrafSync(path.join(p, f), options))
+
+  // We only end up here once we got ENOTEMPTY at least once, and
+  // at this point, we are guaranteed to have removed all the kids.
+  // So, we know that it won't be ENOENT or ENOTDIR or anything else.
+  // try really hard to delete stuff on windows, because it has a
+  // PROFOUNDLY annoying habit of not closing handles promptly when
+  // files are deleted, resulting in spurious ENOTEMPTY errors.
+  const retries = isWindows ? 100 : 1
+  let i = 0
+  do {
+    let threw = true
+    try {
+      const ret = options.rmdirSync(p, options)
+      threw = false
+      return ret
+    } finally {
+      if (++i < retries && threw)
+        continue
+    }
+  } while (true)
+}
+
+module.exports = rimraf
+rimraf.sync = rimrafSync
 
 
 /***/ }),
@@ -55407,6 +62656,851 @@ function coerce (version, options) {
     '.' + (match[3] || '0') +
     '.' + (match[4] || '0'), options)
 }
+
+
+/***/ }),
+
+/***/ 8065:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+const { promisify } = __nccwpck_require__(3837);
+const tmp = __nccwpck_require__(7390);
+
+// file
+module.exports.fileSync = tmp.fileSync;
+const fileWithOptions = promisify((options, cb) =>
+  tmp.file(options, (err, path, fd, cleanup) =>
+    err ? cb(err) : cb(undefined, { path, fd, cleanup: promisify(cleanup) })
+  )
+);
+module.exports.file = async (options) => fileWithOptions(options);
+
+module.exports.withFile = async function withFile(fn, options) {
+  const { path, fd, cleanup } = await module.exports.file(options);
+  try {
+    return await fn({ path, fd });
+  } finally {
+    await cleanup();
+  }
+};
+
+
+// directory
+module.exports.dirSync = tmp.dirSync;
+const dirWithOptions = promisify((options, cb) =>
+  tmp.dir(options, (err, path, cleanup) =>
+    err ? cb(err) : cb(undefined, { path, cleanup: promisify(cleanup) })
+  )
+);
+module.exports.dir = async (options) => dirWithOptions(options);
+
+module.exports.withDir = async function withDir(fn, options) {
+  const { path, cleanup } = await module.exports.dir(options);
+  try {
+    return await fn({ path });
+  } finally {
+    await cleanup();
+  }
+};
+
+
+// name generation
+module.exports.tmpNameSync = tmp.tmpNameSync;
+module.exports.tmpName = promisify(tmp.tmpName);
+
+module.exports.tmpdir = tmp.tmpdir;
+
+module.exports.setGracefulCleanup = tmp.setGracefulCleanup;
+
+
+/***/ }),
+
+/***/ 7390:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+/*!
+ * Tmp
+ *
+ * Copyright (c) 2011-2017 KARASZI Istvan <github@spam.raszi.hu>
+ *
+ * MIT Licensed
+ */
+
+/*
+ * Module dependencies.
+ */
+const fs = __nccwpck_require__(7147);
+const os = __nccwpck_require__(2037);
+const path = __nccwpck_require__(1017);
+const crypto = __nccwpck_require__(6113);
+const _c = { fs: fs.constants, os: os.constants };
+const rimraf = __nccwpck_require__(4959);
+
+/*
+ * The working inner variables.
+ */
+const
+  // the random characters to choose from
+  RANDOM_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+
+  TEMPLATE_PATTERN = /XXXXXX/,
+
+  DEFAULT_TRIES = 3,
+
+  CREATE_FLAGS = (_c.O_CREAT || _c.fs.O_CREAT) | (_c.O_EXCL || _c.fs.O_EXCL) | (_c.O_RDWR || _c.fs.O_RDWR),
+
+  // constants are off on the windows platform and will not match the actual errno codes
+  IS_WIN32 = os.platform() === 'win32',
+  EBADF = _c.EBADF || _c.os.errno.EBADF,
+  ENOENT = _c.ENOENT || _c.os.errno.ENOENT,
+
+  DIR_MODE = 0o700 /* 448 */,
+  FILE_MODE = 0o600 /* 384 */,
+
+  EXIT = 'exit',
+
+  // this will hold the objects need to be removed on exit
+  _removeObjects = [],
+
+  // API change in fs.rmdirSync leads to error when passing in a second parameter, e.g. the callback
+  FN_RMDIR_SYNC = fs.rmdirSync.bind(fs),
+  FN_RIMRAF_SYNC = rimraf.sync;
+
+let
+  _gracefulCleanup = false;
+
+/**
+ * Gets a temporary file name.
+ *
+ * @param {(Options|tmpNameCallback)} options options or callback
+ * @param {?tmpNameCallback} callback the callback function
+ */
+function tmpName(options, callback) {
+  const
+    args = _parseArguments(options, callback),
+    opts = args[0],
+    cb = args[1];
+
+  try {
+    _assertAndSanitizeOptions(opts);
+  } catch (err) {
+    return cb(err);
+  }
+
+  let tries = opts.tries;
+  (function _getUniqueName() {
+    try {
+      const name = _generateTmpName(opts);
+
+      // check whether the path exists then retry if needed
+      fs.stat(name, function (err) {
+        /* istanbul ignore else */
+        if (!err) {
+          /* istanbul ignore else */
+          if (tries-- > 0) return _getUniqueName();
+
+          return cb(new Error('Could not get a unique tmp filename, max tries reached ' + name));
+        }
+
+        cb(null, name);
+      });
+    } catch (err) {
+      cb(err);
+    }
+  }());
+}
+
+/**
+ * Synchronous version of tmpName.
+ *
+ * @param {Object} options
+ * @returns {string} the generated random name
+ * @throws {Error} if the options are invalid or could not generate a filename
+ */
+function tmpNameSync(options) {
+  const
+    args = _parseArguments(options),
+    opts = args[0];
+
+  _assertAndSanitizeOptions(opts);
+
+  let tries = opts.tries;
+  do {
+    const name = _generateTmpName(opts);
+    try {
+      fs.statSync(name);
+    } catch (e) {
+      return name;
+    }
+  } while (tries-- > 0);
+
+  throw new Error('Could not get a unique tmp filename, max tries reached');
+}
+
+/**
+ * Creates and opens a temporary file.
+ *
+ * @param {(Options|null|undefined|fileCallback)} options the config options or the callback function or null or undefined
+ * @param {?fileCallback} callback
+ */
+function file(options, callback) {
+  const
+    args = _parseArguments(options, callback),
+    opts = args[0],
+    cb = args[1];
+
+  // gets a temporary filename
+  tmpName(opts, function _tmpNameCreated(err, name) {
+    /* istanbul ignore else */
+    if (err) return cb(err);
+
+    // create and open the file
+    fs.open(name, CREATE_FLAGS, opts.mode || FILE_MODE, function _fileCreated(err, fd) {
+      /* istanbu ignore else */
+      if (err) return cb(err);
+
+      if (opts.discardDescriptor) {
+        return fs.close(fd, function _discardCallback(possibleErr) {
+          // the chance of getting an error on close here is rather low and might occur in the most edgiest cases only
+          return cb(possibleErr, name, undefined, _prepareTmpFileRemoveCallback(name, -1, opts, false));
+        });
+      } else {
+        // detachDescriptor passes the descriptor whereas discardDescriptor closes it, either way, we no longer care
+        // about the descriptor
+        const discardOrDetachDescriptor = opts.discardDescriptor || opts.detachDescriptor;
+        cb(null, name, fd, _prepareTmpFileRemoveCallback(name, discardOrDetachDescriptor ? -1 : fd, opts, false));
+      }
+    });
+  });
+}
+
+/**
+ * Synchronous version of file.
+ *
+ * @param {Options} options
+ * @returns {FileSyncObject} object consists of name, fd and removeCallback
+ * @throws {Error} if cannot create a file
+ */
+function fileSync(options) {
+  const
+    args = _parseArguments(options),
+    opts = args[0];
+
+  const discardOrDetachDescriptor = opts.discardDescriptor || opts.detachDescriptor;
+  const name = tmpNameSync(opts);
+  var fd = fs.openSync(name, CREATE_FLAGS, opts.mode || FILE_MODE);
+  /* istanbul ignore else */
+  if (opts.discardDescriptor) {
+    fs.closeSync(fd);
+    fd = undefined;
+  }
+
+  return {
+    name: name,
+    fd: fd,
+    removeCallback: _prepareTmpFileRemoveCallback(name, discardOrDetachDescriptor ? -1 : fd, opts, true)
+  };
+}
+
+/**
+ * Creates a temporary directory.
+ *
+ * @param {(Options|dirCallback)} options the options or the callback function
+ * @param {?dirCallback} callback
+ */
+function dir(options, callback) {
+  const
+    args = _parseArguments(options, callback),
+    opts = args[0],
+    cb = args[1];
+
+  // gets a temporary filename
+  tmpName(opts, function _tmpNameCreated(err, name) {
+    /* istanbul ignore else */
+    if (err) return cb(err);
+
+    // create the directory
+    fs.mkdir(name, opts.mode || DIR_MODE, function _dirCreated(err) {
+      /* istanbul ignore else */
+      if (err) return cb(err);
+
+      cb(null, name, _prepareTmpDirRemoveCallback(name, opts, false));
+    });
+  });
+}
+
+/**
+ * Synchronous version of dir.
+ *
+ * @param {Options} options
+ * @returns {DirSyncObject} object consists of name and removeCallback
+ * @throws {Error} if it cannot create a directory
+ */
+function dirSync(options) {
+  const
+    args = _parseArguments(options),
+    opts = args[0];
+
+  const name = tmpNameSync(opts);
+  fs.mkdirSync(name, opts.mode || DIR_MODE);
+
+  return {
+    name: name,
+    removeCallback: _prepareTmpDirRemoveCallback(name, opts, true)
+  };
+}
+
+/**
+ * Removes files asynchronously.
+ *
+ * @param {Object} fdPath
+ * @param {Function} next
+ * @private
+ */
+function _removeFileAsync(fdPath, next) {
+  const _handler = function (err) {
+    if (err && !_isENOENT(err)) {
+      // reraise any unanticipated error
+      return next(err);
+    }
+    next();
+  };
+
+  if (0 <= fdPath[0])
+    fs.close(fdPath[0], function () {
+      fs.unlink(fdPath[1], _handler);
+    });
+  else fs.unlink(fdPath[1], _handler);
+}
+
+/**
+ * Removes files synchronously.
+ *
+ * @param {Object} fdPath
+ * @private
+ */
+function _removeFileSync(fdPath) {
+  let rethrownException = null;
+  try {
+    if (0 <= fdPath[0]) fs.closeSync(fdPath[0]);
+  } catch (e) {
+    // reraise any unanticipated error
+    if (!_isEBADF(e) && !_isENOENT(e)) throw e;
+  } finally {
+    try {
+      fs.unlinkSync(fdPath[1]);
+    }
+    catch (e) {
+      // reraise any unanticipated error
+      if (!_isENOENT(e)) rethrownException = e;
+    }
+  }
+  if (rethrownException !== null) {
+    throw rethrownException;
+  }
+}
+
+/**
+ * Prepares the callback for removal of the temporary file.
+ *
+ * Returns either a sync callback or a async callback depending on whether
+ * fileSync or file was called, which is expressed by the sync parameter.
+ *
+ * @param {string} name the path of the file
+ * @param {number} fd file descriptor
+ * @param {Object} opts
+ * @param {boolean} sync
+ * @returns {fileCallback | fileCallbackSync}
+ * @private
+ */
+function _prepareTmpFileRemoveCallback(name, fd, opts, sync) {
+  const removeCallbackSync = _prepareRemoveCallback(_removeFileSync, [fd, name], sync);
+  const removeCallback = _prepareRemoveCallback(_removeFileAsync, [fd, name], sync, removeCallbackSync);
+
+  if (!opts.keep) _removeObjects.unshift(removeCallbackSync);
+
+  return sync ? removeCallbackSync : removeCallback;
+}
+
+/**
+ * Prepares the callback for removal of the temporary directory.
+ *
+ * Returns either a sync callback or a async callback depending on whether
+ * tmpFileSync or tmpFile was called, which is expressed by the sync parameter.
+ *
+ * @param {string} name
+ * @param {Object} opts
+ * @param {boolean} sync
+ * @returns {Function} the callback
+ * @private
+ */
+function _prepareTmpDirRemoveCallback(name, opts, sync) {
+  const removeFunction = opts.unsafeCleanup ? rimraf : fs.rmdir.bind(fs);
+  const removeFunctionSync = opts.unsafeCleanup ? FN_RIMRAF_SYNC : FN_RMDIR_SYNC;
+  const removeCallbackSync = _prepareRemoveCallback(removeFunctionSync, name, sync);
+  const removeCallback = _prepareRemoveCallback(removeFunction, name, sync, removeCallbackSync);
+  if (!opts.keep) _removeObjects.unshift(removeCallbackSync);
+
+  return sync ? removeCallbackSync : removeCallback;
+}
+
+/**
+ * Creates a guarded function wrapping the removeFunction call.
+ *
+ * The cleanup callback is save to be called multiple times.
+ * Subsequent invocations will be ignored.
+ *
+ * @param {Function} removeFunction
+ * @param {string} fileOrDirName
+ * @param {boolean} sync
+ * @param {cleanupCallbackSync?} cleanupCallbackSync
+ * @returns {cleanupCallback | cleanupCallbackSync}
+ * @private
+ */
+function _prepareRemoveCallback(removeFunction, fileOrDirName, sync, cleanupCallbackSync) {
+  let called = false;
+
+  // if sync is true, the next parameter will be ignored
+  return function _cleanupCallback(next) {
+
+    /* istanbul ignore else */
+    if (!called) {
+      // remove cleanupCallback from cache
+      const toRemove = cleanupCallbackSync || _cleanupCallback;
+      const index = _removeObjects.indexOf(toRemove);
+      /* istanbul ignore else */
+      if (index >= 0) _removeObjects.splice(index, 1);
+
+      called = true;
+      if (sync || removeFunction === FN_RMDIR_SYNC || removeFunction === FN_RIMRAF_SYNC) {
+        return removeFunction(fileOrDirName);
+      } else {
+        return removeFunction(fileOrDirName, next || function() {});
+      }
+    }
+  };
+}
+
+/**
+ * The garbage collector.
+ *
+ * @private
+ */
+function _garbageCollector() {
+  /* istanbul ignore else */
+  if (!_gracefulCleanup) return;
+
+  // the function being called removes itself from _removeObjects,
+  // loop until _removeObjects is empty
+  while (_removeObjects.length) {
+    try {
+      _removeObjects[0]();
+    } catch (e) {
+      // already removed?
+    }
+  }
+}
+
+/**
+ * Random name generator based on crypto.
+ * Adapted from http://blog.tompawlak.org/how-to-generate-random-values-nodejs-javascript
+ *
+ * @param {number} howMany
+ * @returns {string} the generated random name
+ * @private
+ */
+function _randomChars(howMany) {
+  let
+    value = [],
+    rnd = null;
+
+  // make sure that we do not fail because we ran out of entropy
+  try {
+    rnd = crypto.randomBytes(howMany);
+  } catch (e) {
+    rnd = crypto.pseudoRandomBytes(howMany);
+  }
+
+  for (var i = 0; i < howMany; i++) {
+    value.push(RANDOM_CHARS[rnd[i] % RANDOM_CHARS.length]);
+  }
+
+  return value.join('');
+}
+
+/**
+ * Helper which determines whether a string s is blank, that is undefined, or empty or null.
+ *
+ * @private
+ * @param {string} s
+ * @returns {Boolean} true whether the string s is blank, false otherwise
+ */
+function _isBlank(s) {
+  return s === null || _isUndefined(s) || !s.trim();
+}
+
+/**
+ * Checks whether the `obj` parameter is defined or not.
+ *
+ * @param {Object} obj
+ * @returns {boolean} true if the object is undefined
+ * @private
+ */
+function _isUndefined(obj) {
+  return typeof obj === 'undefined';
+}
+
+/**
+ * Parses the function arguments.
+ *
+ * This function helps to have optional arguments.
+ *
+ * @param {(Options|null|undefined|Function)} options
+ * @param {?Function} callback
+ * @returns {Array} parsed arguments
+ * @private
+ */
+function _parseArguments(options, callback) {
+  /* istanbul ignore else */
+  if (typeof options === 'function') {
+    return [{}, options];
+  }
+
+  /* istanbul ignore else */
+  if (_isUndefined(options)) {
+    return [{}, callback];
+  }
+
+  // copy options so we do not leak the changes we make internally
+  const actualOptions = {};
+  for (const key of Object.getOwnPropertyNames(options)) {
+    actualOptions[key] = options[key];
+  }
+
+  return [actualOptions, callback];
+}
+
+/**
+ * Generates a new temporary name.
+ *
+ * @param {Object} opts
+ * @returns {string} the new random name according to opts
+ * @private
+ */
+function _generateTmpName(opts) {
+
+  const tmpDir = opts.tmpdir;
+
+  /* istanbul ignore else */
+  if (!_isUndefined(opts.name))
+    return path.join(tmpDir, opts.dir, opts.name);
+
+  /* istanbul ignore else */
+  if (!_isUndefined(opts.template))
+    return path.join(tmpDir, opts.dir, opts.template).replace(TEMPLATE_PATTERN, _randomChars(6));
+
+  // prefix and postfix
+  const name = [
+    opts.prefix ? opts.prefix : 'tmp',
+    '-',
+    process.pid,
+    '-',
+    _randomChars(12),
+    opts.postfix ? '-' + opts.postfix : ''
+  ].join('');
+
+  return path.join(tmpDir, opts.dir, name);
+}
+
+/**
+ * Asserts whether the specified options are valid, also sanitizes options and provides sane defaults for missing
+ * options.
+ *
+ * @param {Options} options
+ * @private
+ */
+function _assertAndSanitizeOptions(options) {
+
+  options.tmpdir = _getTmpDir(options);
+
+  const tmpDir = options.tmpdir;
+
+  /* istanbul ignore else */
+  if (!_isUndefined(options.name))
+    _assertIsRelative(options.name, 'name', tmpDir);
+  /* istanbul ignore else */
+  if (!_isUndefined(options.dir))
+    _assertIsRelative(options.dir, 'dir', tmpDir);
+  /* istanbul ignore else */
+  if (!_isUndefined(options.template)) {
+    _assertIsRelative(options.template, 'template', tmpDir);
+    if (!options.template.match(TEMPLATE_PATTERN))
+      throw new Error(`Invalid template, found "${options.template}".`);
+  }
+  /* istanbul ignore else */
+  if (!_isUndefined(options.tries) && isNaN(options.tries) || options.tries < 0)
+    throw new Error(`Invalid tries, found "${options.tries}".`);
+
+  // if a name was specified we will try once
+  options.tries = _isUndefined(options.name) ? options.tries || DEFAULT_TRIES : 1;
+  options.keep = !!options.keep;
+  options.detachDescriptor = !!options.detachDescriptor;
+  options.discardDescriptor = !!options.discardDescriptor;
+  options.unsafeCleanup = !!options.unsafeCleanup;
+
+  // sanitize dir, also keep (multiple) blanks if the user, purportedly sane, requests us to
+  options.dir = _isUndefined(options.dir) ? '' : path.relative(tmpDir, _resolvePath(options.dir, tmpDir));
+  options.template = _isUndefined(options.template) ? undefined : path.relative(tmpDir, _resolvePath(options.template, tmpDir));
+  // sanitize further if template is relative to options.dir
+  options.template = _isBlank(options.template) ? undefined : path.relative(options.dir, options.template);
+
+  // for completeness' sake only, also keep (multiple) blanks if the user, purportedly sane, requests us to
+  options.name = _isUndefined(options.name) ? undefined : _sanitizeName(options.name);
+  options.prefix = _isUndefined(options.prefix) ? '' : options.prefix;
+  options.postfix = _isUndefined(options.postfix) ? '' : options.postfix;
+}
+
+/**
+ * Resolve the specified path name in respect to tmpDir.
+ *
+ * The specified name might include relative path components, e.g. ../
+ * so we need to resolve in order to be sure that is is located inside tmpDir
+ *
+ * @param name
+ * @param tmpDir
+ * @returns {string}
+ * @private
+ */
+function _resolvePath(name, tmpDir) {
+  const sanitizedName = _sanitizeName(name);
+  if (sanitizedName.startsWith(tmpDir)) {
+    return path.resolve(sanitizedName);
+  } else {
+    return path.resolve(path.join(tmpDir, sanitizedName));
+  }
+}
+
+/**
+ * Sanitize the specified path name by removing all quote characters.
+ *
+ * @param name
+ * @returns {string}
+ * @private
+ */
+function _sanitizeName(name) {
+  if (_isBlank(name)) {
+    return name;
+  }
+  return name.replace(/["']/g, '');
+}
+
+/**
+ * Asserts whether specified name is relative to the specified tmpDir.
+ *
+ * @param {string} name
+ * @param {string} option
+ * @param {string} tmpDir
+ * @throws {Error}
+ * @private
+ */
+function _assertIsRelative(name, option, tmpDir) {
+  if (option === 'name') {
+    // assert that name is not absolute and does not contain a path
+    if (path.isAbsolute(name))
+      throw new Error(`${option} option must not contain an absolute path, found "${name}".`);
+    // must not fail on valid .<name> or ..<name> or similar such constructs
+    let basename = path.basename(name);
+    if (basename === '..' || basename === '.' || basename !== name)
+      throw new Error(`${option} option must not contain a path, found "${name}".`);
+  }
+  else { // if (option === 'dir' || option === 'template') {
+    // assert that dir or template are relative to tmpDir
+    if (path.isAbsolute(name) && !name.startsWith(tmpDir)) {
+      throw new Error(`${option} option must be relative to "${tmpDir}", found "${name}".`);
+    }
+    let resolvedPath = _resolvePath(name, tmpDir);
+    if (!resolvedPath.startsWith(tmpDir))
+      throw new Error(`${option} option must be relative to "${tmpDir}", found "${resolvedPath}".`);
+  }
+}
+
+/**
+ * Helper for testing against EBADF to compensate changes made to Node 7.x under Windows.
+ *
+ * @private
+ */
+function _isEBADF(error) {
+  return _isExpectedError(error, -EBADF, 'EBADF');
+}
+
+/**
+ * Helper for testing against ENOENT to compensate changes made to Node 7.x under Windows.
+ *
+ * @private
+ */
+function _isENOENT(error) {
+  return _isExpectedError(error, -ENOENT, 'ENOENT');
+}
+
+/**
+ * Helper to determine whether the expected error code matches the actual code and errno,
+ * which will differ between the supported node versions.
+ *
+ * - Node >= 7.0:
+ *   error.code {string}
+ *   error.errno {number} any numerical value will be negated
+ *
+ * CAVEAT
+ *
+ * On windows, the errno for EBADF is -4083 but os.constants.errno.EBADF is different and we must assume that ENOENT
+ * is no different here.
+ *
+ * @param {SystemError} error
+ * @param {number} errno
+ * @param {string} code
+ * @private
+ */
+function _isExpectedError(error, errno, code) {
+  return IS_WIN32 ? error.code === code : error.code === code && error.errno === errno;
+}
+
+/**
+ * Sets the graceful cleanup.
+ *
+ * If graceful cleanup is set, tmp will remove all controlled temporary objects on process exit, otherwise the
+ * temporary objects will remain in place, waiting to be cleaned up on system restart or otherwise scheduled temporary
+ * object removals.
+ */
+function setGracefulCleanup() {
+  _gracefulCleanup = true;
+}
+
+/**
+ * Returns the currently configured tmp dir from os.tmpdir().
+ *
+ * @private
+ * @param {?Options} options
+ * @returns {string} the currently configured tmp dir
+ */
+function _getTmpDir(options) {
+  return path.resolve(_sanitizeName(options && options.tmpdir || os.tmpdir()));
+}
+
+// Install process exit listener
+process.addListener(EXIT, _garbageCollector);
+
+/**
+ * Configuration options.
+ *
+ * @typedef {Object} Options
+ * @property {?boolean} keep the temporary object (file or dir) will not be garbage collected
+ * @property {?number} tries the number of tries before give up the name generation
+ * @property (?int) mode the access mode, defaults are 0o700 for directories and 0o600 for files
+ * @property {?string} template the "mkstemp" like filename template
+ * @property {?string} name fixed name relative to tmpdir or the specified dir option
+ * @property {?string} dir tmp directory relative to the root tmp directory in use
+ * @property {?string} prefix prefix for the generated name
+ * @property {?string} postfix postfix for the generated name
+ * @property {?string} tmpdir the root tmp directory which overrides the os tmpdir
+ * @property {?boolean} unsafeCleanup recursively removes the created temporary directory, even when it's not empty
+ * @property {?boolean} detachDescriptor detaches the file descriptor, caller is responsible for closing the file, tmp will no longer try closing the file during garbage collection
+ * @property {?boolean} discardDescriptor discards the file descriptor (closes file, fd is -1), tmp will no longer try closing the file during garbage collection
+ */
+
+/**
+ * @typedef {Object} FileSyncObject
+ * @property {string} name the name of the file
+ * @property {string} fd the file descriptor or -1 if the fd has been discarded
+ * @property {fileCallback} removeCallback the callback function to remove the file
+ */
+
+/**
+ * @typedef {Object} DirSyncObject
+ * @property {string} name the name of the directory
+ * @property {fileCallback} removeCallback the callback function to remove the directory
+ */
+
+/**
+ * @callback tmpNameCallback
+ * @param {?Error} err the error object if anything goes wrong
+ * @param {string} name the temporary file name
+ */
+
+/**
+ * @callback fileCallback
+ * @param {?Error} err the error object if anything goes wrong
+ * @param {string} name the temporary file name
+ * @param {number} fd the file descriptor or -1 if the fd had been discarded
+ * @param {cleanupCallback} fn the cleanup callback function
+ */
+
+/**
+ * @callback fileCallbackSync
+ * @param {?Error} err the error object if anything goes wrong
+ * @param {string} name the temporary file name
+ * @param {number} fd the file descriptor or -1 if the fd had been discarded
+ * @param {cleanupCallbackSync} fn the cleanup callback function
+ */
+
+/**
+ * @callback dirCallback
+ * @param {?Error} err the error object if anything goes wrong
+ * @param {string} name the temporary file name
+ * @param {cleanupCallback} fn the cleanup callback function
+ */
+
+/**
+ * @callback dirCallbackSync
+ * @param {?Error} err the error object if anything goes wrong
+ * @param {string} name the temporary file name
+ * @param {cleanupCallbackSync} fn the cleanup callback function
+ */
+
+/**
+ * Removes the temporary created file or directory.
+ *
+ * @callback cleanupCallback
+ * @param {simpleCallback} [next] function to call whenever the tmp object needs to be removed
+ */
+
+/**
+ * Removes the temporary created file or directory.
+ *
+ * @callback cleanupCallbackSync
+ */
+
+/**
+ * Callback function for function composition.
+ * @see {@link https://github.com/raszi/node-tmp/issues/57|raszi/node-tmp#57}
+ *
+ * @callback simpleCallback
+ */
+
+// exporting all the needed methods
+
+// evaluate _getTmpDir() lazily, mainly for simplifying testing but it also will
+// allow users to reconfigure the temporary directory
+Object.defineProperty(module.exports, "tmpdir", ({
+  enumerable: true,
+  configurable: false,
+  get: function () {
+    return _getTmpDir();
+  }
+}));
+
+module.exports.dir = dir;
+module.exports.dirSync = dirSync;
+
+module.exports.file = file;
+module.exports.fileSync = fileSync;
+
+module.exports.tmpName = tmpName;
+module.exports.tmpNameSync = tmpNameSync;
+
+module.exports.setGracefulCleanup = setGracefulCleanup;
 
 
 /***/ }),
@@ -63677,7 +71771,12 @@ class GradleStateCache {
         return path_1.default.resolve(this.gradleUserHome, rawPath);
     }
     initializeGradleUserHome(gradleUserHome, initScriptsDir) {
-        const initScriptFilenames = ['build-result-capture.init.gradle', 'build-result-capture-service.plugin.groovy'];
+        const initScriptFilenames = [
+            'build-result-capture.init.gradle',
+            'build-result-capture-service.plugin.groovy',
+            'github-dependency-graph.init.gradle',
+            'github-dependency-graph-gradle-plugin-apply.groovy'
+        ];
         for (const initScriptFilename of initScriptFilenames) {
             const initScriptContent = this.readInitScriptAsString(initScriptFilename);
             const initScriptPath = path_1.default.resolve(initScriptsDir, initScriptFilename);
@@ -64382,7 +72481,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.tryDelete = exports.handleCacheFailure = exports.cacheDebug = exports.saveCache = exports.restoreCache = exports.hashStrings = exports.hashFileNames = exports.getCacheKeyForJob = exports.getCacheKeyPrefix = exports.generateCacheKey = exports.CacheKey = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
+exports.tryDelete = exports.handleCacheFailure = exports.cacheDebug = exports.saveCache = exports.restoreCache = exports.hashStrings = exports.hashFileNames = exports.getUniqueLabelForJobInstanceValues = exports.getUniqueLabelForJobInstance = exports.getCacheKeyForJob = exports.getCacheKeyPrefix = exports.generateCacheKey = exports.CacheKey = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const cache = __importStar(__nccwpck_require__(7799));
 const github = __importStar(__nccwpck_require__(5438));
@@ -64462,8 +72561,22 @@ function getCacheKeyJobInstance() {
     if (override) {
         return override;
     }
-    const workflowJobContext = params.getJobContext();
+    const workflowJobContext = params.getJobMatrix();
     return hashStrings([workflowJobContext]);
+}
+function getUniqueLabelForJobInstance() {
+    return getUniqueLabelForJobInstanceValues(github.context.workflow, github.context.job, params.getJobMatrix());
+}
+exports.getUniqueLabelForJobInstance = getUniqueLabelForJobInstance;
+function getUniqueLabelForJobInstanceValues(workflow, jobId, matrixJson) {
+    const matrix = JSON.parse(matrixJson);
+    const matrixString = Object.values(matrix).join('-');
+    const label = matrixString ? `${workflow}-${jobId}-${matrixString}` : `${workflow}-${jobId}`;
+    return sanitize(label);
+}
+exports.getUniqueLabelForJobInstanceValues = getUniqueLabelForJobInstanceValues;
+function sanitize(value) {
+    return value.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
 }
 function getCacheKeyJobExecution() {
     return process.env[CACHE_KEY_JOB_EXECUTION_VAR] || github.context.sha;
@@ -64776,6 +72889,211 @@ exports.DaemonController = DaemonController;
 
 /***/ }),
 
+/***/ 80:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.constructJobCorrelator = exports.getJobCorrelator = exports.complete = exports.setup = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const artifact = __importStar(__nccwpck_require__(2605));
+const github = __importStar(__nccwpck_require__(5438));
+const glob = __importStar(__nccwpck_require__(8090));
+const toolCache = __importStar(__nccwpck_require__(7784));
+const rest_1 = __nccwpck_require__(5375);
+const path = __importStar(__nccwpck_require__(1017));
+const fs_1 = __importDefault(__nccwpck_require__(7147));
+const layout = __importStar(__nccwpck_require__(8182));
+const input_params_1 = __nccwpck_require__(3885);
+const DEPENDENCY_GRAPH_ARTIFACT = 'dependency-graph';
+function setup(option) {
+    if (option === input_params_1.DependencyGraphOption.Disabled || option === input_params_1.DependencyGraphOption.DownloadAndSubmit) {
+        return;
+    }
+    core.info('Enabling dependency graph generation');
+    const jobCorrelator = getJobCorrelator();
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED', 'true');
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR', jobCorrelator);
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_ID', github.context.runId);
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_REPORT_DIR', path.resolve(layout.workspaceDirectory(), 'dependency-graph-reports'));
+}
+exports.setup = setup;
+function complete(option) {
+    return __awaiter(this, void 0, void 0, function* () {
+        switch (option) {
+            case input_params_1.DependencyGraphOption.Disabled:
+                return;
+            case input_params_1.DependencyGraphOption.Generate:
+                yield uploadDependencyGraphs();
+                return;
+            case input_params_1.DependencyGraphOption.GenerateAndSubmit:
+                yield submitDependencyGraphs(yield uploadDependencyGraphs());
+                return;
+            case input_params_1.DependencyGraphOption.DownloadAndSubmit:
+                yield downloadAndSubmitDependencyGraphs();
+        }
+    });
+}
+exports.complete = complete;
+function uploadDependencyGraphs() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const workspaceDirectory = layout.workspaceDirectory();
+        const graphFiles = yield findDependencyGraphFiles(workspaceDirectory);
+        const relativeGraphFiles = graphFiles.map(x => getRelativePathFromWorkspace(x));
+        core.info(`Uploading dependency graph files: ${relativeGraphFiles}`);
+        const artifactClient = artifact.create();
+        artifactClient.uploadArtifact(DEPENDENCY_GRAPH_ARTIFACT, graphFiles, workspaceDirectory);
+        return graphFiles;
+    });
+}
+function downloadAndSubmitDependencyGraphs() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const workspaceDirectory = layout.workspaceDirectory();
+        submitDependencyGraphs(yield retrieveDependencyGraphs(workspaceDirectory));
+    });
+}
+function submitDependencyGraphs(dependencyGraphFiles) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const octokit = getOctokit();
+        for (const jsonFile of dependencyGraphFiles) {
+            const jsonContent = fs_1.default.readFileSync(jsonFile, 'utf8');
+            const jsonObject = JSON.parse(jsonContent);
+            jsonObject.owner = github.context.repo.owner;
+            jsonObject.repo = github.context.repo.repo;
+            const response = yield octokit.request('POST /repos/{owner}/{repo}/dependency-graph/snapshots', jsonObject);
+            const relativeJsonFile = getRelativePathFromWorkspace(jsonFile);
+            core.notice(`Submitted ${relativeJsonFile}: ${response.data.message}`);
+        }
+    });
+}
+function retrieveDependencyGraphs(workspaceDirectory) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (github.context.payload.workflow_run) {
+            return yield retrieveDependencyGraphsForWorkflowRun(github.context.payload.workflow_run.id, workspaceDirectory);
+        }
+        return retrieveDependencyGraphsForCurrentWorkflow(workspaceDirectory);
+    });
+}
+function retrieveDependencyGraphsForWorkflowRun(runId, workspaceDirectory) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const octokit = getOctokit();
+        const artifacts = yield octokit.rest.actions.listWorkflowRunArtifacts({
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            run_id: runId
+        });
+        const matchArtifact = artifacts.data.artifacts.find(candidate => {
+            return candidate.name === DEPENDENCY_GRAPH_ARTIFACT;
+        });
+        if (matchArtifact === undefined) {
+            throw new Error(`Dependency graph artifact not found. Has it been generated by workflow run '${runId}'?`);
+        }
+        const download = yield octokit.rest.actions.downloadArtifact({
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            artifact_id: matchArtifact.id,
+            archive_format: 'zip'
+        });
+        const downloadBuffer = download.data;
+        const downloadZip = path.resolve(workspaceDirectory, 'dependency-graph.zip');
+        fs_1.default.writeFileSync(downloadZip, Buffer.from(downloadBuffer));
+        const extractDir = path.resolve(workspaceDirectory, 'dependency-graph');
+        const extracted = yield toolCache.extractZip(downloadZip, extractDir);
+        core.info(`Extracted dependency graph artifacts to ${extracted}: ${fs_1.default.readdirSync(extracted)}`);
+        return findDependencyGraphFiles(extracted);
+    });
+}
+function retrieveDependencyGraphsForCurrentWorkflow(workspaceDirectory) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const artifactClient = artifact.create();
+        const downloadPath = path.resolve(workspaceDirectory, 'dependency-graph');
+        yield artifactClient.downloadArtifact(DEPENDENCY_GRAPH_ARTIFACT, downloadPath);
+        return yield findDependencyGraphFiles(downloadPath);
+    });
+}
+function findDependencyGraphFiles(dir) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const globber = yield glob.create(`${dir}/dependency-graph-reports/*.json`);
+        const graphFiles = globber.glob();
+        return graphFiles;
+    });
+}
+function getOctokit() {
+    return new rest_1.Octokit({
+        auth: getGithubToken()
+    });
+}
+function getGithubToken() {
+    return core.getInput('github-token', { required: true });
+}
+function getRelativePathFromWorkspace(file) {
+    const workspaceDirectory = layout.workspaceDirectory();
+    return path.relative(workspaceDirectory, file);
+}
+function getJobCorrelator() {
+    return constructJobCorrelator(github.context.workflow, github.context.job, (0, input_params_1.getJobMatrix)());
+}
+exports.getJobCorrelator = getJobCorrelator;
+function constructJobCorrelator(workflow, jobId, matrixJson) {
+    const matrixString = describeMatrix(matrixJson);
+    const label = matrixString ? `${workflow}-${jobId}-${matrixString}` : `${workflow}-${jobId}`;
+    return sanitize(label);
+}
+exports.constructJobCorrelator = constructJobCorrelator;
+function describeMatrix(matrixJson) {
+    core.debug(`Got matrix json: ${matrixJson}`);
+    const matrix = JSON.parse(matrixJson);
+    if (matrix) {
+        return Object.values(matrix).join('-');
+    }
+    return '';
+}
+function sanitize(value) {
+    return value
+        .replace(/[^a-zA-Z0-9_-\s]/g, '')
+        .replace(/\s+/g, '_')
+        .toLowerCase();
+}
+
+
+/***/ }),
+
 /***/ 3584:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -64936,7 +73254,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isJobSummaryEnabled = exports.getGithubToken = exports.getJobContext = exports.getArguments = exports.getGradleExecutable = exports.getGradleVersion = exports.getBuildRootDirectory = exports.getCacheExcludes = exports.getCacheIncludes = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheStrictMatch = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
+exports.DependencyGraphOption = exports.getDependencyGraphOption = exports.isDependencyGraphEnabled = exports.isJobSummaryEnabled = exports.getGithubToken = exports.getJobMatrix = exports.getArguments = exports.getGradleExecutable = exports.getGradleVersion = exports.getBuildRootDirectory = exports.getCacheExcludes = exports.getCacheIncludes = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheStrictMatch = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const string_argv_1 = __nccwpck_require__(9663);
 function isCacheDisabled() {
@@ -64988,10 +73306,10 @@ function getArguments() {
     return (0, string_argv_1.parseArgsStringToArgv)(input);
 }
 exports.getArguments = getArguments;
-function getJobContext() {
+function getJobMatrix() {
     return core.getInput('workflow-job-context');
 }
-exports.getJobContext = getJobContext;
+exports.getJobMatrix = getJobMatrix;
 function getGithubToken() {
     return core.getInput('github-token', { required: true });
 }
@@ -65000,6 +73318,25 @@ function isJobSummaryEnabled() {
     return getBooleanInput('generate-job-summary', true);
 }
 exports.isJobSummaryEnabled = isJobSummaryEnabled;
+function isDependencyGraphEnabled() {
+    return getBooleanInput('generate-dependency-graph', true);
+}
+exports.isDependencyGraphEnabled = isDependencyGraphEnabled;
+function getDependencyGraphOption() {
+    const val = core.getInput('dependency-graph');
+    switch (val.toLowerCase().trim()) {
+        case 'disabled':
+            return DependencyGraphOption.Disabled;
+        case 'generate':
+            return DependencyGraphOption.Generate;
+        case 'generate-and-submit':
+            return DependencyGraphOption.GenerateAndSubmit;
+        case 'download-and-submit':
+            return DependencyGraphOption.DownloadAndSubmit;
+    }
+    throw TypeError(`The value '${val} is not valid for 'dependency-graph. Valid values are: [disabled, generate-and-upload, generate-and-submit, download-and-submit]. The default value is 'disabled'.`);
+}
+exports.getDependencyGraphOption = getDependencyGraphOption;
 function getBooleanInput(paramName, paramDefault = false) {
     const paramValue = core.getInput(paramName);
     switch (paramValue.toLowerCase().trim()) {
@@ -65012,6 +73349,13 @@ function getBooleanInput(paramName, paramDefault = false) {
     }
     throw TypeError(`The value '${paramValue} is not valid for '${paramName}. Valid values are: [true, false]`);
 }
+var DependencyGraphOption;
+(function (DependencyGraphOption) {
+    DependencyGraphOption[DependencyGraphOption["Disabled"] = 0] = "Disabled";
+    DependencyGraphOption[DependencyGraphOption["Generate"] = 1] = "Generate";
+    DependencyGraphOption[DependencyGraphOption["GenerateAndSubmit"] = 2] = "GenerateAndSubmit";
+    DependencyGraphOption[DependencyGraphOption["DownloadAndSubmit"] = 3] = "DownloadAndSubmit";
+})(DependencyGraphOption || (exports.DependencyGraphOption = DependencyGraphOption = {}));
 
 
 /***/ }),
@@ -65531,6 +73875,7 @@ const os = __importStar(__nccwpck_require__(2037));
 const caches = __importStar(__nccwpck_require__(3800));
 const layout = __importStar(__nccwpck_require__(8182));
 const params = __importStar(__nccwpck_require__(3885));
+const dependencyGraph = __importStar(__nccwpck_require__(80));
 const job_summary_1 = __nccwpck_require__(7345);
 const build_results_1 = __nccwpck_require__(2107);
 const cache_reporting_1 = __nccwpck_require__(6674);
@@ -65551,6 +73896,7 @@ function setup() {
         const cacheListener = new cache_reporting_1.CacheListener();
         yield caches.restore(gradleUserHome, cacheListener);
         core.saveState(CACHE_LISTENER, cacheListener.stringify());
+        dependencyGraph.setup(params.getDependencyGraphOption());
     });
 }
 exports.setup = setup;
@@ -65572,6 +73918,7 @@ function complete() {
         else {
             (0, job_summary_1.logJobSummary)(buildResults, cacheListener);
         }
+        dependencyGraph.complete(params.getDependencyGraphOption());
     });
 }
 exports.complete = complete;
@@ -65702,6 +74049,14 @@ module.exports = require("os");
 
 "use strict";
 module.exports = require("path");
+
+/***/ }),
+
+/***/ 4074:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("perf_hooks");
 
 /***/ }),
 
