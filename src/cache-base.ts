@@ -183,11 +183,6 @@ export class GradleStateCache {
             const initScriptPath = path.resolve(initScriptsDir, initScriptFilename)
             fs.writeFileSync(initScriptPath, initScriptContent)
         }
-
-        // TODO:DAZ Remove this when we use a real dependency again
-        const depGraphJar = 'github-dependency-graph-gradle-plugin-0.0.3.jar'
-        const jarFile = path.resolve(__dirname, '..', '..', 'src', 'resources', 'init-scripts', depGraphJar)
-        fs.copyFileSync(jarFile, path.resolve(initScriptsDir, depGraphJar))
     }
 
     private readInitScriptAsString(resource: string): string {
