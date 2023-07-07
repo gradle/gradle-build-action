@@ -1,4 +1,11 @@
+import org.gradle.util.GradleVersion
+
 if (System.env.GITHUB_DEPENDENCY_GRAPH_ENABLED != "true") {
+  return
+}
+
+if (GradleVersion.current().baseVersion < GradleVersion.version("5.0")) {
+  println "::warning::Dependency Graph is not supported for Gradle versions < 5.0. No dependency snapshot will be generated."
   return
 }
 
@@ -7,7 +14,7 @@ def jobCorrelator = System.env.GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR
 def reportFile = new File(reportDir, jobCorrelator + ".json")
 
 if (reportFile.exists()) {
-  println "::warning::No dependency report generated for step: report file for '${jobCorrelator}' created in earlier step. Each build invocation requires a unique job correlator: specify GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR var for this step."
+  println "::warning::No dependency snapshot generated for step: report file for '${jobCorrelator}' created in earlier step. Each build invocation requires a unique job correlator: specify GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR var for this step."
   return
 }
 

@@ -5,6 +5,9 @@ import static org.junit.Assume.assumeTrue
 class TestDependencyGraph extends BaseInitScriptTest {
     def initScript = 'github-dependency-graph.init.gradle'
 
+    static final List<TestGradleVersion> NO_DEPENDENCY_GRAPH_VERSIONS = [GRADLE_3_X, GRADLE_4_X]
+    static final List<TestGradleVersion> DEPENDENCY_GRAPH_VERSIONS = ALL_VERSIONS - NO_DEPENDENCY_GRAPH_VERSIONS
+
 
     def "does not produce dependency graph when not enabled"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
@@ -29,7 +32,21 @@ class TestDependencyGraph extends BaseInitScriptTest {
         assert reportFile.exists()
 
         where:
-        testGradleVersion << ALL_VERSIONS
+        testGradleVersion << DEPENDENCY_GRAPH_VERSIONS
+    }
+
+    def "warns and produces no dependency graph when enabled for older Gradle versions"() {
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
+
+        when:
+        def result = run(['help'], initScript, testGradleVersion.gradleVersion, [], envVars)
+
+        then:
+        assert !reportsDir.exists()
+        assert result.output.contains("::warning::Dependency Graph is not supported")
+
+        where:
+        testGradleVersion << NO_DEPENDENCY_GRAPH_VERSIONS
     }
 
     def "warns and does not overwrite existing report file"() {
@@ -42,10 +59,10 @@ class TestDependencyGraph extends BaseInitScriptTest {
 
         then:
         assert reportFile.text == "DUMMY CONTENT"
-        assert result.output.contains("::warning::No dependency report generated for step")
+        assert result.output.contains("::warning::No dependency snapshot generated for step")
 
         where:
-        testGradleVersion << ALL_VERSIONS
+        testGradleVersion << DEPENDENCY_GRAPH_VERSIONS
     }
 
     def getEnvVars() {
