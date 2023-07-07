@@ -22,8 +22,9 @@ class BaseInitScriptTest extends Specification {
     static final TestGradleVersion GRADLE_5_X = new TestGradleVersion(GradleVersion.version('5.6.4'), 8, 12)
     static final TestGradleVersion GRADLE_6_NO_BUILD_SERVICE = new TestGradleVersion(GradleVersion.version('6.5.1'), 8, 14)
     static final TestGradleVersion GRADLE_6_X = new TestGradleVersion(GradleVersion.version('6.9.4'), 8, 15)
-    static final TestGradleVersion GRADLE_7_X = new TestGradleVersion(GradleVersion.version('7.6.1'), 8, 19)
-    static final TestGradleVersion GRADLE_8_X = new TestGradleVersion(GradleVersion.version('8.0.2'), 8, 19)
+    static final TestGradleVersion GRADLE_7_X = new TestGradleVersion(GradleVersion.version('7.6.2'), 8, 19)
+    static final TestGradleVersion GRADLE_8_0 = new TestGradleVersion(GradleVersion.version('8.0.2'), 8, 19)
+    static final TestGradleVersion GRADLE_8_X = new TestGradleVersion(GradleVersion.version('8.2'), 8, 19)
 
     static final List<TestGradleVersion> ALL_VERSIONS = [
         GRADLE_3_X, // First version where TestKit supports environment variables
@@ -32,14 +33,15 @@ class BaseInitScriptTest extends Specification {
         GRADLE_6_NO_BUILD_SERVICE, // Last version without build service support
         GRADLE_6_X,
         GRADLE_7_X,
+        GRADLE_8_0,
         GRADLE_8_X,
     ]
 
     static final List<TestGradleVersion> CONFIGURATION_CACHE_VERSIONS =
-        [GRADLE_7_X, GRADLE_8_X]
+        [GRADLE_7_X, GRADLE_8_0, GRADLE_8_X]
 
     static final List<TestGradleVersion> SETTINGS_PLUGIN_VERSIONS =
-        [GRADLE_6_X, GRADLE_7_X, GRADLE_8_X]
+        [GRADLE_6_X, GRADLE_7_X, GRADLE_8_0, GRADLE_8_X]
 
     static final String PUBLIC_BUILD_SCAN_ID = 'i2wepy2gr7ovw'
     static final String DEFAULT_SCAN_UPLOAD_TOKEN = 'scan-upload-token'
