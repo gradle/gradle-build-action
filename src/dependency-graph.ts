@@ -171,5 +171,8 @@ function describeMatrix(matrixJson: string): string {
 }
 
 function sanitize(value: string): string {
-    return value.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase()
+    return value
+        .replace(/[^a-zA-Z0-9_-\s]/g, '')
+        .replace(/\s+/g, '_')
+        .toLowerCase()
 }
