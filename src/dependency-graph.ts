@@ -150,7 +150,7 @@ export function constructJobCorrelator(workflow: string, jobId: string, matrixJs
 }
 
 function describeMatrix(matrixJson: string): string {
-    core.info(`Got matrix json: ${matrixJson}`)
+    core.debug(`Got matrix json: ${matrixJson}`)
     const matrix = JSON.parse(matrixJson)
     if (matrix) {
         return Object.values(matrix).join('-')
