@@ -408,3 +408,120 @@ You can use the `gradle-build-action` on GitHub Enterprise Server, and benefit f
 - Easily run your build with different versions of Gradle
 - Save/restore of Gradle User Home (requires GHES v3.5+ : GitHub Actions cache was introduced in GHES 3.5)
 - Support for GitHub Actions Job Summary (requires GHES 3.6+ : GitHub Actions Job Summary support was introduced in GHES 3.6). In earlier versions of GHES the build-results summary and caching report will be written to the workflow log, as part of the post-action step.
+
+# GitHub Dependency Graph support (Experimental)
+
+The `gradle-build-action` has experimental support for submitting a [GitHub Dependency Graph](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/about-the-dependency-graph) snapshot via the [GitHub Dependency Submission API](https://docs.github.com/en/rest/dependency-graph/dependency-submission?apiVersion=2022-11-28). 
+
+The dependency graph snapshot is generated via integration with the [GitHub Dependency Graph Gradle Plugin](https://plugins.gradle.org/plugin/org.gradle.github-dependency-graph-gradle-plugin), and saved as a workflow artifact. The generated snapshot files can be submitted either in the same job, or in a subsequent job (in the same or a dependent workflow).
+
+You enable GitHub Dependency Graph support by setting the `dependency-graph` action parameter. Valid values are:
+
+|<div style="width:290px">Option</div> | Behaviour |
+| --- |---|
+| `disabled`           | Do not generate a dependency graph for any build invocations.<p>This is the default. |
+| `generate`           | Generate a dependency graph snapshot for each build invocation, saving as a workflow artifact. |
+| `generate-and-submit` | As per `generate`, but any generated dependency graph snapshots will be submitted at the end of the job. |
+| `download-and-submit` | Download any previously saved dependency graph snapshots, submitting them via the Dependency Submission API. This can be useful to collect all snapshots in a matrix of builds and submit them in one step. |
+
+- 'disabled': Do not generate a dependency graph for any build invocations. This is the default.
+- 'generate': Generate a dependency graph snapshot for each build invocation, saving as a workflow artifact.
+- 'generate-and-submit': As per 'generate', but any generated dependency graph snapshots will be submitted at the end of the job.
+- 'download-and-submit': Download any previously saved dependency graph snapshots, submitting them via the Dependency Submission API. This can be useful to collect all snapshots in a matrix of builds and submit them in one step.
+
+Dependency Graph _submission_ (but not generation) requires the `contents: write` permission, which may need to be explicitly enabled in the workflow file.
+
+Example of a simple workflow that generates and submits a dependency graph:
+```yaml
+name: Submit dependency graph
+on:
+  push:
+  
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Gradle to generate and submit dependency graphs
+      uses: gradle/gradle-build-action@dependency-graph
+      with:
+        dependency-graph: generate-and-submit
+    - name: Run a build, generating the dependency graph snapshot which will be submitted
+      run: ./gradlew build
+```
+
+### Running multiple builds in a single Job
+
+GitHub tracks dependency snapshots based on the `job.correlator` value that is embedded in the snapshot. When a newer snapshot for an existing correlator is submitted, the previous snapshot is replaced. Snapshots with different `job.correlator` values are additive to the overall dependency graph for the repository.
+
+The `gradle-build-action` will generate a `job.correlator` value based on the workflow name, job id and matrix values. However, if your job steps contains multiple Gradle invocations, then a unique correlator value must be assigned to each. You assign a correlator by setting the `GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR` environment variable.
+
+```yaml
+name: dependency-graph
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Gradle to generate and submit dependency graphs
+      uses: gradle/gradle-build-action@dependency-graph
+      with:
+        dependency-graph: generate-and-submit
+    - name: Run first build using the default job correlator 'dependency-graph-build'
+      run: ./gradlew build
+    - name: Run second build providing a unique job correlator
+      run: ./gradlew test
+      env:
+         GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR: dependency-graph-test
+      
+```
+
+### Dependency snapshots generated for pull requests
+
+This `contents: write` permission is not available for any workflow that is triggered by a pull request submitted from a forked repository, since it would permit a malicious pull request to make repository changes. 
+
+Because of this restriction, it is not possible to `generate-and-submit` a dependency graph generated for a pull-request that comes from a repository fork. In order to do so, 2 workflows will be required:
+1. The first workflow runs directly against the pull request sources and will generate the dependency graph snapshot.
+2. The second workflow is triggered on `workflow_run` of the first workflow, and will submit the previously saved dependency snapshots.
+
+Note: when `download-and-submit` is used in a workflow triggered via [workflow_run](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run), the action will download snapshots saved in the triggering workflow.
+
+***Main workflow file***
+```yaml
+name: run-build-and-generate-dependency-snapshot
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Gradle to generate and submit dependency graphs
+      uses: gradle/gradle-build-action@v2
+      with:
+        dependency-graph: generate # Only generate in this job
+    - name: Run a build, generating the dependency graph snapshot which will be submitted
+      run: ./gradlew build
+```
+
+***Dependent workflow file***
+```yaml
+name: submit-dependency-snapshot
+
+on:
+  workflow_run:
+    workflows: ['run-build-and-generate-dependency-snapshot']
+    types: [completed]
+
+jobs:
+  submit-snapshots:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retrieve dependency graph artifact and submit
+        uses: gradle/gradle-build-action@v2
+      with:
+        dependency-graph: download-and-submit
+```
+
