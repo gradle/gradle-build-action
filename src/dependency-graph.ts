@@ -8,59 +8,64 @@ import {Octokit} from '@octokit/rest'
 import * as path from 'path'
 import fs from 'fs'
 
-import * as execution from './execution'
 import * as layout from './repository-layout'
+import {DependencyGraphOption, getJobMatrix} from './input-params'
 
 const DEPENDENCY_GRAPH_ARTIFACT = 'dependency-graph'
-const DEPENDENCY_GRAPH_FILE = 'dependency-graph.json'
 
-export async function generateDependencyGraph(executable: string | undefined): Promise<void> {
-    const workspaceDirectory = layout.workspaceDirectory()
-    const buildRootDirectory = layout.buildRootDirectory()
-    const buildPath = getRelativePathFromWorkspace(buildRootDirectory)
+export function setup(option: DependencyGraphOption): void {
+    if (option === DependencyGraphOption.Disabled || option === DependencyGraphOption.DownloadAndSubmit) {
+        return
+    }
 
-    const initScript = path.resolve(
-        __dirname,
-        '..',
-        '..',
-        'src',
-        'resources',
-        'init-scripts',
-        'github-dependency-graph.init.gradle'
+    core.info('Enabling dependency graph generation')
+    const jobCorrelator = getJobCorrelator()
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED', 'true')
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR', jobCorrelator)
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_ID', github.context.runId)
+    core.exportVariable(
+        'GITHUB_DEPENDENCY_GRAPH_REPORT_DIR',
+        path.resolve(layout.workspaceDirectory(), 'dependency-graph-reports')
     )
-    const args = [
-        `-Dorg.gradle.github.env.GRADLE_BUILD_PATH=${buildPath}`,
-        '--init-script',
-        initScript,
-        ':GitHubDependencyGraphPlugin_generateDependencyGraph'
-    ]
+}
 
-    await execution.executeGradleBuild(executable, buildRootDirectory, args)
-    const dependencyGraphJson = copyDependencyGraphToBuildRoot(buildRootDirectory)
+export async function complete(option: DependencyGraphOption): Promise<void> {
+    switch (option) {
+        case DependencyGraphOption.Disabled:
+            return
+        case DependencyGraphOption.Generate:
+            await uploadDependencyGraphs()
+            return
+        case DependencyGraphOption.GenerateAndSubmit:
+            await submitDependencyGraphs(await uploadDependencyGraphs())
+            return
+        case DependencyGraphOption.DownloadAndSubmit:
+            await downloadAndSubmitDependencyGraphs()
+    }
+}
+
+async function uploadDependencyGraphs(): Promise<string[]> {
+    const workspaceDirectory = layout.workspaceDirectory()
+    const graphFiles = await findDependencyGraphFiles(workspaceDirectory)
+
+    const relativeGraphFiles = graphFiles.map(x => getRelativePathFromWorkspace(x))
+    core.info(`Uploading dependency graph files: ${relativeGraphFiles}`)
 
     const artifactClient = artifact.create()
-    artifactClient.uploadArtifact(DEPENDENCY_GRAPH_ARTIFACT, [dependencyGraphJson], workspaceDirectory)
+    artifactClient.uploadArtifact(DEPENDENCY_GRAPH_ARTIFACT, graphFiles, workspaceDirectory)
+
+    return graphFiles
 }
 
-function copyDependencyGraphToBuildRoot(buildRootDirectory: string): string {
-    const sourceFile = path.resolve(
-        buildRootDirectory,
-        'build',
-        'reports',
-        'github-dependency-graph-plugin',
-        'github-dependency-snapshot.json'
-    )
-
-    const destFile = path.resolve(buildRootDirectory, DEPENDENCY_GRAPH_FILE)
-    fs.copyFileSync(sourceFile, destFile)
-    return destFile
-}
-
-export async function submitDependencyGraph(): Promise<void> {
+async function downloadAndSubmitDependencyGraphs(): Promise<void> {
     const workspaceDirectory = layout.workspaceDirectory()
+    submitDependencyGraphs(await retrieveDependencyGraphs(workspaceDirectory))
+}
+
+async function submitDependencyGraphs(dependencyGraphFiles: string[]): Promise<void> {
     const octokit: Octokit = getOctokit()
 
-    for (const jsonFile of await retrieveDependencyGraphs(octokit, workspaceDirectory)) {
+    for (const jsonFile of dependencyGraphFiles) {
         const jsonContent = fs.readFileSync(jsonFile, 'utf8')
 
         const jsonObject = JSON.parse(jsonContent)
@@ -69,34 +74,20 @@ export async function submitDependencyGraph(): Promise<void> {
         const response = await octokit.request('POST /repos/{owner}/{repo}/dependency-graph/snapshots', jsonObject)
 
         const relativeJsonFile = getRelativePathFromWorkspace(jsonFile)
-        core.info(`Submitted ${relativeJsonFile}: ${JSON.stringify(response)}`)
         core.notice(`Submitted ${relativeJsonFile}: ${response.data.message}`)
     }
 }
 
-async function findDependencyGraphFiles(dir: string): Promise<string[]> {
-    const globber = await glob.create(`${dir}/**/${DEPENDENCY_GRAPH_FILE}`)
-    const graphFiles = globber.glob()
-    core.info(`Found graph files in ${dir}: ${graphFiles}`)
-    return graphFiles
-}
-
-async function retrieveDependencyGraphs(octokit: Octokit, workspaceDirectory: string): Promise<string[]> {
+async function retrieveDependencyGraphs(workspaceDirectory: string): Promise<string[]> {
     if (github.context.payload.workflow_run) {
-        return await retrieveDependencyGraphsForWorkflowRun(
-            github.context.payload.workflow_run.id,
-            octokit,
-            workspaceDirectory
-        )
+        return await retrieveDependencyGraphsForWorkflowRun(github.context.payload.workflow_run.id, workspaceDirectory)
     }
     return retrieveDependencyGraphsForCurrentWorkflow(workspaceDirectory)
 }
 
-async function retrieveDependencyGraphsForWorkflowRun(
-    runId: number,
-    octokit: Octokit,
-    workspaceDirectory: string
-): Promise<string[]> {
+async function retrieveDependencyGraphsForWorkflowRun(runId: number, workspaceDirectory: string): Promise<string[]> {
+    const octokit: Octokit = getOctokit()
+
     // Find the workflow run artifacts named "dependency-graph"
     const artifacts = await octokit.rest.actions.listWorkflowRunArtifacts({
         owner: github.context.repo.owner,
@@ -139,6 +130,12 @@ async function retrieveDependencyGraphsForCurrentWorkflow(workspaceDirectory: st
     return await findDependencyGraphFiles(downloadPath)
 }
 
+async function findDependencyGraphFiles(dir: string): Promise<string[]> {
+    const globber = await glob.create(`${dir}/dependency-graph-reports/*.json`)
+    const graphFiles = globber.glob()
+    return graphFiles
+}
+
 function getOctokit(): Octokit {
     return new Octokit({
         auth: getGithubToken()
@@ -152,4 +149,30 @@ function getGithubToken(): string {
 function getRelativePathFromWorkspace(file: string): string {
     const workspaceDirectory = layout.workspaceDirectory()
     return path.relative(workspaceDirectory, file)
+}
+
+export function getJobCorrelator(): string {
+    return constructJobCorrelator(github.context.workflow, github.context.job, getJobMatrix())
+}
+
+export function constructJobCorrelator(workflow: string, jobId: string, matrixJson: string): string {
+    const matrixString = describeMatrix(matrixJson)
+    const label = matrixString ? `${workflow}-${jobId}-${matrixString}` : `${workflow}-${jobId}`
+    return sanitize(label)
+}
+
+function describeMatrix(matrixJson: string): string {
+    core.debug(`Got matrix json: ${matrixJson}`)
+    const matrix = JSON.parse(matrixJson)
+    if (matrix) {
+        return Object.values(matrix).join('-')
+    }
+    return ''
+}
+
+function sanitize(value: string): string {
+    return value
+        .replace(/[^a-zA-Z0-9_-\s]/g, '')
+        .replace(/\s+/g, '_')
+        .toLowerCase()
 }

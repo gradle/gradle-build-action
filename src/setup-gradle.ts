@@ -6,6 +6,7 @@ import * as os from 'os'
 import * as caches from './caches'
 import * as layout from './repository-layout'
 import * as params from './input-params'
+import * as dependencyGraph from './dependency-graph'
 
 import {logJobSummary, writeJobSummary} from './job-summary'
 import {loadBuildResults} from './build-results'
@@ -36,6 +37,8 @@ export async function setup(): Promise<void> {
     await caches.restore(gradleUserHome, cacheListener)
 
     core.saveState(CACHE_LISTENER, cacheListener.stringify())
+
+    dependencyGraph.setup(params.getDependencyGraphOption())
 }
 
 export async function complete(): Promise<void> {
@@ -58,6 +61,8 @@ export async function complete(): Promise<void> {
     } else {
         logJobSummary(buildResults, cacheListener)
     }
+
+    dependencyGraph.complete(params.getDependencyGraphOption())
 }
 
 async function determineGradleUserHome(): Promise<string> {

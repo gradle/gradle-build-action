@@ -11,9 +11,7 @@
 
     "compile-main": "ncc build src/main.ts --out dist/main --source-map --no-source-map-register",
     "compile-post": "ncc build src/post.ts --out dist/post --source-map --no-source-map-register",
-    "compile-dependency-graph-generate": "ncc build src/dependency-graph-generate.ts --out dist/dependency-graph-generate --source-map --no-source-map-register",
-    "compile-dependency-graph-submit": "ncc build src/dependency-graph-submit.ts --out dist/dependency-graph-submit --source-map --no-source-map-register",
-    "compile": "npm run compile-main && npm run compile-post && npm run compile-dependency-graph-generate && npm run compile-dependency-graph-submit",
+    "compile": "npm run compile-main && npm run compile-post",
 
     "test": "jest",
     "check": "npm run format && npm run lint",

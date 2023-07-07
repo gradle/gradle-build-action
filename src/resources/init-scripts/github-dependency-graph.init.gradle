@@ -1,12 +1,17 @@
-import org.gradle.github.GitHubDependencyGraphPlugin
-initscript {
-  repositories {
-    maven {
-      url = uri("https://plugins.gradle.org/m2/")
-    }
-  }
-  dependencies {
-    classpath("org.gradle:github-dependency-graph-gradle-plugin:+")
-  }
+if (System.env.GITHUB_DEPENDENCY_GRAPH_ENABLED != "true") {
+  return
 }
-apply plugin: GitHubDependencyGraphPlugin
+
+def reportDir = System.env.GITHUB_DEPENDENCY_GRAPH_REPORT_DIR
+def jobCorrelator = System.env.GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR
+def reportFile = new File(reportDir, jobCorrelator + ".json")
+
+if (reportFile.exists()) {
+  println "::warning::No dependency report generated for step: report file for '${jobCorrelator}' created in earlier step. Each build invocation requires a unique job correlator: specify GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR var for this step."
+  return
+}
+
+println "Generating dependency graph for '${jobCorrelator}'"
+
+// TODO:DAZ This should be conditionally applied, since the script may be present when not required.
+apply from: 'github-dependency-graph-gradle-plugin-apply.groovy'
