@@ -172,7 +172,12 @@ export class GradleStateCache {
     }
 
     private initializeGradleUserHome(gradleUserHome: string, initScriptsDir: string): void {
-        const initScriptFilenames = ['build-result-capture.init.gradle', 'build-result-capture-service.plugin.groovy']
+        const initScriptFilenames = [
+            'build-result-capture.init.gradle',
+            'build-result-capture-service.plugin.groovy',
+            'github-dependency-graph.init.gradle',
+            'github-dependency-graph-gradle-plugin-apply.groovy'
+        ]
         for (const initScriptFilename of initScriptFilenames) {
             const initScriptContent = this.readInitScriptAsString(initScriptFilename)
             const initScriptPath = path.resolve(initScriptsDir, initScriptFilename)

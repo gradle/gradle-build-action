@@ -1,0 +1,87 @@
+package com.gradle.gradlebuildaction
+
+import static org.junit.Assume.assumeTrue
+
+class TestDependencyGraph extends BaseInitScriptTest {
+    def initScript = 'github-dependency-graph.init.gradle'
+
+    static final List<TestGradleVersion> NO_DEPENDENCY_GRAPH_VERSIONS = [GRADLE_3_X, GRADLE_4_X]
+    static final List<TestGradleVersion> DEPENDENCY_GRAPH_VERSIONS = ALL_VERSIONS - NO_DEPENDENCY_GRAPH_VERSIONS
+
+
+    def "does not produce dependency graph when not enabled"() {
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
+
+        when:
+        run(['help'], initScript, testGradleVersion.gradleVersion)
+
+        then:
+        assert !reportsDir.exists()
+
+        where:
+        testGradleVersion << ALL_VERSIONS
+    }
+
+    def "produces dependency graph when enabled"() {
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
+
+        when:
+        run(['help'], initScript, testGradleVersion.gradleVersion, [], envVars)
+
+        then:
+        assert reportFile.exists()
+
+        where:
+        testGradleVersion << DEPENDENCY_GRAPH_VERSIONS
+    }
+
+    def "warns and produces no dependency graph when enabled for older Gradle versions"() {
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
+
+        when:
+        def result = run(['help'], initScript, testGradleVersion.gradleVersion, [], envVars)
+
+        then:
+        assert !reportsDir.exists()
+        assert result.output.contains("::warning::Dependency Graph is not supported")
+
+        where:
+        testGradleVersion << NO_DEPENDENCY_GRAPH_VERSIONS
+    }
+
+    def "warns and does not overwrite existing report file"() {
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
+
+        when:
+        reportsDir.mkdirs()
+        reportFile << "DUMMY CONTENT"
+        def result = run(['help'], initScript, testGradleVersion.gradleVersion, [], envVars)
+
+        then:
+        assert reportFile.text == "DUMMY CONTENT"
+        assert result.output.contains("::warning::No dependency snapshot generated for step")
+
+        where:
+        testGradleVersion << DEPENDENCY_GRAPH_VERSIONS
+    }
+
+    def getEnvVars() {
+        return [
+            GITHUB_DEPENDENCY_GRAPH_ENABLED: "true",
+            GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR: "CORRELATOR",
+            GITHUB_DEPENDENCY_GRAPH_JOB_ID: "1",
+            GITHUB_DEPENDENCY_GRAPH_REPORT_DIR: reportsDir.absolutePath,
+            GITHUB_REF: "main",
+            GITHUB_SHA: "123456",
+            GITHUB_WORKSPACE: testProjectDir.absolutePath
+        ]
+    }
+
+    def getReportsDir() {
+        return new File(testProjectDir, 'build/reports/github-dependency-graph-snapshots')
+    }
+
+    def getReportFile() {
+        return new File(reportsDir, "CORRELATOR.json")
+    }
+}
