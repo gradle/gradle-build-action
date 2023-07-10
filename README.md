@@ -409,7 +409,8 @@ You can use the `gradle-build-action` on GitHub Enterprise Server, and benefit f
 - Save/restore of Gradle User Home (requires GHES v3.5+ : GitHub Actions cache was introduced in GHES 3.5)
 - Support for GitHub Actions Job Summary (requires GHES 3.6+ : GitHub Actions Job Summary support was introduced in GHES 3.6). In earlier versions of GHES the build-results summary and caching report will be written to the workflow log, as part of the post-action step.
 
-# GitHub Dependency Graph support (Experimental)
+# GitHub Dependency Graph support
+**EXPERIMENTAL**
 
 The `gradle-build-action` has experimental support for submitting a [GitHub Dependency Graph](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/about-the-dependency-graph) snapshot via the [GitHub Dependency Submission API](https://docs.github.com/en/rest/dependency-graph/dependency-submission?apiVersion=2022-11-28).
 
