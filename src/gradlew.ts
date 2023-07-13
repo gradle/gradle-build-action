@@ -4,23 +4,39 @@ import fs from 'fs'
 const IS_WINDOWS = process.platform === 'win32'
 
 export function wrapperScriptFilename(): string {
-    return IS_WINDOWS ? 'gradlew.bat' : 'gradlew'
+    return IS_WINDOWS ? 'gradlew.bat' : './gradlew'
 }
 
 export function installScriptFilename(): string {
     return IS_WINDOWS ? 'gradle.bat' : 'gradle'
 }
 
-export function locateGradleWrapperScript(buildRootDirectory: string): string {
+export function gradleWrapperScript(buildRootDirectory: string): string {
     validateGradleWrapper(buildRootDirectory)
-    return path.resolve(buildRootDirectory, wrapperScriptFilename())
+    return wrapperScriptFilename()
 }
 
 function validateGradleWrapper(buildRootDirectory: string): void {
+    const wrapperScript = path.resolve(buildRootDirectory, wrapperScriptFilename())
+    verifyExists(wrapperScript, 'Gradle Wrapper script')
+    verifyIsExecutableScript(wrapperScript)
+
     const wrapperProperties = path.resolve(buildRootDirectory, 'gradle/wrapper/gradle-wrapper.properties')
-    if (!fs.existsSync(wrapperProperties)) {
+    verifyExists(wrapperProperties, 'Gradle wrapper properties file')
+}
+
+function verifyExists(file: string, description: string): void {
+    if (!fs.existsSync(file)) {
         throw new Error(
-            `Cannot locate a Gradle wrapper properties file at '${wrapperProperties}'. Specify 'gradle-version' or 'gradle-executable' for projects without Gradle wrapper configured.`
+            `Cannot locate ${description} at '${file}'. Specify 'gradle-version' or 'gradle-executable' for projects without Gradle wrapper configured.`
         )
+    }
+}
+
+function verifyIsExecutableScript(toExecute: string): void {
+    try {
+        fs.accessSync(toExecute, fs.constants.X_OK)
+    } catch (err) {
+        throw new Error(`Gradle script '${toExecute}' is not executable.`)
     }
 }

@@ -73282,19 +73282,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.executeGradleBuild = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
-const fs_1 = __importDefault(__nccwpck_require__(7147));
 const gradlew = __importStar(__nccwpck_require__(2335));
 function executeGradleBuild(executable, root, args) {
     return __awaiter(this, void 0, void 0, function* () {
-        const toExecute = executable !== null && executable !== void 0 ? executable : gradlew.locateGradleWrapperScript(root);
-        verifyIsExecutableScript(toExecute);
+        const toExecute = executable !== null && executable !== void 0 ? executable : gradlew.gradleWrapperScript(root);
         const status = yield exec.exec(toExecute, args, {
             cwd: root,
             ignoreReturnCode: true
@@ -73305,14 +73300,6 @@ function executeGradleBuild(executable, root, args) {
     });
 }
 exports.executeGradleBuild = executeGradleBuild;
-function verifyIsExecutableScript(toExecute) {
-    try {
-        fs_1.default.accessSync(toExecute, fs_1.default.constants.X_OK);
-    }
-    catch (err) {
-        throw new Error(`Gradle script '${toExecute}' is not executable.`);
-    }
-}
 
 
 /***/ }),
@@ -73349,27 +73336,41 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.locateGradleWrapperScript = exports.installScriptFilename = exports.wrapperScriptFilename = void 0;
+exports.gradleWrapperScript = exports.installScriptFilename = exports.wrapperScriptFilename = void 0;
 const path = __importStar(__nccwpck_require__(1017));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const IS_WINDOWS = process.platform === 'win32';
 function wrapperScriptFilename() {
-    return IS_WINDOWS ? 'gradlew.bat' : 'gradlew';
+    return IS_WINDOWS ? 'gradlew.bat' : './gradlew';
 }
 exports.wrapperScriptFilename = wrapperScriptFilename;
 function installScriptFilename() {
     return IS_WINDOWS ? 'gradle.bat' : 'gradle';
 }
 exports.installScriptFilename = installScriptFilename;
-function locateGradleWrapperScript(buildRootDirectory) {
+function gradleWrapperScript(buildRootDirectory) {
     validateGradleWrapper(buildRootDirectory);
-    return path.resolve(buildRootDirectory, wrapperScriptFilename());
+    return wrapperScriptFilename();
 }
-exports.locateGradleWrapperScript = locateGradleWrapperScript;
+exports.gradleWrapperScript = gradleWrapperScript;
 function validateGradleWrapper(buildRootDirectory) {
+    const wrapperScript = path.resolve(buildRootDirectory, wrapperScriptFilename());
+    verifyExists(wrapperScript, 'Gradle Wrapper script');
+    verifyIsExecutableScript(wrapperScript);
     const wrapperProperties = path.resolve(buildRootDirectory, 'gradle/wrapper/gradle-wrapper.properties');
-    if (!fs_1.default.existsSync(wrapperProperties)) {
-        throw new Error(`Cannot locate a Gradle wrapper properties file at '${wrapperProperties}'. Specify 'gradle-version' or 'gradle-executable' for projects without Gradle wrapper configured.`);
+    verifyExists(wrapperProperties, 'Gradle wrapper properties file');
+}
+function verifyExists(file, description) {
+    if (!fs_1.default.existsSync(file)) {
+        throw new Error(`Cannot locate ${description} at '${file}'. Specify 'gradle-version' or 'gradle-executable' for projects without Gradle wrapper configured.`);
+    }
+}
+function verifyIsExecutableScript(toExecute) {
+    try {
+        fs_1.default.accessSync(toExecute, fs_1.default.constants.X_OK);
+    }
+    catch (err) {
+        throw new Error(`Gradle script '${toExecute}' is not executable.`);
     }
 }
 
