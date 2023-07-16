@@ -1,11 +1,5 @@
 import org.gradle.util.GradleVersion
 
-// Only run against root build. Do not run against included builds.
-def isTopLevelBuild = gradle.getParent() == null
-if (!isTopLevelBuild) {
-  return
-}
-
 // Only run when dependency graph is explicitly enabled
 if (System.env.GITHUB_DEPENDENCY_GRAPH_ENABLED != "true") {
   return
@@ -18,17 +12,19 @@ if (GradleVersion.current().baseVersion < GradleVersion.version("5.0")) {
 }
 
 // Attempt to find a unique job correlator to use based on the environment variable
-def reportDir = System.env.GITHUB_DEPENDENCY_GRAPH_REPORT_DIR
-def jobCorrelator = ensureUniqueJobCorrelator(reportDir, System.env.GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR)
+// This is only required for top-level builds
+def isTopLevelBuild = gradle.getParent() == null
+if (isTopLevelBuild) {
+  def jobCorrelator = ensureUniqueJobCorrelator(System.env.GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR)
 
-if (jobCorrelator == null) {
-  println "::warning::No dependency snapshot generated for step: report file for '${jobCorrelator}' created in earlier step. Each build invocation requires a unique job correlator: specify GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR var for this step."
-  return
+  if (jobCorrelator == null) {
+    println "::warning::No dependency snapshot generated for step: report file for '${jobCorrelator}' created in earlier step. Each build invocation requires a unique job correlator: specify GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR var for this step."
+    return
+  }
+
+  println "Generating dependency graph for '${jobCorrelator}'"
 }
 
-println "Generating dependency graph for '${jobCorrelator}'"
-
-// TODO:DAZ This should be conditionally applied, since the script may be present when not required.
 apply from: 'github-dependency-graph-gradle-plugin-apply.groovy'
 
 /**
@@ -37,7 +33,8 @@ apply from: 'github-dependency-graph-gradle-plugin-apply.groovy'
  * - If so, tries to find a unique value that does not yet have a corresponding report file.
  * - When found, this value is set as a System property override.
  */
-String ensureUniqueJobCorrelator(String reportDir, String jobCorrelator) {
+String ensureUniqueJobCorrelator(String jobCorrelator) {
+    def reportDir = System.env.GITHUB_DEPENDENCY_GRAPH_REPORT_DIR
     def reportFile = new File(reportDir, jobCorrelator + ".json")
     if (!reportFile.exists()) return jobCorrelator
 
