@@ -73341,7 +73341,7 @@ const path = __importStar(__nccwpck_require__(1017));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const IS_WINDOWS = process.platform === 'win32';
 function wrapperScriptFilename() {
-    return IS_WINDOWS ? 'gradlew.bat' : './gradlew';
+    return IS_WINDOWS ? './gradlew.bat' : './gradlew';
 }
 exports.wrapperScriptFilename = wrapperScriptFilename;
 function installScriptFilename() {
