@@ -49,18 +49,46 @@ class TestDependencyGraph extends BaseInitScriptTest {
         testGradleVersion << NO_DEPENDENCY_GRAPH_VERSIONS
     }
 
-    def "warns and does not overwrite existing report file"() {
+    def "constructs unique job correlator for each build invocation"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
+        def reportFile1 = new File(reportsDir, "CORRELATOR-1.json")
+        def reportFile2 = new File(reportsDir, "CORRELATOR-2.json")
+
+        buildFile << """
+            task firstTask {
+                doLast {
+                    println "First"
+                }
+            }
+            task secondTask {
+                doLast {
+                    println "Second"
+                }
+            }
+        """
+
         when:
-        reportsDir.mkdirs()
-        reportFile << "DUMMY CONTENT"
-        def result = run(['help'], initScript, testGradleVersion.gradleVersion, [], envVars)
+        run(['help'], initScript, testGradleVersion.gradleVersion, [], envVars)
 
         then:
-        assert reportFile.text == "DUMMY CONTENT"
-        assert result.output.contains("::warning::No dependency snapshot generated for step")
+        assert reportFile.exists()
 
+        when:
+        run(['first'], initScript, testGradleVersion.gradleVersion, [], envVars)
+
+        then:
+        assert reportFile.exists()
+        assert reportFile1.exists()
+        
+        when:
+        run(['second'], initScript, testGradleVersion.gradleVersion, [], envVars)
+
+        then:
+        assert reportFile.exists()
+        assert reportFile1.exists()
+        assert reportFile2.exists()
+        
         where:
         testGradleVersion << DEPENDENCY_GRAPH_VERSIONS
     }

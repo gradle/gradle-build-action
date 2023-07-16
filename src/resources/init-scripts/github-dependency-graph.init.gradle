@@ -1,19 +1,27 @@
 import org.gradle.util.GradleVersion
 
+// Only run against root build. Do not run against included builds.
+def isTopLevelBuild = gradle.getParent() == null
+if (!isTopLevelBuild) {
+  return
+}
+
+// Only run when dependency graph is explicitly enabled
 if (System.env.GITHUB_DEPENDENCY_GRAPH_ENABLED != "true") {
   return
 }
 
+// Do not run for unsupported versions of Gradle
 if (GradleVersion.current().baseVersion < GradleVersion.version("5.0")) {
   println "::warning::Dependency Graph is not supported for Gradle versions < 5.0. No dependency snapshot will be generated."
   return
 }
 
+// Attempt to find a unique job correlator to use based on the environment variable
 def reportDir = System.env.GITHUB_DEPENDENCY_GRAPH_REPORT_DIR
-def jobCorrelator = System.env.GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR
-def reportFile = new File(reportDir, jobCorrelator + ".json")
+def jobCorrelator = ensureUniqueJobCorrelator(reportDir, System.env.GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR)
 
-if (reportFile.exists()) {
+if (jobCorrelator == null) {
   println "::warning::No dependency snapshot generated for step: report file for '${jobCorrelator}' created in earlier step. Each build invocation requires a unique job correlator: specify GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR var for this step."
   return
 }
@@ -22,3 +30,27 @@ println "Generating dependency graph for '${jobCorrelator}'"
 
 // TODO:DAZ This should be conditionally applied, since the script may be present when not required.
 apply from: 'github-dependency-graph-gradle-plugin-apply.groovy'
+
+/**
+ * Using the supplied jobCorrelator value:
+ * - Checks if report file already exists
+ * - If so, tries to find a unique value that does not yet have a corresponding report file.
+ * - When found, this value is set as a System property override.
+ */
+String ensureUniqueJobCorrelator(String reportDir, String jobCorrelator) {
+    def reportFile = new File(reportDir, jobCorrelator + ".json")
+    if (!reportFile.exists()) return jobCorrelator
+
+    // Try at most 100 suffixes
+    for (int i = 1; i < 100; i++) {
+        def candidateCorrelator = jobCorrelator + "-" + i
+        def candidateFile = new File(reportDir, candidateCorrelator + ".json")
+        if (!candidateFile.exists()) {
+           System.properties['org.gradle.github.env.GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR'] = candidateCorrelator
+           return candidateCorrelator
+        }
+    }
+
+    // Could not determine unique job correlator
+    return null
+}

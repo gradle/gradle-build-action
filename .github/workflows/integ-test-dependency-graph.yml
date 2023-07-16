@@ -66,3 +66,33 @@ jobs:
       uses: ./
       with:
         dependency-graph: download-and-submit
+
+  multiple-builds:
+    runs-on: "ubuntu-latest"
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v3
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
+    - name: Setup Gradle for dependency-graph generate
+      uses: ./
+      with:
+        dependency-graph: generate
+    - name: Run assemble
+      run: ./gradlew assemble
+      working-directory: .github/workflow-samples/groovy-dsl
+      env:
+        GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR: job-correlator
+    - name: Run build
+      run: ./gradlew build
+      working-directory: .github/workflow-samples/groovy-dsl 
+      env:
+        GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR: job-correlator
+    - name: Check generated dependency graphs
+      run: |
+        ls -l dependency-graph-reports
+        if ([ ! -e dependency-graph-reports/job-correlator.json ] || [ ! -e dependency-graph-reports/job-correlator-1.json ])
+        then
+            echo "Did not find expected dependency graph files"
+            exit 1
+        fi    
