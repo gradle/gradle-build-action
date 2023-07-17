@@ -8,7 +8,6 @@ class TestDependencyGraph extends BaseInitScriptTest {
     static final List<TestGradleVersion> NO_DEPENDENCY_GRAPH_VERSIONS = [GRADLE_3_X, GRADLE_4_X]
     static final List<TestGradleVersion> DEPENDENCY_GRAPH_VERSIONS = ALL_VERSIONS - NO_DEPENDENCY_GRAPH_VERSIONS
 
-
     def "does not produce dependency graph when not enabled"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
@@ -33,6 +32,20 @@ class TestDependencyGraph extends BaseInitScriptTest {
 
         where:
         testGradleVersion << DEPENDENCY_GRAPH_VERSIONS
+    }
+
+    // Dependency-graph plugin doesn't support config-cache for 8.0 of Gradle
+    def "produces dependency graph with configuration-cache on latest Gradle"() {
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
+
+        when:
+        run(['help'], initScript, testGradleVersion.gradleVersion, [], envVars)
+
+        then:
+        assert reportFile.exists()
+
+        where:
+        testGradleVersion << [GRADLE_8_X]
     }
 
     def "warns and produces no dependency graph when enabled for older Gradle versions"() {
