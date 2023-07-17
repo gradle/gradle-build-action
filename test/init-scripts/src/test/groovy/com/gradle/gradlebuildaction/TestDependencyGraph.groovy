@@ -109,12 +109,12 @@ class TestDependencyGraph extends BaseInitScriptTest {
     def getEnvVars() {
         return [
             GITHUB_DEPENDENCY_GRAPH_ENABLED: "true",
-            GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR: "CORRELATOR",
-            GITHUB_DEPENDENCY_GRAPH_JOB_ID: "1",
-            GITHUB_DEPENDENCY_GRAPH_REPORT_DIR: reportsDir.absolutePath,
+            GITHUB_JOB_CORRELATOR: "CORRELATOR",
+            GITHUB_JOB_ID: "1",
             GITHUB_REF: "main",
             GITHUB_SHA: "123456",
-            GITHUB_WORKSPACE: testProjectDir.absolutePath
+            GITHUB_WORKSPACE: testProjectDir.absolutePath,
+            DEPENDENCY_GRAPH_REPORT_DIR: reportsDir.absolutePath
         ]
     }
 

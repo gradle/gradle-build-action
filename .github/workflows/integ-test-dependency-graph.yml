@@ -82,12 +82,12 @@ jobs:
       run: ./gradlew assemble
       working-directory: .github/workflow-samples/groovy-dsl
       env:
-        GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR: job-correlator
+        GITHUB_JOB_CORRELATOR: job-correlator
     - name: Run build
       run: ./gradlew build
       working-directory: .github/workflow-samples/groovy-dsl 
       env:
-        GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR: job-correlator
+        GITHUB_JOB_CORRELATOR: job-correlator
     - name: Check generated dependency graphs
       run: |
         ls -l dependency-graph-reports

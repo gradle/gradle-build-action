@@ -456,32 +456,6 @@ jobs:
       run: ./gradlew build
 ```
 
-### Running multiple builds in a single Job
-
-GitHub tracks dependency snapshots based on the `job.correlator` value that is embedded in the snapshot. When a newer snapshot for an existing correlator is submitted, the previous snapshot is replaced. Snapshots with different `job.correlator` values are additive to the overall dependency graph for the repository.
-
-The `gradle-build-action` will generate a `job.correlator` value based on the workflow name, job id and matrix values. However, if your job steps contains multiple Gradle invocations, then a unique correlator value must be assigned to each. You assign a correlator by setting the `GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR` environment variable.
-
-```yaml
-name: dependency-graph
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Setup Gradle to generate and submit dependency graphs
-      uses: gradle/gradle-build-action@dependency-graph
-      with:
-        dependency-graph: generate-and-submit
-    - name: Run first build using the default job correlator 'dependency-graph-build'
-      run: ./gradlew build
-    - name: Run second build providing a unique job correlator
-      run: ./gradlew test
-      env:
-         GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR: dependency-graph-test
-      
-```
-
 ### Dependency snapshots generated for pull requests
 
 This `contents: write` permission is not available for any workflow that is triggered by a pull request submitted from a forked repository, since it would permit a malicious pull request to make repository changes. 
