@@ -139,7 +139,7 @@ class BaseInitScriptTest extends Specification {
         } else {
             """
               plugins {
-                id 'com.gradle.enterprise' version '3.13.4'
+                id 'com.gradle.enterprise' version '3.14'
               }
               gradleEnterprise {
                 server = '$mockScansServer.address'
@@ -165,7 +165,7 @@ class BaseInitScriptTest extends Specification {
         } else if (gradleVersion < GradleVersion.version('6.0')) {
             """
               plugins {
-                id 'com.gradle.build-scan' version '3.13.4'
+                id 'com.gradle.build-scan' version '3.14'
               }
               gradleEnterprise {
                 server = '$mockScansServer.address'
