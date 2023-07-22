@@ -36,7 +36,7 @@ function writeSummaryTable(results: BuildResult[]): void {
         <th>Requested Tasks</th>
         <th>Gradle Version</th>
         <th>Build Outcome</th>
-        <th>Build Scan™</th>
+        <th>Build Scan®</th>
     </tr>${results.map(result => renderBuildResultRow(result)).join('')}
 </table>
     `)
@@ -72,7 +72,7 @@ function renderBuildScan(result: BuildResult): string {
 }
 
 function renderBuildScanBadge(outcomeText: string, outcomeColor: string, targetUrl: string): string {
-    const badgeUrl = `https://img.shields.io/badge/Build%20Scan%E2%84%A2-${outcomeText}-${outcomeColor}?logo=Gradle`
+    const badgeUrl = `https://img.shields.io/badge/Build%20Scan%C2%AE-${outcomeText}-${outcomeColor}?logo=Gradle`
     const badgeHtml = `<img src="${badgeUrl}" alt="Build Scan ${outcomeText}" />`
     return `<a href="${targetUrl}" rel="nofollow">${badgeHtml}</a>`
 }
@@ -81,7 +81,7 @@ function logSummaryTable(results: BuildResult[]): void {
     core.info('============================')
     core.info('Gradle Builds')
     core.info('----------------------------')
-    core.info('Root Project | Requested Tasks | Gradle Version | Build Outcome | Build Scan™')
+    core.info('Root Project | Requested Tasks | Gradle Version | Build Outcome | Build Scan®')
     core.info('----------------------------')
     for (const result of results) {
         core.info(

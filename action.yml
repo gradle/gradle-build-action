@@ -87,7 +87,7 @@ inputs:
 
 outputs:
   build-scan-url:
-    description: Link to the build scan if any
+    description: Link to the Build Scan® if any
 
 runs:
   using: 'node16'

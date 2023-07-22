@@ -1,4 +1,4 @@
-name: Demo adding build scan comment to PR
+name: Demo adding Build Scan® comment to PR
 on:
   pull_request:
     types: [assigned, review_requested]
@@ -14,7 +14,7 @@ jobs:
       id: gradle
       working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew build --scan
-    - name: "Add build scan URL as PR comment"
+    - name: "Add Build Scan URL as PR comment"
       uses: actions/github-script@v6
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}

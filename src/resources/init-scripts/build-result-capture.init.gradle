@@ -23,7 +23,7 @@ if (isTopLevelBuild) {
                 captureUsingBuildFinished(gradle, invocationId)
             }
             
-            // The `buildScanPublished` hook allows the capture of the build scan URI.
+            // The `buildScanPublished` hook allows the capture of the Build Scan URI.
             // Results captured this way will overwrite any results from the other mechanism.
             settings.pluginManager.withPlugin("com.gradle.enterprise") {
                 captureUsingBuildScanPublished(settings.extensions["gradleEnterprise"].buildScan, settings.rootProject, invocationId)
@@ -34,7 +34,7 @@ if (isTopLevelBuild) {
             // By default, use 'buildFinished' to capture build results
             captureUsingBuildFinished(gradle, invocationId)
 
-            // The `buildScanPublished` hook allows the capture of the build scan URI.
+            // The `buildScanPublished` hook allows the capture of the Build Scan URI.
             // Results captured this way will overwrite any results from 'buildFinished'.
             gradle.rootProject.pluginManager.withPlugin("com.gradle.build-scan") {
                 captureUsingBuildScanPublished(gradle.rootProject.extensions["buildScan"], gradle.rootProject, invocationId)

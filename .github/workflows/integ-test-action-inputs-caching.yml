@@ -88,12 +88,12 @@ jobs:
       id: gradle
       working-directory: .github/workflow-samples/no-wrapper${{ matrix.build-root-suffix }}
       run: gradle help "-DgradleVersionCheck=${{matrix.gradle}}"
-    - name: Check build scan url is captured
+    - name: Check Build Scan url is captured
       if: ${{ !steps.gradle.outputs.build-scan-url }}
       uses: actions/github-script@v6
       with:
         script: |
-          core.setFailed('No build scan detected')
+          core.setFailed('No Build Scan detected')
 
   # Test that build scans are captured when caching is disabled because Gradle User Home already exists
   cache-disabled-pre-existing-gradle-home:
@@ -111,12 +111,12 @@ jobs:
       id: gradle
       working-directory: .github/workflow-samples/no-wrapper${{ matrix.build-root-suffix }}
       run: gradle help "-DgradleVersionCheck=${{matrix.gradle}}"
-    - name: Check build scan url is captured
+    - name: Check Build Scan url is captured
       if: ${{ !steps.gradle.outputs.build-scan-url }}
       uses: actions/github-script@v6
       with:
         script: |
-          core.setFailed('No build scan detected')
+          core.setFailed('No Build Scan detected')
 
   # Test seed the cache with cache-write-only and verify with cache-read-only
   seed-build-write-only:

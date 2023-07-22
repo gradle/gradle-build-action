@@ -41,7 +41,7 @@ However, the `gradle-build-action` offers a number of advantages over this appro
 - Easily [run the build with different versions of Gradle](#use-a-specific-gradle-version) using the `gradle-version` parameter. Gradle distributions are automatically downloaded and cached. 
 - More sophisticated and more efficient caching of Gradle User Home between invocations, compared to `setup-java` and most custom configurations using `actions/cache`. [More details below](#caching).
 - Detailed reporting of cache usage and cache configuration options allow you to [optimize the use of the GitHub actions cache](#optimizing-cache-effectiveness).
-- [Automatic capture of build scan links](#build-scans) from the build, making these easier to locate for workflow run.
+- [Automatic capture of Build Scan® links](#build-scans) from the build, making these easier to locate for workflow run.
 
 The `gradle-build-action` is designed to provide these benefits with minimal configuration. 
 These features work both when Gradle is executed via the `gradle-build-action` and for any Gradle execution in subsequent steps.
@@ -339,7 +339,7 @@ If you are using init scripts for the [Gradle Enterprise Gradle Plugin](https://
 you'll need to ensure these files are applied prior to `build-result-capture.init.gradle`.
 Since Gradle applies init scripts in alphabetical order, one way to ensure this is via file naming.
 
-### Build scan link as Step output
+### Build Scan® link as Step output
 
 As well as reporting the [Build Scan](https://gradle.com/build-scans/) link in the Job Summary,
 the `gradle-build-action` action makes this link available as a Step output named `build-scan-url`.
@@ -361,7 +361,7 @@ jobs:
     - name: Run build with Gradle wrapper
       id: gradle
       run: ./gradlew build --scan
-    - name: "Add build scan URL as PR comment"
+    - name: "Add Build Scan URL as PR comment"
       uses: actions/github-script@v5
       if: github.event_name == 'pull_request' && failure()
       with:
@@ -404,7 +404,7 @@ jobs:
 ## Support for GitHub Enterprise Server (GHES)
 
 You can use the `gradle-build-action` on GitHub Enterprise Server, and benefit from the improved integration with Gradle. Depending on the version of GHES you are running, certain features may be limited:
-- Build scan links are captured and displayed in the GitHub Actions UI
+- Build Scan links are captured and displayed in the GitHub Actions UI
 - Easily run your build with different versions of Gradle
 - Save/restore of Gradle User Home (requires GHES v3.5+ : GitHub Actions cache was introduced in GHES 3.5)
 - Support for GitHub Actions Job Summary (requires GHES 3.6+ : GitHub Actions Job Summary support was introduced in GHES 3.6). In earlier versions of GHES the build-results summary and caching report will be written to the workflow log, as part of the post-action step.

@@ -84,11 +84,11 @@ jobs:
         gradle-version: ${{matrix.gradle}}
         build-root-directory: .github/workflow-samples/no-wrapper${{ matrix.build-root-suffix }}
         arguments: help -DgradleVersionCheck=${{matrix.gradle}}
-    - name: Check build scan url
+    - name: Check Build Scan url
       if: ${{ !steps.gradle.outputs.build-scan-url }}
       uses: actions/github-script@v6
       with:
         script: |
-          core.setFailed('No build scan detected')    
+          core.setFailed('No Build Scan detected')    
   
    
