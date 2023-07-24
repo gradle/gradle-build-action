@@ -78,21 +78,19 @@ jobs:
       uses: ./
       with:
         dependency-graph: generate
-    - name: Run assemble
+    - id: gradle-assemble
       run: ./gradlew assemble
       working-directory: .github/workflow-samples/groovy-dsl
-      env:
-        GITHUB_JOB_CORRELATOR: job-correlator
-    - name: Run build
+    - id: gradle-build
       run: ./gradlew build
-      working-directory: .github/workflow-samples/groovy-dsl 
-      env:
-        GITHUB_JOB_CORRELATOR: job-correlator
+      working-directory: .github/workflow-samples/groovy-dsl
     - name: Check generated dependency graphs
       run: |
+        echo "gradle-assemble report file: ${{ steps.gradle-assemble.outputs.dependency-graph-file }}"
+        echo "gradle-build report file: ${{ steps.gradle-build.outputs.dependency-graph-file }}"
         ls -l dependency-graph-reports
-        if ([ ! -e dependency-graph-reports/job-correlator.json ] || [ ! -e dependency-graph-reports/job-correlator-1.json ])
+        if ([ ! -e ${{ steps.gradle-assemble.outputs.dependency-graph-file }} ] || [ ! -e ${{ steps.gradle-build.outputs.dependency-graph-file }} ])
         then
             echo "Did not find expected dependency graph files"
             exit 1
-        fi    
+        fi
