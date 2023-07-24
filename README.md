@@ -410,7 +410,6 @@ You can use the `gradle-build-action` on GitHub Enterprise Server, and benefit f
 - Support for GitHub Actions Job Summary (requires GHES 3.6+ : GitHub Actions Job Summary support was introduced in GHES 3.6). In earlier versions of GHES the build-results summary and caching report will be written to the workflow log, as part of the post-action step.
 
 # GitHub Dependency Graph support
-**EXPERIMENTAL**
 
 The `gradle-build-action` has experimental support for submitting a [GitHub Dependency Graph](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/about-the-dependency-graph) snapshot via the [GitHub Dependency Submission API](https://docs.github.com/en/rest/dependency-graph/dependency-submission?apiVersion=2022-11-28).
 
@@ -449,12 +448,58 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Setup Gradle to generate and submit dependency graphs
-      uses: gradle/gradle-build-action@dependency-graph
+      uses: gradle/gradle-build-action@v2
       with:
         dependency-graph: generate-and-submit
     - name: Run a build, generating the dependency graph snapshot which will be submitted
       run: ./gradlew build
 ```
+
+### Filtering which Gradle Configurations contribute to the dependency graph
+
+If you do not want to include every dependency configuration in every project in your build, you can limit the
+dependency extraction to a subset of these.
+
+To restrict which Gradle subprojects contribute to the report, specify which projects to include via a regular expression.
+You can provide this value via the `DEPENDENCY_GRAPH_INCLUDE_PROJECTS` environment variable or system property.
+
+To restrict which Gradle configurations contribute to the report, you can filter configurations by name using a regular expression.
+You can provide this value via the `DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS` environment variable or system property.
+
+Example of a simple workflow that limits the dependency graph to `RuntimeClasspath` configuration:
+```yaml
+name: Submit dependency graph
+on:
+  push:
+  
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Gradle to generate and submit dependency graphs
+      uses: gradle/gradle-build-action@v2
+      with:
+        dependency-graph: generate-and-submit
+    - name: Run a build, generating the dependency graph from 'RuntimeClasspath' configurations
+      run: ./gradlew build -DDEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS=RuntimeClasspath
+```
+
+### Gradle version compatibility
+
+The plugin should be compatible with all versions of Gradle >= 5.0, and has been tested against 
+Gradle versions "5.6.4", "6.9.4", "7.0.2", "7.6.2", "8.0.2" and the current Gradle release.
+
+The plugin is compatible with running Gradle with the configuration-cache enabled. However, this support is
+limited to Gradle "8.1.0" and later:
+- With Gradle "8.0", the build should run successfully, but an empty dependency graph will be generated.
+- With Gradle <= "7.6.4", the plugin will cause the build to fail with configuration-cache enabled.
+
+To use this plugin with versions of Gradle older than "8.1.0", you'll need to invoke Gradle with the
+configuration-cache disabled.
 
 ### Dependency snapshots generated for pull requests
 

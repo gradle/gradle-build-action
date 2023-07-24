@@ -29,9 +29,10 @@ class TestDependencyGraph extends BaseInitScriptTest {
 
         then:
         assert reportFile.exists()
+        assert gitHubOutputFile.text == "dependency-graph-file=${reportFile.absolutePath}\n"
 
         where:
-        testGradleVersion << DEPENDENCY_GRAPH_VERSIONS
+        testGradleVersion << GRADLE_8_X
     }
 
     // Dependency-graph plugin doesn't support config-cache for 8.0 of Gradle
@@ -114,7 +115,8 @@ class TestDependencyGraph extends BaseInitScriptTest {
             GITHUB_REF: "main",
             GITHUB_SHA: "123456",
             GITHUB_WORKSPACE: testProjectDir.absolutePath,
-            DEPENDENCY_GRAPH_REPORT_DIR: reportsDir.absolutePath
+            DEPENDENCY_GRAPH_REPORT_DIR: reportsDir.absolutePath,
+            GITHUB_OUTPUT: gitHubOutputFile.absolutePath
         ]
     }
 
@@ -124,5 +126,9 @@ class TestDependencyGraph extends BaseInitScriptTest {
 
     def getReportFile() {
         return new File(reportsDir, "CORRELATOR.json")
+    }
+
+    def getGitHubOutputFile() {
+        return new File(testProjectDir, "GITHUB_OUTPUT")
     }
 }
