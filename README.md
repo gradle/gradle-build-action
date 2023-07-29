@@ -411,7 +411,7 @@ You can use the `gradle-build-action` on GitHub Enterprise Server, and benefit f
 
 # GitHub Dependency Graph support
 
-The `gradle-build-action` has experimental support for submitting a [GitHub Dependency Graph](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/about-the-dependency-graph) snapshot via the [GitHub Dependency Submission API](https://docs.github.com/en/rest/dependency-graph/dependency-submission?apiVersion=2022-11-28).
+The `gradle-build-action` has support for submitting a [GitHub Dependency Graph](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/about-the-dependency-graph) snapshot via the [GitHub Dependency Submission API](https://docs.github.com/en/rest/dependency-graph/dependency-submission?apiVersion=2022-11-28).
 
 The dependency graph snapshot is generated via integration with the [GitHub Dependency Graph Gradle Plugin](https://plugins.gradle.org/plugin/org.gradle.github-dependency-graph-gradle-plugin), and saved as a workflow artifact. The generated snapshot files can be submitted either in the same job, or in a subsequent job (in the same or a dependent workflow).
 
@@ -419,17 +419,12 @@ The generated dependency graph snapshot reports all of the dependencies that wer
  
 You enable GitHub Dependency Graph support by setting the `dependency-graph` action parameter. Valid values are:
 
-|<div style="width:290px">Option</div> | Behaviour |
-| --- |---|
-| `disabled`           | Do not generate a dependency graph for any build invocations.<p>This is the default. |
-| `generate`           | Generate a dependency graph snapshot for each build invocation, saving as a workflow artifact. |
+| Option | Behaviour |
+| --- | --- |
+| `disabled`            | Do not generate a dependency graph for any build invocations.<p>This is the default. |
+| `generate`            | Generate a dependency graph snapshot for each build invocation, saving as a workflow artifact. |
 | `generate-and-submit` | As per `generate`, but any generated dependency graph snapshots will be submitted at the end of the job. |
 | `download-and-submit` | Download any previously saved dependency graph snapshots, submitting them via the Dependency Submission API. This can be useful to collect all snapshots in a matrix of builds and submit them in one step. |
-
-- 'disabled': Do not generate a dependency graph for any build invocations. This is the default.
-- 'generate': Generate a dependency graph snapshot for each build invocation, saving as a workflow artifact.
-- 'generate-and-submit': As per 'generate', but any generated dependency graph snapshots will be submitted at the end of the job.
-- 'download-and-submit': Download any previously saved dependency graph snapshots, submitting them via the Dependency Submission API. This can be useful to collect all snapshots in a matrix of builds and submit them in one step.
 
 Dependency Graph _submission_ (but not generation) requires the `contents: write` permission, which may need to be explicitly enabled in the workflow file.
 
