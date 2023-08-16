@@ -46,8 +46,6 @@ However, the `gradle-build-action` offers a number of advantages over this appro
 The `gradle-build-action` is designed to provide these benefits with minimal configuration. 
 These features work both when Gradle is executed via the `gradle-build-action` and for any Gradle execution in subsequent steps.
 
-When using `gradle-build-action` we recommend that you _not_ use `actions/cache` or `actions/setup-java@v3` to explicitly cache the Gradle User Home. Doing so may interfere with the caching provided by this action.
-
 ## Use a specific Gradle version
 
 The `gradle-build-action` can download and install a specified Gradle version, adding this installed version to the PATH.
@@ -204,6 +202,17 @@ Caching is enabled by default. You can disable caching for the action as follows
 ```yaml
 cache-disabled: true
 ```
+
+### Incompatibility with other caching mechanisms
+
+When using `gradle-build-action` we recommend that you avoid using other mechanisms to save and restore the Gradle User Home. 
+
+Specifically:
+- Avoid using `actions/cache` configured to cache the Gradle User Home, [as described in this example](https://github.com/actions/cache/blob/main/examples.md#java---gradle).
+- Avoid using `actions/setup-java` with the `cache: gradle` option, [as described here](https://github.com/actions/setup-java#caching-gradle-dependencies).
+
+Using either of these mechanisms may interfere with the caching provided by this action. If you choose to use a different mechanism to save and restore the Gradle User Home, you should disable the caching provided by this action, as described above.
+
 ### Cache keys
 
 Distributions downloaded to satisfy a `gradle-version` parameter are stored outside of Gradle User Home and cached separately. The cache key is unique to the downloaded distribution and will not change over time.
