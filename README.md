@@ -461,7 +461,8 @@ You can provide this value via the `DEPENDENCY_GRAPH_INCLUDE_PROJECTS` environme
 To restrict which Gradle configurations contribute to the report, you can filter configurations by name using a regular expression.
 You can provide this value via the `DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS` environment variable or system property.
 
-Example of a simple workflow that limits the dependency graph to `runtimeClasspath` configuration:
+Example of a simple workflow that limits the dependency graph to `runtimeClasspath` configuration and to exclude `buildSrc` dependencies:
+
 ```yaml
 name: Submit dependency graph
 on:
@@ -480,7 +481,10 @@ jobs:
       with:
         dependency-graph: generate-and-submit
     - name: Run a build, generating the dependency graph from 'runtimeClasspath' configurations
-      run: ./gradlew build -DDEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS=runtimeClasspath
+      run: ./gradlew build
+      env:
+        DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS: runtimeClasspath
+        DEPENDENCY_GRAPH_INCLUDE_PROJECTS: "^:(?!buildSrc).*"
 ```
 
 ### Gradle version compatibility
