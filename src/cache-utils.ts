@@ -66,7 +66,7 @@ export class CacheKey {
  * - The cache protocol version
  * - The name of the cache
  * - The runner operating system
- * - The name of the Job being executed
+ * - The name of the workflow and Job being executed
  * - The matrix values for the Job being executed (job context)
  * - The SHA of the commit being executed
  *
