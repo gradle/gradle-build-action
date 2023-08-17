@@ -1,5 +1,5 @@
 name: "Gradle Build Action"
-description: 'Configures Gradle for use in GitHub actions, caching useful state in the GitHub actions cache'
+description: 'Configures Gradle for GitHub actions, caching state and generating a dependency graph via Dependency Submission.'
 
 # https://help.github.com/en/articles/metadata-syntax-for-github-actions
 
