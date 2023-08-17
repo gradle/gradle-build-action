@@ -2,12 +2,26 @@
 
 This GitHub Action can be used to configure Gradle and optionally execute a Gradle build on any platform supported by GitHub Actions.
 
+## Why use the `gradle-build-action`?
+
+It is possible to directly invoke Gradle in your workflow, and the `actions/setup-java@v3` action provides a simple way to cache Gradle dependencies. 
+
+However, the `gradle-build-action` offers a number of advantages over this approach:
+
+- Easily [configure your workflow to use a specific version of Gradle](#use-a-specific-gradle-version) using the `gradle-version` parameter. Gradle distributions are automatically downloaded and cached. 
+- More sophisticated and more efficient caching of Gradle User Home between invocations, compared to `setup-java` and most custom configurations using `actions/cache`. [More details below](#caching).
+- Detailed reporting of cache usage and cache configuration options allow you to [optimize the use of the GitHub actions cache](#optimizing-cache-effectiveness).
+- [Automatic capture of Build Scan® links](#build-scans) from the build, making these easier to locate for workflow run.
+
+The `gradle-build-action` is designed to provide these benefits with minimal configuration. 
+These features work both when Gradle is executed via the `gradle-build-action` and for any Gradle execution in subsequent steps.
+
 ## Use the action to setup Gradle
 
-If you have an existing workflow invoking Gradle, you can add an initial "Setup Gradle" Step to benefit from caching, 
-build-scan capture and other features of the gradle-build-action.
+The recommended way to use the `gradle-build-action` is in an initial "Setup Gradle" step, with subsquent steps invoking Gradle directly with a `run` step. This makes the action minimally invasive, and allows a workflow to configure and execute a Gradle execution in any way.
 
-All subsequent Gradle invocations will benefit from this initial setup, via `init` scripts added to the Gradle User Home.
+Most of the functionality of the `gradle-build-action` is applied via Gradle init-scripts, and so will apply to all subsequent Gradle executions on the runner, no matter how Gradle is invoked. This means that if you have an existing workflow that executes Gradle with a `run` step, you can add an initial "Setup Gradle" Step to benefit from caching, build-scan capture and other features of the gradle-build-action.
+
 
 ```yaml
 name: Run Gradle on PRs
@@ -32,21 +46,7 @@ jobs:
       run: ./gradlew build
 ```
 
-## Why use the `gradle-build-action`?
-
-It is possible to directly invoke Gradle in your workflow, and the `actions/setup-java@v3` action provides a simple way to cache Gradle dependencies. 
-
-However, the `gradle-build-action` offers a number of advantages over this approach:
-
-- Easily [run the build with different versions of Gradle](#use-a-specific-gradle-version) using the `gradle-version` parameter. Gradle distributions are automatically downloaded and cached. 
-- More sophisticated and more efficient caching of Gradle User Home between invocations, compared to `setup-java` and most custom configurations using `actions/cache`. [More details below](#caching).
-- Detailed reporting of cache usage and cache configuration options allow you to [optimize the use of the GitHub actions cache](#optimizing-cache-effectiveness).
-- [Automatic capture of Build Scan® links](#build-scans) from the build, making these easier to locate for workflow run.
-
-The `gradle-build-action` is designed to provide these benefits with minimal configuration. 
-These features work both when Gradle is executed via the `gradle-build-action` and for any Gradle execution in subsequent steps.
-
-## Use a specific Gradle version
+## Choose a specific Gradle version
 
 The `gradle-build-action` can download and install a specified Gradle version, adding this installed version to the PATH.
 Downloaded Gradle versions are stored in the GitHub Actions cache, to avoid requiring downloading again later.
@@ -91,103 +91,6 @@ jobs:
     - run: gradle build --dry-run # just test build configuration
 ```
 
-## Gradle Execution
-
-If the action is configured with an `arguments` input, then Gradle will execute a Gradle build with the arguments provided.
-
-If no `arguments` are provided, the action will not execute Gradle, but will still cache Gradle state and configure build-scan capture for all subsequent Gradle executions.
-
-```yaml
-name: Run Gradle on PRs
-on: pull_request
-jobs:
-  gradle:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-java@v3
-      with:
-        distribution: temurin
-        java-version: 11
-    
-    - name: Setup and execute Gradle 'test' task
-      uses: gradle/gradle-build-action@v2
-      with:
-        arguments: test
-```
-
-### Multiple Gradle executions in the same Job
-
-It is possible to configure multiple Gradle executions to run sequentially in the same job. 
-The initial Action step will perform the Gradle setup.
-
-```yaml
-- uses: gradle/gradle-build-action@v2
-  with:
-    arguments: assemble
-- uses: gradle/gradle-build-action@v2
-  with:
-    arguments: check
-```
-
-### Gradle command-line arguments
-
-The `arguments` input can be used to pass arbitrary arguments to the `gradle` command line.
-Arguments can be supplied in a single line, or as a multi-line input.
-
-Here are some valid examples:
-```yaml
-arguments: build
-arguments: check --scan
-arguments: some arbitrary tasks
-arguments: build -PgradleProperty=foo
-arguments: |
-    build
-    --scan
-    -PgradleProperty=foo
-    -DsystemProperty=bar
-```
-
-If you need to pass environment variables, use the GitHub Actions workflow syntax:
-
-```yaml
-- uses: gradle/gradle-build-action@v2
-  env:
-    CI: true
-  with:
-    arguments: build
-```
-
-### Gradle build located in a subdirectory
-
-By default, the action will execute Gradle in the root directory of your project. 
-Use the `build-root-directory` input to target a Gradle build in a subdirectory.
-
-```yaml
-- uses: gradle/gradle-build-action@v2
-  with:
-    arguments: build
-    build-root-directory: some/subdirectory
-```
-
-### Using a specific Gradle executable
-
-The action will first look for a Gradle wrapper script in the root directory of your project. 
-If not found, `gradle` will be executed from the PATH.
-Use the `gradle-executable` input to execute using a specific Gradle installation.
-
-```yaml
- - uses: gradle/gradle-build-action@v2
-   with:
-     arguments: build
-     gradle-executable: /path/to/installed/gradle
-```
-
-This mechanism can also be used to target a Gradle wrapper script that is located in a non-default location.
-
 ## Caching build state between Jobs
 
 The `gradle-build-action` will use the GitHub Actions cache to save and restore reusable state that may be speed up a subsequent build invocation. This includes most content that is downloaded from the internet as part of a build, as well as expensive to create content like compiled build scripts, transformed Jar files, etc.
@@ -197,6 +100,8 @@ The state that is cached includes:
 - A subset of the Gradle User Home directory, including downloaded dependencies, wrapper distributions, and the local build cache ;
 
 To reduce the space required for caching, this action makes a best effort to reduce duplication in cache entries.
+
+State will be restored from the cache during the first `gradle-build-action` step for any workflow job, and cache entries will be written back to the cache at the end of the job, after all Gradle executions have completed.
 
 ### Disabling caching
 
@@ -227,6 +132,14 @@ You can also configure read-only caching only for certain branches:
 cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/release' }}
 ```
 
+### Using the cache write-only
+
+In certain circumstances it may be desirable to start with a clean Gradle User Home state, but to save that state at the end of a workflow Job:
+
+```yaml
+cache-write-only: true
+```
+
 ### Incompatibility with other caching mechanisms
 
 When using `gradle-build-action` we recommend that you avoid using other mechanisms to save and restore the Gradle User Home. 
@@ -239,8 +152,6 @@ Using either of these mechanisms may interfere with the caching provided by this
 
 ### Cache debugging and analysis
 
-Gradle User Home state will be restored from the cache during the first `gradle-build-action` step for any workflow job. 
-This state will be saved back to the cache at the end of the job, after all Gradle executions have completed.
 A report of all cache entries restored and saved is printed to the Job Summary when saving the cache entries. 
 This report can provide valuable insignt into how much cache space is being used.
 
@@ -253,16 +164,9 @@ env:
 
 Note that this setting will also prevent certain cache operations from running in parallel, further assisting with debugging.
 
-#### Stopping the Gradle daemon
+## How Gradle User Home caching works
 
-By default, the action will stop all running Gradle daemons in the post-action step, prior to saving the Gradle User Home state. 
-This allows for any Gradle User Home cleanup to occur, and avoid file-locking issues on Windows.
-
-If caching is unavailable or the cache is in read-only mode, the daemon will not be stopped and will continue running after the job is completed.
-
-### How Gradle User Home caching works
-
-#### Properties of the GitHub Actions cache
+### Properties of the GitHub Actions cache
 
 The GitHub Actions cache has some properties that present problems for efficient caching of the Gradle User Home.
 - Immutable entries: once a cache entry is written for a key, it cannot be overwritten or changed.
@@ -271,7 +175,7 @@ The GitHub Actions cache has some properties that present problems for efficient
 
 Each of these properties has influenced the design and implementation of the caching in `gradle-build-action`, as described below.
 
-#### Which content is cached
+### Which content is cached
 
 Using experiments and observations, we have attempted to identify which Gradle User Home content is worth saving and restoring between build invocations. We considered both the respective size of the content and the impact this content has on build times. As well as the obvious candidates like downloaded dependencies, we saw that compiled build scripts, transformed Jar files and other content can also have a significant impact.
 
@@ -285,7 +189,7 @@ In the end, we opted to save and restore as much content as is practical, includ
 
 In certain cases a particular section of Gradle User Home will be too large to make caching effective. In these cases, particular subdirectories can be excluded from caching. See [Exclude content from Gradle User Home cache](#exclude-content-from-gradle-user-home-cache).
 
-#### Cache keys
+### Cache keys
 
 The actual content of the Gradle User Home after a build is the result of many factors, including:
 - Core Gradle build files (`settngs.gradle[.kts]`, `build.gradle[.kts]`, `gradle.properties`)
@@ -307,7 +211,7 @@ Specifically, the cache key is: `${cache-protocol}-gradle|${runner-os}|${workflo
 As such, the cache key is likely to change on each subsequent run of GitHub actions. 
 This allows the most recent state to always be available in the GitHub actions cache.
 
-#### Finding a matching cache entry
+### Finding a matching cache entry
 
 In most cases, no exact match will exist for the cache key. Instead, the Gradle User Home will be restored for the closest matching cache entry, using a set of "restore keys". The entries will be matched with the following precedence:
 - An exact match on OS, workflow, job, matrix and Git SHA
@@ -323,7 +227,7 @@ Note that while effective, this mechanism is not inherently efficient. It requir
 
 This inefficiency is effectively mitigated by [Deduplication of Gradle User Home cache entries](#deduplication-of-gradle-user-home-cache-entries), and can be further optimized for a workflow using the techniques described in [Optimizing cache effectiveness](#optimizing-cache-effectiveness).
 
-#### Deduplication of Gradle User Home cache entries
+### Deduplication of Gradle User Home cache entries
 
 To reduce duplication between cache entries, certain artifacts in Gradle User Home are extracted and cached independently based on their identity. This allows each Gradle User Home cache entry to be relatively small, sharing common elements between them without duplication.
 
@@ -335,7 +239,14 @@ Artifacts that are cached independently include:
 
 For example, this means that all jobs executing a particular version of the Gradle wrapper will share a single common entry for this wrapper distribution and one for each of the generated Gradle API jars.
 
-### Optimizing cache effectiveness
+### Stopping the Gradle daemon
+
+By default, the action will stop all running Gradle daemons in the post-action step, prior to saving the Gradle User Home state. 
+This allows for any Gradle User Home cleanup to occur, and avoid file-locking issues on Windows.
+
+If caching is disabled or the cache is in read-only mode, the daemon will not be stopped and will continue running after the job is completed.
+
+## Optimizing cache effectiveness
 
 Cache storage space for GitHub actions is limited, and writing new cache entries can trigger the deletion of existing entries.
 Eviction of shared cache entries can reduce cache effectiveness, slowing down your `gradle-build-action` steps.
@@ -344,7 +255,7 @@ There are a number of actions you can take if your cache use is less effective d
 
 At the end of a Job, the `gradle-build-action` will write a summary of the Gradle builds executed, together with a detailed report of the cache entries that were read and written during the Job. This report can provide valuable insights that may help to determine the right way to optimize the cache usage for your workflow.
 
-#### Select which jobs should write to the cache
+### Select which jobs should write to the cache
 
 Consider a workflow that first runs a Job "compile-and-unit-test" to compile the code and run some basic unit tests, which is followed by a matrix of parallel "integration-test" jobs that each run a set of integration tests for the repository. Each "integration test" Job requires all of the dependencies required by "compile-and-unit-test", and possibly one or 2 additional dependencies.
 
@@ -355,7 +266,7 @@ There are some techniques that can be used to avoid/mitigate this issue:
 - Add an additional step to the "compile-and-unit-test" job which downloads all dependencies required by the integration-test jobs but does not execute the tests. This will allow the "dependencies" entry for "compile-and-unit-test" to be shared among all cache entries for "integration-test". The resulting "integration-test" entries should be much smaller, reducing the potential for eviction.
 - Combine the above 2 techniques, so that no cache entry is written by "integration-test" jobs, but all required dependencies are already present from the restored "compile-and-unit-test" entry.
 
-#### Select which branches should write to the cache
+### Select which branches should write to the cache
 
 GitHub cache entries are not shared between builds on different branches. 
 This means that each PR branch will have it's own Gradle User Home cache, and will not benefit from cache entries written by other PR branches.
@@ -372,7 +283,7 @@ See [Using the caches read-only](#using-the-caches-read-only) for more details.
 
 Similarly, you could use `cache-read-only` for certain jobs in the workflow, and instead have these jobs reuse the cache content from upstream jobs.
 
-#### Exclude content from Gradle User Home cache
+### Exclude content from Gradle User Home cache
 
 As well as any wrapper distributions, the action will attempt to save and restore the `caches` and `notifications` directories from Gradle User Home.
 
@@ -395,7 +306,7 @@ gradle-home-cache-excludes: |
 You can specify any number of fixed paths or patterns to include or exclude. 
 File pattern support is documented at https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#patterns-to-match-file-paths.
 
-#### Remove unused files from Gradle User Home before saving to cache
+### Remove unused files from Gradle User Home before saving to cache
 
 The Gradle User Home directory has a tendency to grow over time. When you switch to a new Gradle wrapper version or upgrade a dependency version
 the old files are not automatically and immediately removed. While this can make sense in a local environment, in a GitHub Actions environment
@@ -489,6 +400,103 @@ jobs:
         name: build-reports
         path: build/reports/
 ```
+
+## Use the action to invoke Gradle
+
+If the `gradle-build-action` is configured with an `arguments` input, then Gradle will execute a Gradle build with the arguments provided. NOTE: We recommend using the `gradle-build-action` as a "Setup Gradle" step as described above, with Gradle being invoked via a regular `run` command.
+
+If no `arguments` are provided, the action will not execute Gradle, but will still cache Gradle state and configure build-scan capture for all subsequent Gradle executions.
+
+```yaml
+name: Run Gradle on PRs
+on: pull_request
+jobs:
+  gradle:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-java@v3
+      with:
+        distribution: temurin
+        java-version: 11
+    
+    - name: Setup and execute Gradle 'test' task
+      uses: gradle/gradle-build-action@v2
+      with:
+        arguments: test
+```
+
+### Multiple Gradle executions in the same Job
+
+It is possible to configure multiple Gradle executions to run sequentially in the same job. 
+The initial Action step will perform the Gradle setup.
+
+```yaml
+- uses: gradle/gradle-build-action@v2
+  with:
+    arguments: assemble
+- uses: gradle/gradle-build-action@v2
+  with:
+    arguments: check
+```
+
+### Gradle command-line arguments
+
+The `arguments` input can be used to pass arbitrary arguments to the `gradle` command line.
+Arguments can be supplied in a single line, or as a multi-line input.
+
+Here are some valid examples:
+```yaml
+arguments: build
+arguments: check --scan
+arguments: some arbitrary tasks
+arguments: build -PgradleProperty=foo
+arguments: |
+    build
+    --scan
+    -PgradleProperty=foo
+    -DsystemProperty=bar
+```
+
+If you need to pass environment variables, use the GitHub Actions workflow syntax:
+
+```yaml
+- uses: gradle/gradle-build-action@v2
+  env:
+    CI: true
+  with:
+    arguments: build
+```
+
+### Gradle build located in a subdirectory
+
+By default, the action will execute Gradle in the root directory of your project. 
+Use the `build-root-directory` input to target a Gradle build in a subdirectory.
+
+```yaml
+- uses: gradle/gradle-build-action@v2
+  with:
+    arguments: build
+    build-root-directory: some/subdirectory
+```
+
+### Using a specific Gradle executable
+
+The action will first look for a Gradle wrapper script in the root directory of your project. 
+If not found, `gradle` will be executed from the PATH.
+Use the `gradle-executable` input to execute using a specific Gradle installation.
+
+```yaml
+ - uses: gradle/gradle-build-action@v2
+   with:
+     arguments: build
+     gradle-executable: /path/to/installed/gradle
+```
+
+This mechanism can also be used to target a Gradle wrapper script that is located in a non-default location.
 
 ## Support for GitHub Enterprise Server (GHES)
 
