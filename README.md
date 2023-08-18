@@ -513,6 +513,8 @@ The `gradle-build-action` has support for submitting a [GitHub Dependency Graph]
 The dependency graph snapshot is generated via integration with the [GitHub Dependency Graph Gradle Plugin](https://plugins.gradle.org/plugin/org.gradle.github-dependency-graph-gradle-plugin), and saved as a workflow artifact. The generated snapshot files can be submitted either in the same job, or in a subsequent job (in the same or a dependent workflow).
 
 The generated dependency graph snapshot reports all of the dependencies that were resolved during a bulid execution, and is used by GitHub to generate [Dependabot Alerts](https://docs.github.com/en/code-security/dependabot/dependabot-alerts/about-dependabot-alerts) for vulnerable dependencies, as well as to populate the [Dependency Graph insights view](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/exploring-the-dependencies-of-a-repository#viewing-the-dependency-graph).
+
+## Enable Dependency Graph generation for a workflow
  
 You enable GitHub Dependency Graph support by setting the `dependency-graph` action parameter. Valid values are:
 
@@ -547,9 +549,52 @@ jobs:
       run: ./gradlew build
 ```
 
+The `contents: write` permission is not required to generate the dependency graph, but is required in order to submit the graph via the GitHub API.
+
+The above configuration will work for workflows that run as a result of commits to a repository branch, but not when a workflow is triggered by a PR from a repository fork.
+For a configuration that supports this setup, see [Dependency Graphs for pull request workflows](#dependency-graphs-for-pull-request-workflows).
+
+## Limiting the scope of the dependency graph
+
+At times it is helpful to limit the dependencies reported to GitHub, in order to security alerts for dependencies that don't form a critical part of your product.
+For example, a vulnerability in the tool you use to generate documentation is unlikely to be as important as a vulnerability in one of your runtime dependencies.
+
+There are a number of techniques you can employ to limit the scope of the generated dependency graph:
+- [Don't generate a dependency graph for all Gradle executions](#choosing-which-gradle-invocations-will-generate-a-dependency-graph)
+- [For a Gradle execution, filter which Gradle projects and configurations will contribute dependencies](#filtering-which-gradle-configurations-contribute-to-the-dependency-graph)
+- [Use a separate workflow that only resolves the required dependencies]()
+
+> [!NOTE]
+> Ideally, all dependencies involved in building and testing a project will be extracted and reported in a dependency graph. 
+> These dependencies would be assigned to different scopes (eg development, runtime, testing) and the GitHub UI would make it easy to opt-in to security alerts for different dependency scopes.
+> However, this functionality does not yet exist.
+
+### Choosing which Gradle invocations will generate a dependency graph
+
+Once you enable the dependency graph support for a workflow job (via the `dependency-graph` parameter), dependencies will be collected and reported for all subsequent Gradle invocations.
+If you have a Gradle build step that you want to exclude from dependency graph generation, you can set the `GITHUB_DEPENDENCY_GRAPH_ENABLED` environment variable to `false`.
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Gradle to generate and submit dependency graphs
+      uses: gradle/gradle-build-action@v2
+      with:
+        dependency-graph: generate-and-submit
+    - name: Build the app, generating a graph of dependencies required
+      run: ./gradlew :my-app:assemble
+    - name: Run all checks, disabling dependency graph generation
+      run: ./gradlew check
+      env:
+        GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+```
+
 ### Filtering which Gradle Configurations contribute to the dependency graph
 
-If you do not want to include every dependency configuration in every project in your build, you can limit the
+If you do not want the dependency graph to include every dependency configuration in every project in your build, you can limit the
 dependency extraction to a subset of these.
 
 To restrict which Gradle subprojects contribute to the report, specify which projects to include via a regular expression.
@@ -558,16 +603,10 @@ You can provide this value via the `DEPENDENCY_GRAPH_INCLUDE_PROJECTS` environme
 To restrict which Gradle configurations contribute to the report, you can filter configurations by name using a regular expression.
 You can provide this value via the `DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS` environment variable or system property.
 
-Example of a simple workflow that limits the dependency graph to `runtimeClasspath` configuration and to exclude `buildSrc` dependencies:
+For example, if you want to exclude dependencies in the `buildSrc` project, and only report on dependencies from the `runtimeClasspath` configuration,
+you would use the following configuration:
 
 ```yaml
-name: Submit dependency graph
-on:
-  push:
-  
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -580,24 +619,35 @@ jobs:
     - name: Run a build, generating the dependency graph from 'runtimeClasspath' configurations
       run: ./gradlew build
       env:
-        DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS: runtimeClasspath
         DEPENDENCY_GRAPH_INCLUDE_PROJECTS: "^:(?!buildSrc).*"
+        DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS: runtimeClasspath
 ```
 
-### Gradle version compatibility
+### Use a dedicated workflow for dependency graph generation
 
-The plugin should be compatible with all versions of Gradle >= 5.0, and has been tested against 
-Gradle versions "5.6.4", "6.9.4", "7.0.2", "7.6.2", "8.0.2" and the current Gradle release.
+Instead of generating a dependency graph from your existing CI workflow, it's possible to create a separate dedicated workflow (or Job) that is solely intended for generating a dependency graph.
+Such a workflow will still need to execute Gradle, but can do so in a way that is targeted at resolving exactly the dependencies required.
 
-The plugin is compatible with running Gradle with the configuration-cache enabled. However, this support is
-limited to Gradle "8.1.0" and later:
-- With Gradle "8.0", the build should run successfully, but an empty dependency graph will be generated.
-- With Gradle <= "7.6.4", the plugin will cause the build to fail with configuration-cache enabled.
+For example, the following workflow will report only those dependencies that are part of the `runtimeClasspath` or the `my-app` project. 
 
-To use this plugin with versions of Gradle older than "8.1.0", you'll need to invoke Gradle with the
-configuration-cache disabled.
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Gradle to generate and submit dependency graphs
+      uses: gradle/gradle-build-action@v2
+      with:
+        dependency-graph: generate-and-submit
+    - name: Extract the 'runtimeClasspath' dependencies for 'my-app'
+      run: ./gradlew :my-app:dependencies --configuration runtimeClasspath
+```
 
-### Dependency snapshots generated for pull requests
+Note that the above example will also include `buildSrc` dependencies, since these are resolved as part of running the `dependencies` task.
+If this isn't desirable, you will still need to use the filtering mechanism described above.
+
+## Dependency Graphs for pull request workflows
 
 This `contents: write` permission is not available for any workflow that is triggered by a pull request submitted from a forked repository, since it would permit a malicious pull request to make repository changes. 
 
@@ -642,4 +692,17 @@ jobs:
       with:
         dependency-graph: download-and-submit
 ```
+
+## Gradle version compatibility
+
+The plugin should be compatible with all versions of Gradle >= 5.0, and has been tested against 
+Gradle versions "5.6.4", "6.9.4", "7.0.2", "7.6.2", "8.0.2" and the current Gradle release.
+
+The plugin is compatible with running Gradle with the configuration-cache enabled. However, this support is
+limited to Gradle "8.1.0" and later:
+- With Gradle "8.0", the build should run successfully, but an empty dependency graph will be generated.
+- With Gradle <= "7.6.4", the plugin will cause the build to fail with configuration-cache enabled.
+
+To use this plugin with versions of Gradle older than "8.1.0", you'll need to invoke Gradle with the
+configuration-cache disabled.
 
