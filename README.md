@@ -564,10 +564,10 @@ There are a number of techniques you can employ to limit the scope of the genera
 - [For a Gradle execution, filter which Gradle projects and configurations will contribute dependencies](#filtering-which-gradle-configurations-contribute-to-the-dependency-graph)
 - [Use a separate workflow that only resolves the required dependencies]()
 
-[!NOTE]
-Ideally, all dependencies involved in building and testing a project will be extracted and reported in a dependency graph. 
-These dependencies would be assigned to different scopes (eg development, runtime, testing) and the GitHub UI would make it easy to opt-in to security alerts for different dependency scopes.
-However, this functionality does not yet exist.
+> [!NOTE]
+> Ideally, all dependencies involved in building and testing a project will be extracted and reported in a dependency graph. 
+> These dependencies would be assigned to different scopes (eg development, runtime, testing) and the GitHub UI would make it easy to opt-in to security alerts for different dependency scopes.
+> However, this functionality does not yet exist.
 
 ### Choosing which Gradle invocations will generate a dependency graph
 
