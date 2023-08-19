@@ -29,6 +29,8 @@ export async function restore(gradleUserHome: string, cacheListener: CacheListen
         core.info('Gradle User Home already exists: will not restore from cache.')
         // Initialize pre-existing Gradle User Home.
         gradleStateCache.init()
+        cacheListener.cacheDisabled = true
+        cacheListener.cacheDisabledReason = 'disabled due to pre-existing Gradle User Home'
         return
     }
 
