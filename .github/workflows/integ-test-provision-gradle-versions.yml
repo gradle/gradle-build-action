@@ -55,6 +55,17 @@ jobs:
     - name: Test use release-candidate
       working-directory: .github/workflow-samples/no-wrapper
       run: gradle help
+    - name: Setup Gradle with current
+      id: gradle-current
+      uses: ./
+      with:
+        gradle-version: current
+    - name: Check current version output parameter
+      if: ${{ !startsWith(steps.gradle-current.outputs.gradle-version , '8.') }}
+      uses: actions/github-script@v6
+      with:
+        script: |
+          core.setFailed('Gradle version parameter not set correctly: value was "${{ steps.gradle-current.outputs.gradle-version }}"')    
   
   gradle-versions:
     strategy:
@@ -80,10 +91,17 @@ jobs:
         distribution: temurin
         java-version: 8
     - name: Setup Gradle
+      id: setup-gradle
       uses: ./
       with:
         cache-read-only: false # For testing, allow writing cache entries on non-default branches
         gradle-version: ${{ matrix.gradle }}
+    - name: Check output parameter
+      if: ${{ steps.setup-gradle.outputs.gradle-version != matrix.gradle }}
+      uses: actions/github-script@v6
+      with:
+        script: |
+          core.setFailed('Gradle version parameter not set correctly: value was "${{ steps.setup-gradle.outputs.gradle-version }}"')    
     - name: Run Gradle build
       id: gradle
       working-directory: .github/workflow-samples/no-wrapper${{ matrix.build-root-suffix }}

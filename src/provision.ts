@@ -38,6 +38,12 @@ async function addToPath(executable: string): Promise<string> {
 }
 
 async function installGradle(version: string): Promise<string> {
+    const versionInfo = await resolveGradleVersion(version)
+    core.setOutput('gradle-version', versionInfo.version)
+    return installGradleVersion(versionInfo)
+}
+
+async function resolveGradleVersion(version: string): Promise<GradleVersionInfo> {
     switch (version) {
         case 'current':
             return gradleCurrent()
@@ -55,36 +61,33 @@ async function installGradle(version: string): Promise<string> {
     }
 }
 
-async function gradleCurrent(): Promise<string> {
-    const versionInfo = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/current`)
-    return installGradleVersion(versionInfo)
+async function gradleCurrent(): Promise<GradleVersionInfo> {
+    return await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/current`)
 }
 
-async function gradleReleaseCandidate(): Promise<string> {
+async function gradleReleaseCandidate(): Promise<GradleVersionInfo> {
     const versionInfo = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-candidate`)
     if (versionInfo && versionInfo.version && versionInfo.downloadUrl) {
-        return installGradleVersion(versionInfo)
+        return versionInfo
     }
     core.info('No current release-candidate found, will fallback to current')
     return gradleCurrent()
 }
 
-async function gradleNightly(): Promise<string> {
-    const versionInfo = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/nightly`)
-    return installGradleVersion(versionInfo)
+async function gradleNightly(): Promise<GradleVersionInfo> {
+    return await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/nightly`)
 }
 
-async function gradleReleaseNightly(): Promise<string> {
-    const versionInfo = await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-nightly`)
-    return installGradleVersion(versionInfo)
+async function gradleReleaseNightly(): Promise<GradleVersionInfo> {
+    return await gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-nightly`)
 }
 
-async function gradle(version: string): Promise<string> {
+async function gradle(version: string): Promise<GradleVersionInfo> {
     const versionInfo = await findGradleVersionDeclaration(version)
     if (!versionInfo) {
         throw new Error(`Gradle version ${version} does not exists`)
     }
-    return installGradleVersion(versionInfo)
+    return versionInfo
 }
 
 async function gradleVersionDeclaration(url: string): Promise<GradleVersionInfo> {

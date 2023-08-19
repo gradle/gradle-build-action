@@ -74828,6 +74828,13 @@ function addToPath(executable) {
 }
 function installGradle(version) {
     return __awaiter(this, void 0, void 0, function* () {
+        const versionInfo = yield resolveGradleVersion(version);
+        core.setOutput('gradle-version', versionInfo.version);
+        return installGradleVersion(versionInfo);
+    });
+}
+function resolveGradleVersion(version) {
+    return __awaiter(this, void 0, void 0, function* () {
         switch (version) {
             case 'current':
                 return gradleCurrent();
@@ -74847,15 +74854,14 @@ function installGradle(version) {
 }
 function gradleCurrent() {
     return __awaiter(this, void 0, void 0, function* () {
-        const versionInfo = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/current`);
-        return installGradleVersion(versionInfo);
+        return yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/current`);
     });
 }
 function gradleReleaseCandidate() {
     return __awaiter(this, void 0, void 0, function* () {
         const versionInfo = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-candidate`);
         if (versionInfo && versionInfo.version && versionInfo.downloadUrl) {
-            return installGradleVersion(versionInfo);
+            return versionInfo;
         }
         core.info('No current release-candidate found, will fallback to current');
         return gradleCurrent();
@@ -74863,14 +74869,12 @@ function gradleReleaseCandidate() {
 }
 function gradleNightly() {
     return __awaiter(this, void 0, void 0, function* () {
-        const versionInfo = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/nightly`);
-        return installGradleVersion(versionInfo);
+        return yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/nightly`);
     });
 }
 function gradleReleaseNightly() {
     return __awaiter(this, void 0, void 0, function* () {
-        const versionInfo = yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-nightly`);
-        return installGradleVersion(versionInfo);
+        return yield gradleVersionDeclaration(`${gradleVersionsBaseUrl}/release-nightly`);
     });
 }
 function gradle(version) {
@@ -74879,7 +74883,7 @@ function gradle(version) {
         if (!versionInfo) {
             throw new Error(`Gradle version ${version} does not exists`);
         }
-        return installGradleVersion(versionInfo);
+        return versionInfo;
     });
 }
 function gradleVersionDeclaration(url) {
