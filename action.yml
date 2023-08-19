@@ -35,6 +35,11 @@ inputs:
     required: false
     default: false
 
+  cache-overwrite-existing:
+    description: When 'true', a pre-existing Gradle User Home will not prevent the cache from being restored.
+    required: false
+    default: false
+
   gradle-home-cache-includes:
     description: Paths within Gradle User Home to cache.
     required: false

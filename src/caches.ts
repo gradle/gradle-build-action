@@ -1,5 +1,11 @@
 import * as core from '@actions/core'
-import {isCacheCleanupEnabled, isCacheDisabled, isCacheReadOnly, isCacheWriteOnly} from './cache-utils'
+import {
+    isCacheCleanupEnabled,
+    isCacheDisabled,
+    isCacheReadOnly,
+    isCacheWriteOnly,
+    isCacheOverwriteExisting
+} from './cache-utils'
 import {CacheListener} from './cache-reporting'
 import {DaemonController} from './daemon-controller'
 import {GradleStateCache} from './cache-base'
@@ -26,10 +32,15 @@ export async function restore(gradleUserHome: string, cacheListener: CacheListen
     }
 
     if (gradleStateCache.cacheOutputExists()) {
-        core.info('Gradle User Home already exists: will not restore from cache.')
-        // Initialize pre-existing Gradle User Home.
-        gradleStateCache.init()
-        return
+        if (!isCacheOverwriteExisting()) {
+            core.info('Gradle User Home already exists: will not restore from cache.')
+            // Initialize pre-existing Gradle User Home.
+            gradleStateCache.init()
+            cacheListener.cacheDisabled = true
+            cacheListener.cacheDisabledReason = 'disabled due to pre-existing Gradle User Home'
+            return
+        }
+        core.info('Gradle User Home already exists: will overwrite with cached contents.')
     }
 
     gradleStateCache.init()

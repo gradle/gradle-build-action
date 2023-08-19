@@ -13,6 +13,10 @@ export function isCacheWriteOnly(): boolean {
     return getBooleanInput('cache-write-only')
 }
 
+export function isCacheOverwriteExisting(): boolean {
+    return getBooleanInput('cache-overwrite-existing')
+}
+
 export function isCacheStrictMatch(): boolean {
     return getBooleanInput('gradle-home-cache-strict-match')
 }

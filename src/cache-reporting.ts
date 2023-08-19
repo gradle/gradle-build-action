@@ -10,6 +10,7 @@ export class CacheListener {
     cacheReadOnly = false
     cacheWriteOnly = false
     cacheDisabled = false
+    cacheDisabledReason = 'disabled'
 
     get fullyRestored(): boolean {
         return this.cacheEntries.every(x => !x.wasRequestedButNotRestored())
@@ -17,7 +18,7 @@ export class CacheListener {
 
     get cacheStatus(): string {
         if (!cache.isFeatureAvailable()) return 'not available'
-        if (this.cacheDisabled) return 'disabled'
+        if (this.cacheDisabled) return this.cacheDisabledReason
         if (this.cacheWriteOnly) return 'write-only'
         if (this.cacheReadOnly) return 'read-only'
         return 'enabled'

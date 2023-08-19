@@ -37,6 +37,10 @@ export function isCacheWriteOnly(): boolean {
     return params.isCacheWriteOnly()
 }
 
+export function isCacheOverwriteExisting(): boolean {
+    return params.isCacheOverwriteExisting()
+}
+
 export function isCacheDebuggingEnabled(): boolean {
     return params.isCacheDebuggingEnabled()
 }

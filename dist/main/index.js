@@ -73467,6 +73467,7 @@ class CacheListener {
         this.cacheReadOnly = false;
         this.cacheWriteOnly = false;
         this.cacheDisabled = false;
+        this.cacheDisabledReason = 'disabled';
     }
     get fullyRestored() {
         return this.cacheEntries.every(x => !x.wasRequestedButNotRestored());
@@ -73475,7 +73476,7 @@ class CacheListener {
         if (!cache.isFeatureAvailable())
             return 'not available';
         if (this.cacheDisabled)
-            return 'disabled';
+            return this.cacheDisabledReason;
         if (this.cacheWriteOnly)
             return 'write-only';
         if (this.cacheReadOnly)
@@ -73681,7 +73682,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.tryDelete = exports.handleCacheFailure = exports.cacheDebug = exports.saveCache = exports.restoreCache = exports.hashStrings = exports.hashFileNames = exports.getUniqueLabelForJobInstanceValues = exports.getUniqueLabelForJobInstance = exports.getCacheKeyForJob = exports.getCacheKeyPrefix = exports.generateCacheKey = exports.CacheKey = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
+exports.tryDelete = exports.handleCacheFailure = exports.cacheDebug = exports.saveCache = exports.restoreCache = exports.hashStrings = exports.hashFileNames = exports.getUniqueLabelForJobInstanceValues = exports.getUniqueLabelForJobInstance = exports.getCacheKeyForJob = exports.getCacheKeyPrefix = exports.generateCacheKey = exports.CacheKey = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheOverwriteExisting = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const cache = __importStar(__nccwpck_require__(7799));
 const github = __importStar(__nccwpck_require__(5438));
@@ -73713,6 +73714,10 @@ function isCacheWriteOnly() {
     return params.isCacheWriteOnly();
 }
 exports.isCacheWriteOnly = isCacheWriteOnly;
+function isCacheOverwriteExisting() {
+    return params.isCacheOverwriteExisting();
+}
+exports.isCacheOverwriteExisting = isCacheOverwriteExisting;
 function isCacheDebuggingEnabled() {
     return params.isCacheDebuggingEnabled();
 }
@@ -73963,9 +73968,14 @@ function restore(gradleUserHome, cacheListener) {
             return;
         }
         if (gradleStateCache.cacheOutputExists()) {
-            core.info('Gradle User Home already exists: will not restore from cache.');
-            gradleStateCache.init();
-            return;
+            if (!(0, cache_utils_1.isCacheOverwriteExisting)()) {
+                core.info('Gradle User Home already exists: will not restore from cache.');
+                gradleStateCache.init();
+                cacheListener.cacheDisabled = true;
+                cacheListener.cacheDisabledReason = 'disabled due to pre-existing Gradle User Home';
+                return;
+            }
+            core.info('Gradle User Home already exists: will overwrite with cached contents.');
         }
         gradleStateCache.init();
         core.saveState(CACHE_RESTORED_VAR, true);
@@ -74455,7 +74465,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DependencyGraphOption = exports.getDependencyGraphOption = exports.isDependencyGraphEnabled = exports.isJobSummaryEnabled = exports.getGithubToken = exports.getJobMatrix = exports.getArguments = exports.getGradleExecutable = exports.getGradleVersion = exports.getBuildRootDirectory = exports.getCacheExcludes = exports.getCacheIncludes = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheStrictMatch = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
+exports.DependencyGraphOption = exports.getDependencyGraphOption = exports.isDependencyGraphEnabled = exports.isJobSummaryEnabled = exports.getGithubToken = exports.getJobMatrix = exports.getArguments = exports.getGradleExecutable = exports.getGradleVersion = exports.getBuildRootDirectory = exports.getCacheExcludes = exports.getCacheIncludes = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheStrictMatch = exports.isCacheOverwriteExisting = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const string_argv_1 = __nccwpck_require__(9663);
 function isCacheDisabled() {
@@ -74470,6 +74480,10 @@ function isCacheWriteOnly() {
     return getBooleanInput('cache-write-only');
 }
 exports.isCacheWriteOnly = isCacheWriteOnly;
+function isCacheOverwriteExisting() {
+    return getBooleanInput('cache-overwrite-existing');
+}
+exports.isCacheOverwriteExisting = isCacheOverwriteExisting;
 function isCacheStrictMatch() {
     return getBooleanInput('gradle-home-cache-strict-match');
 }
