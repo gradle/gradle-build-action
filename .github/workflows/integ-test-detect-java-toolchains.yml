@@ -1,0 +1,82 @@
+name: Test detect java toolchains
+
+on:
+  workflow_call:
+    inputs:
+      cache-key-prefix:
+        type: string
+      runner-os:
+        type: string
+        default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
+      download-dist:
+        type: boolean
+        default: false
+
+env:
+  DOWNLOAD_DIST: ${{ inputs.download-dist }}
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: restore-java-toolchain-${{ inputs.cache-key-prefix }}
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+
+jobs:
+  # Test that pre-installed runner JDKs are detected
+  pre-installed-toolchains:
+    strategy:
+      matrix:
+        os: ${{fromJSON(inputs.runner-os)}}
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v3
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
+    - name: Setup Gradle
+      uses: ./
+    - name: List detected toolchains
+      shell: bash
+      working-directory: .github/workflow-samples/groovy-dsl
+      run: | 
+        gradle -q javaToolchains > output.txt
+        cat output.txt
+    - name: Verify detected toolchains
+      shell: bash
+      working-directory: .github/workflow-samples/groovy-dsl
+      run: | 
+        grep -q 'Eclipse Temurin JDK 1.8' output.txt || (echo "::error::Did not detect preinstalled JDK 1.8" && exit 1)
+        grep -q 'Eclipse Temurin JDK 11' output.txt || (echo "::error::Did not detect preinstalled JDK 11" && exit 1)
+        grep -q 'Eclipse Temurin JDK 17' output.txt || (echo "::error::Did not detect preinstalled JDK 17" && exit 1)
+
+  # Test that JDKs provisioned by setup-java are detected
+  setup-java-installed-toolchain:
+    strategy:
+      matrix:
+        os: ${{fromJSON(inputs.runner-os)}}
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v3
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
+    - name: Setup Java 20
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '20'
+    - name: Setup Java 16
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '16'
+    - name: Setup Gradle
+      uses: ./
+    - name: List detected toolchains
+      shell: bash
+      working-directory: .github/workflow-samples/groovy-dsl
+      run: | 
+        gradle -q javaToolchains > output.txt
+        cat output.txt
+    - name: Verify detected toolchains
+      shell: bash
+      working-directory: .github/workflow-samples/groovy-dsl
+      run: | 
+        grep -q 'Eclipse Temurin JDK 16' output.txt || (echo "::error::Did not detect setup-java installed JDK 16" && exit 1)
+        grep -q 'Eclipse Temurin JDK 20' output.txt || (echo "::error::Did not detect setup-java installed JDK 20" && exit 1)

@@ -83,3 +83,8 @@ jobs:
     uses: ./.github/workflows/integ-test-sample-gradle-plugin.yml
     with:
       cache-key-prefix: ${{github.run_number}}-
+
+  toolchain-detection:
+    uses: ./.github/workflows/integ-test-detect-java-toolchains.yml
+    with:
+      cache-key-prefix: ${{github.run_number}}-
