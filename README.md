@@ -71,6 +71,8 @@ Moreover, you can use the following aliases:
 
 This can be handy to automatically verify your build works with the latest release candidate of Gradle:
 
+The actual Gradle version used is available as an action output: `gradle-version`.
+
 ```yaml
 name: Test latest Gradle RC
 on:
@@ -86,10 +88,13 @@ jobs:
         distribution: temurin
         java-version: 11
     - uses: gradle/gradle-build-action@v2
+      id: setup-gradle
       with:
         gradle-version: release-candidate
     - run: gradle build --dry-run # just test build configuration
+    - run: echo "The release-candidate version was ${{ steps.setup-gradle.outputs.gradle-version }}"
 ```
+
 
 ## Caching build state between Jobs
 
