@@ -32,20 +32,20 @@ class TestDependencyGraph extends BaseInitScriptTest {
         assert gitHubOutputFile.text == "dependency-graph-file=${reportFile.absolutePath}\n"
 
         where:
-        testGradleVersion << GRADLE_8_X
+        testGradleVersion << [GRADLE_8_X]
     }
 
-    // Dependency-graph plugin doesn't support config-cache for 8.0 of Gradle
     def "produces dependency graph with configuration-cache on latest Gradle"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         when:
-        run(['help'], initScript, testGradleVersion.gradleVersion, [], envVars)
+        run(['help', '--configuration-cache'], initScript, testGradleVersion.gradleVersion, [], envVars)
 
         then:
         assert reportFile.exists()
 
         where:
+        // Dependency-graph plugin doesn't support config-cache for 8.0 of Gradle
         testGradleVersion << [GRADLE_8_X]
     }
 
