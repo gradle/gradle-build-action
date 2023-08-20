@@ -725,3 +725,55 @@ limited to Gradle "8.1.0" and later:
 
 To use this plugin with versions of Gradle older than "8.1.0", you'll need to invoke Gradle with the
 configuration-cache disabled.
+
+# Gradle Enterprise plugin injection
+
+The `gradle-build-action` provides support for injecting and configuring the Gradle Enterprise Gradle plugin into any Gradle build, without any modification to the project sources.
+This is achieved via an init-script installed into Gradle User Home, which is enabled and parameterized via environment variables.
+
+The same auto-injection behavior is available for the Common Custom User Data Gradle plugin, which enriches any build scans published with additional useful information.
+
+## Enabling Gradle Enterprise injection
+
+In order to enable Gradle Enterprise for your build, you must provide the required configuration via environment variables. 
+
+Here's a minimal example:
+
+```yaml
+name: Run build with Gradle Enterprise injection
+  
+env:
+  GRADLE_ENTERPRISE_INJECTION_ENABLED: true
+  GRADLE_ENTERPRISE_INJECTION_SERVER_URL: https://ge.gradle.org
+  GRADLE_ENTERPRISE_INJECTION_GE_PLUGIN_VERSION: 3.14.1
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GE_ACCESS_KEY }} # Required to publish scans to ge.gradle.org
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+    - name: Run a Gradle build with Gradle Enterprise injection enabled
+      run: ./gradlew build
+```
+
+This configuration will automatically apply `v3.14.1` of the [Gradle Enterprise Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/), and publish build scans to https://ge.gradle.org.
+
+Note that the `ge.gradle.org` server requires authentication in order to publish scans. The provided `GRADLE_ENTERPRISE_ACCESS_KEY` isn't required by the Gradle Enterprise injection script, 
+but will be used by the GE plugin in order to authenticate with the server.
+
+## Configuring Gradle Enterprise injection
+
+The `init-script` supports a number of additional configuration parameters that you may fine useful. All configuration options (required and optional) are detailed below:
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| GRADLE_ENTERPRISE_INJECTION_ENABLED | :white_check_mark: | enables Gradle Enterprise injection |
+| GRADLE_ENTERPRISE_INJECTION_SERVER_URL | :white_check_mark: | the URL of the Gradle Enterprise server |
+| GRADLE_ENTERPRISE_INJECTION_ALLOW_UNTRUSTED_SERVER | | allow communication with an untrusted server; set to _true_ if your Gradle Enterprise instance is using a self-signed certificate |
+| GRADLE_ENTERPRISE_INJECTION_ENFORCE_SERVER_URL | | enforce the configured Gradle Enterprise URL over a URL configured in the project's build; set to _true_ to enforce publication of build scans to the configured Gradle Enterprise URL |
+| GRADLE_ENTERPRISE_INJECTION_GE_PLUGIN_VERSION | :white_check_mark: | the version of the [Gradle Enterprise Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/) to apply |
+| GRADLE_ENTERPRISE_INJECTION_CCUD_PLUGIN_VERSION |  | the version of the [Common Custom User Data Gradle plugin](https://github.com/gradle/common-custom-user-data-gradle-plugin) to apply, if any |
+| GRADLE_ENTERPRISE_INJECTION_PLUGIN_REPOSITORY_URL |  | the URL of the repository to use when resolving the GE and CCUD plugins; the Gradle Plugin Portal is used by default |
