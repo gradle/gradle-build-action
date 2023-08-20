@@ -72971,6 +72971,16 @@ class GradleStateCache {
         return path_1.default.resolve(this.gradleUserHome, rawPath);
     }
     initializeGradleUserHome(gradleUserHome, initScriptsDir) {
+        const gradleProperties = path_1.default.resolve(gradleUserHome, 'gradle.properties');
+        const existingGradleProperties = fs_1.default.existsSync(gradleProperties)
+            ? fs_1.default.readFileSync(gradleProperties, 'utf8')
+            : '';
+        if (!existingGradleProperties.includes('org.gradle.java.installations.fromEnv=')) {
+            fs_1.default.appendFileSync(gradleProperties, `
+# Auto-detect pre-installed JDKs
+org.gradle.java.installations.fromEnv=JAVA_HOME_8_X64,JAVA_HOME_11_X64,JAVA_HOME_17_X64
+`);
+        }
         const initScriptFilenames = [
             'build-result-capture.init.gradle',
             'build-result-capture-service.plugin.groovy',
