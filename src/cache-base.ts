@@ -172,6 +172,22 @@ export class GradleStateCache {
     }
 
     private initializeGradleUserHome(gradleUserHome: string, initScriptsDir: string): void {
+        // Ensure that pre-installed java versions are detected. Only add property if it isn't already defined.
+        const gradleProperties = path.resolve(gradleUserHome, 'gradle.properties')
+        const existingGradleProperties = fs.existsSync(gradleProperties)
+            ? fs.readFileSync(gradleProperties, 'utf8')
+            : ''
+        if (!existingGradleProperties.includes('org.gradle.java.installations.fromEnv=')) {
+            fs.appendFileSync(
+                gradleProperties,
+                `
+# Auto-detect pre-installed JDKs
+org.gradle.java.installations.fromEnv=JAVA_HOME_8_X64,JAVA_HOME_11_X64,JAVA_HOME_17_X64
+`
+            )
+        }
+
+        // Copy init scripts from src/resources
         const initScriptFilenames = [
             'build-result-capture.init.gradle',
             'build-result-capture-service.plugin.groovy',

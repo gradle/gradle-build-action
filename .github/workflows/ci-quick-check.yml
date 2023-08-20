@@ -124,3 +124,10 @@ jobs:
     with:
       runner-os: '["ubuntu-latest"]'
       download-dist: true
+
+  toolchain-detection:
+    needs: build-distribution
+    uses: ./.github/workflows/integ-test-detect-java-toolchains.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
