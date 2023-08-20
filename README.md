@@ -145,6 +145,20 @@ In certain circumstances it may be desirable to start with a clean Gradle User H
 cache-write-only: true
 ```
 
+### Overwriting an existing Gradle User Home
+
+When the action detects that the Gradle User Home caches directory already exists (`~/.gradle/caches`), then by default it will not overwrite the existing content of this directory.
+This can occur when a prior action initializes this directory, or when using a self-hosted runner that retains this directory between uses.
+
+In this case the Job Summary will display a message like: 
+> Caching for gradle-build-action was disabled due to pre-existing Gradle User Home
+
+If you want override the default and have the `gradle-build-action` caches overwrite existing content in the Gradle User Home, you can set the `cache-overwrite-existing` parameter to 'true':
+
+```yaml
+cache-overwrite-existing: true
+```
+
 ### Incompatibility with other caching mechanisms
 
 When using `gradle-build-action` we recommend that you avoid using other mechanisms to save and restore the Gradle User Home. 
