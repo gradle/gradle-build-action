@@ -3,7 +3,7 @@ package com.gradle.gradlebuildaction
 import static org.junit.Assume.assumeTrue
 
 class TestDependencyGraph extends BaseInitScriptTest {
-    def initScript = 'github-dependency-graph.init.gradle'
+    def initScript = 'gradle-build-action.github-dependency-graph.init.gradle'
 
     static final List<TestGradleVersion> NO_DEPENDENCY_GRAPH_VERSIONS = [GRADLE_3_X, GRADLE_4_X]
     static final List<TestGradleVersion> DEPENDENCY_GRAPH_VERSIONS = ALL_VERSIONS - NO_DEPENDENCY_GRAPH_VERSIONS

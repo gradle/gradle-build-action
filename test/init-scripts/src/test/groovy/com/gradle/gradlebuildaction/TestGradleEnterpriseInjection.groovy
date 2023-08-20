@@ -8,7 +8,7 @@ import static org.junit.Assume.assumeTrue
 class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
     static final List<TestGradleVersion> CCUD_COMPATIBLE_VERSIONS = ALL_VERSIONS - [GRADLE_3_X]
 
-    def initScript = 'inject-gradle-enterprise.init.gradle'
+    def initScript = 'gradle-build-action.inject-gradle-enterprise.init.gradle'
 
     private static final GradleVersion GRADLE_6 = GradleVersion.version('6.0')
 
