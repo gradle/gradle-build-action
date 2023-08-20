@@ -31,7 +31,7 @@ if (isTopLevelBuild) {
   println "Generating dependency graph into '${reportFile}'"
 }
 
-apply from: 'github-dependency-graph-gradle-plugin-apply.groovy'
+apply from: 'gradle-build-action.github-dependency-graph-gradle-plugin-apply.groovy'
 
 /**
  * Using the supplied jobCorrelator value:

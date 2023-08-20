@@ -72982,10 +72982,11 @@ org.gradle.java.installations.fromEnv=JAVA_HOME_8_X64,JAVA_HOME_11_X64,JAVA_HOME
 `);
         }
         const initScriptFilenames = [
-            'build-result-capture.init.gradle',
-            'build-result-capture-service.plugin.groovy',
-            'github-dependency-graph.init.gradle',
-            'github-dependency-graph-gradle-plugin-apply.groovy'
+            'gradle-build-action.build-result-capture.init.gradle',
+            'gradle-build-action.build-result-capture-service.plugin.groovy',
+            'gradle-build-action.github-dependency-graph.init.gradle',
+            'gradle-build-action.github-dependency-graph-gradle-plugin-apply.groovy',
+            'gradle-build-action.inject-gradle-enterprise.init.gradle'
         ];
         for (const initScriptFilename of initScriptFilenames) {
             const initScriptContent = this.readInitScriptAsString(initScriptFilename);

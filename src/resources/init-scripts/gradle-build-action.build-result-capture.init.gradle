@@ -82,7 +82,7 @@ def captureUsingBuildFinished(gradle, invocationId) {
 
 def captureUsingBuildService(settings, invocationId) {
     gradle.ext.invocationId = invocationId
-    apply from: 'build-result-capture-service.plugin.groovy'
+    apply from: 'gradle-build-action.build-result-capture-service.plugin.groovy'
 }
 
 class BuildResults {

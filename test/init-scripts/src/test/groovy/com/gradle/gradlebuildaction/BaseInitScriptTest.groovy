@@ -16,6 +16,8 @@ import java.nio.file.Files
 import java.util.zip.GZIPOutputStream
 
 class BaseInitScriptTest extends Specification {
+    static final String GE_PLUGIN_VERSION = '3.14.1'
+    static final String CCUD_PLUGIN_VERSION = '1.11.1'
 
     static final TestGradleVersion GRADLE_3_X = new TestGradleVersion(GradleVersion.version('3.5.1'), 7, 9)
     static final TestGradleVersion GRADLE_4_X = new TestGradleVersion(GradleVersion.version('4.10.3'), 7, 10)
@@ -126,12 +128,17 @@ class BaseInitScriptTest extends Specification {
         buildFile << ''
     }
 
-    def declareGePluginApplication(GradleVersion gradleVersion) {
-        settingsFile.text = maybeAddPluginsToSettings(gradleVersion) + settingsFile.text
-        buildFile.text = maybeAddPluginsToRootProject(gradleVersion) + buildFile.text
+    def declareGePluginApplication(GradleVersion gradleVersion, URI serverUrl = mockScansServer.address) {
+        settingsFile.text = maybeAddPluginsToSettings(gradleVersion, null, serverUrl) + settingsFile.text
+        buildFile.text = maybeAddPluginsToRootProject(gradleVersion, null, serverUrl) + buildFile.text
     }
 
-    String maybeAddPluginsToSettings(GradleVersion gradleVersion) {
+    def declareGePluginAndCcudPluginApplication(GradleVersion gradleVersion, URI serverUrl = mockScansServer.address) {
+        settingsFile.text = maybeAddPluginsToSettings(gradleVersion, CCUD_PLUGIN_VERSION, serverUrl) + settingsFile.text
+        buildFile.text = maybeAddPluginsToRootProject(gradleVersion, CCUD_PLUGIN_VERSION, serverUrl) + buildFile.text
+    }
+
+    String maybeAddPluginsToSettings(GradleVersion gradleVersion, String ccudPluginVersion, URI serverUri) {
         if (gradleVersion < GradleVersion.version('5.0')) {
             '' // applied in build.gradle
         } else if (gradleVersion < GradleVersion.version('6.0')) {
@@ -139,10 +146,11 @@ class BaseInitScriptTest extends Specification {
         } else {
             """
               plugins {
-                id 'com.gradle.enterprise' version '3.14.1'
+                id 'com.gradle.enterprise' version '${GE_PLUGIN_VERSION}'
+                ${ccudPluginVersion ? "id 'com.gradle.common-custom-user-data-gradle-plugin' version '$ccudPluginVersion'" : ""}
               }
               gradleEnterprise {
-                server = '$mockScansServer.address'
+                server = '$serverUri'
                 buildScan {
                   publishAlways()
                 }
@@ -151,24 +159,26 @@ class BaseInitScriptTest extends Specification {
         }
     }
 
-    String maybeAddPluginsToRootProject(GradleVersion gradleVersion) {
+    String maybeAddPluginsToRootProject(GradleVersion gradleVersion, String ccudPluginVersion, URI serverUrl) {
         if (gradleVersion < GradleVersion.version('5.0')) {
             """
               plugins {
                 id 'com.gradle.build-scan' version '1.16'
+                ${ccudPluginVersion ? "id 'com.gradle.common-custom-user-data-gradle-plugin' version '$ccudPluginVersion'" : ""}
               }
               buildScan {
-                server = '$mockScansServer.address'
+                server = '$serverUrl'
                 publishAlways()
               }
             """
         } else if (gradleVersion < GradleVersion.version('6.0')) {
             """
               plugins {
-                id 'com.gradle.build-scan' version '3.14.1'
+                id 'com.gradle.build-scan' version '${GE_PLUGIN_VERSION}'
+                ${ccudPluginVersion ? "id 'com.gradle.common-custom-user-data-gradle-plugin' version '$ccudPluginVersion'" : ""}
               }
               gradleEnterprise {
-                server = '$mockScansServer.address'
+                server = '$serverUrl'
                 buildScan {
                   publishAlways()
                 }

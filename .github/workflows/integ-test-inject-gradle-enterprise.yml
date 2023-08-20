@@ -1,0 +1,57 @@
+name: Test gradle enterprise injection
+
+on:
+  workflow_call:
+    inputs:
+      cache-key-prefix:
+        type: string
+      runner-os:
+        type: string
+        default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
+      download-dist:
+        type: boolean
+        default: false
+
+env:
+  DOWNLOAD_DIST: ${{ inputs.download-dist }}
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: provision-gradle-versions-${{ inputs.cache-key-prefix }}
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+  GRADLE_ENTERPRISE_INJECTION_ENABLED: true
+  GRADLE_ENTERPRISE_INJECTION_SERVER_URL: https://ge.solutions-team.gradle.com
+  GRADLE_ENTERPRISE_INJECTION_GE_PLUGIN_VERSION: 3.14.1
+  GRADLE_ENTERPRISE_INJECTION_CCUD_PLUGIN_VERSION: 1.11.1
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GE_SOLUTIONS_ACCESS_TOKEN }}
+
+jobs:
+  inject-gradle-enterprise:
+    strategy:
+      matrix:
+        gradle: [current, 7.6.2, 6.9.4, 5.6.4]
+        os: ${{fromJSON(inputs.runner-os)}}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v3
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: temurin
+        java-version: 8
+    - name: Setup Gradle
+      id: setup-gradle
+      uses: ./
+      with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
+        gradle-version: ${{ matrix.gradle }}
+    - name: Run Gradle build
+      id: gradle
+      working-directory: .github/workflow-samples/no-ge
+      run: gradle help
+    - name: Check Build Scan url
+      if: ${{ !steps.gradle.outputs.build-scan-url }}
+      uses: actions/github-script@v6
+      with:
+        script: |
+          core.setFailed('No Build Scan detected')   

@@ -5,7 +5,7 @@ import groovy.json.JsonSlurper
 import static org.junit.Assume.assumeTrue
 
 class TestBuildResultRecorder extends BaseInitScriptTest {
-    def initScript = 'build-result-capture.init.gradle'
+    def initScript = 'gradle-build-action.build-result-capture.init.gradle'
 
     def "produces build results file for build with #testGradleVersion"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
