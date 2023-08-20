@@ -103,4 +103,11 @@ jobs:
       shell: bash
       run: |
         cat ~/.gradle/gradle.properties
-        grep -q 'org.gradle.java.installations.fromEnv=JAVA_HOME' && exit 1
+        if grep -q 'org.gradle.java.installations.fromEnv=JAVA_HOME' ~/.gradle/gradle.properties ; then
+          echo 'Found overwritten fromEnv'
+          exit 1
+        fi
+        if ! grep -q 'org.gradle.java.installations.fromEnv=XXXXX' ~/.gradle/gradle.properties ; then
+          echo 'Did NOT find original fromEnv'
+          exit 1
+        fi
