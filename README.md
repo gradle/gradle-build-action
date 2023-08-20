@@ -11,6 +11,7 @@ However, the `gradle-build-action` offers a number of advantages over this appro
 - Easily [configure your workflow to use a specific version of Gradle](#use-a-specific-gradle-version) using the `gradle-version` parameter. Gradle distributions are automatically downloaded and cached. 
 - More sophisticated and more efficient caching of Gradle User Home between invocations, compared to `setup-java` and most custom configurations using `actions/cache`. [More details below](#caching).
 - Detailed reporting of cache usage and cache configuration options allow you to [optimize the use of the GitHub actions cache](#optimizing-cache-effectiveness).
+- [Generate and Submit a GitHub Dependency Graph](#github-dependency-graph-support) for your project, enabling Dependabot security alerts.
 - [Automatic capture of Build Scan® links](#build-scans) from the build, making these easier to locate for workflow run.
 
 The `gradle-build-action` is designed to provide these benefits with minimal configuration. 
@@ -714,7 +715,7 @@ jobs:
 
 ## Gradle version compatibility
 
-The plugin should be compatible with all versions of Gradle >= 5.0, and has been tested against 
+The GitHub Dependency Graph plugin should be compatible with all versions of Gradle >= 5.0, and has been tested against 
 Gradle versions "5.6.4", "6.9.4", "7.0.2", "7.6.2", "8.0.2" and the current Gradle release.
 
 The plugin is compatible with running Gradle with the configuration-cache enabled. However, this support is
@@ -724,4 +725,3 @@ limited to Gradle "8.1.0" and later:
 
 To use this plugin with versions of Gradle older than "8.1.0", you'll need to invoke Gradle with the
 configuration-cache disabled.
-
