@@ -20,7 +20,8 @@ updates:
     schedule:
       interval: "weekly"
     ignore:
-      - dependency-name: "@types/node"
+      - dependency-name: "@types/node" # Breaking change: update with next major release
+      - dependency-name: "@octokit/rest" # Tied to node version
     groups:
       npm-dependencies:
         patterns:
