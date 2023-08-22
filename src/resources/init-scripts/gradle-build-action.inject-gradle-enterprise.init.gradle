@@ -15,14 +15,14 @@ initscript {
     }
 
     // finish early if injection is disabled
-    def gradleInjectionEnabled = getInputParam("gradle-enterprise-injection.enabled")
+    def gradleInjectionEnabled = getInputParam("gradle-enterprise.injection-enabled")
     if (gradleInjectionEnabled != "true") {
         return
     }
 
-    def pluginRepositoryUrl = getInputParam('gradle-enterprise-injection.plugin-repository-url')
-    def gePluginVersion = getInputParam('gradle-enterprise-injection.ge-plugin-version')
-    def ccudPluginVersion = getInputParam('gradle-enterprise-injection.ccud-plugin-version')
+    def pluginRepositoryUrl = getInputParam('gradle-enterprise.plugin-repository.url')
+    def gePluginVersion = getInputParam('gradle-enterprise.plugin.version')
+    def ccudPluginVersion = getInputParam('gradle-enterprise.ccud-plugin.version')
 
     def atLeastGradle5 = GradleVersion.current() >= GradleVersion.version('5.0')
     def atLeastGradle4 = GradleVersion.current() >= GradleVersion.version('4.0')
@@ -71,17 +71,17 @@ def getInputParam = { String name ->
 }
 
 // finish early if injection is disabled
-def gradleInjectionEnabled = getInputParam("gradle-enterprise-injection.enabled")
+def gradleInjectionEnabled = getInputParam("gradle-enterprise.injection-enabled")
 if (gradleInjectionEnabled != "true") {
     return
 }
 
-def geUrl = getInputParam('gradle-enterprise-injection.server-url')
-def geAllowUntrustedServer = Boolean.parseBoolean(getInputParam('gradle-enterprise-injection.allow-untrusted-server'))
-def geEnforceUrl = Boolean.parseBoolean(getInputParam('gradle-enterprise-injection.enforce-server-url'))
-def buildScanUploadInBackground = Boolean.parseBoolean(getInputParam('gradle-enterprise-injection.build-scan-upload-in-background'))
-def gePluginVersion = getInputParam('gradle-enterprise-injection.ge-plugin-version')
-def ccudPluginVersion = getInputParam('gradle-enterprise-injection.ccud-plugin-version')
+def geUrl = getInputParam('gradle-enterprise.url')
+def geAllowUntrustedServer = Boolean.parseBoolean(getInputParam('gradle-enterprise.allow-untrusted-server'))
+def geEnforceUrl = Boolean.parseBoolean(getInputParam('gradle-enterprise.enforce-url'))
+def buildScanUploadInBackground = Boolean.parseBoolean(getInputParam('gradle-enterprise.build-scan.upload-in-background'))
+def gePluginVersion = getInputParam('gradle-enterprise.plugin.version')
+def ccudPluginVersion = getInputParam('gradle-enterprise.ccud-plugin.version')
 
 def atLeastGradle4 = GradleVersion.current() >= GradleVersion.version('4.0')
 
@@ -145,7 +145,7 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
                     ext.server = geUrl
                     ext.allowUntrustedServer = geAllowUntrustedServer
                     ext.buildScan.publishAlways()
-                    ext.buildScan.uploadInBackground = buildScanUploadInBackground
+                    ext.buildScan.uploadInBackground = false
                     ext.buildScan.value CI_AUTO_INJECTION_CUSTOM_VALUE_NAME, CI_AUTO_INJECTION_CUSTOM_VALUE_VALUE
                 }
             }

@@ -370,30 +370,30 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         def getEnvVars() {
             Map<String, String> envVars = [
                 GRADLE_ENTERPRISE_INJECTION_ENABLED: "true",
-                GRADLE_ENTERPRISE_INJECTION_SERVER_URL: serverUrl,
-                GRADLE_ENTERPRISE_INJECTION_ALLOW_UNTRUSTED_SERVER: "true",
-                GRADLE_ENTERPRISE_INJECTION_GE_PLUGIN_VERSION: GE_PLUGIN_VERSION,
-                GRADLE_ENTERPRISE_INJECTION_BUILD_SCAN_UPLOAD_IN_BACKGROUND: "true" // Need to upload in background since our Mock server doesn't cope with foreground upload
+                GRADLE_ENTERPRISE_URL: serverUrl,
+                GRADLE_ENTERPRISE_ALLOW_UNTRUSTED_SERVER: "true",
+                GRADLE_ENTERPRISE_PLUGIN_VERSION: GE_PLUGIN_VERSION,
+                GRADLE_ENTERPRISE_BUILD_SCAN_UPLOAD_IN_BACKGROUND: "true" // Need to upload in background since our Mock server doesn't cope with foreground upload
             ]
-            if (enforceUrl) envVars.put("GRADLE_ENTERPRISE_INJECTION_ENFORCE_SERVER_URL", "true")
-            if (ccudPluginVersion != null) envVars.put("GRADLE_ENTERPRISE_INJECTION_CCUD_PLUGIN_VERSION", ccudPluginVersion)
-            if (pluginRepositoryUrl != null) envVars.put("GRADLE_ENTERPRISE_INJECTION_PLUGIN_REPOSITORY_URL", pluginRepositoryUrl)
+            if (enforceUrl) envVars.put("GRADLE_ENTERPRISE_ENFORCE_URL", "true")
+            if (ccudPluginVersion != null) envVars.put("GRADLE_ENTERPRISE_CCUD_PLUGIN_VERSION", ccudPluginVersion)
+            if (pluginRepositoryUrl != null) envVars.put("GRADLE_ENTERPRISE_PLUGIN_REPOSITORY_URL", pluginRepositoryUrl)
 
             return envVars
         }
 
         def getJvmArgs() {
             List<String> jvmArgs = [
-                "-Dgradle-enterprise-injection.enabled=true",
-                "-Dgradle-enterprise-injection.server-url=$serverUrl",
-                "-Dgradle-enterprise-injection.allow-untrusted-server=true",
-                "-Dgradle-enterprise-injection.ge-plugin-version=$GE_PLUGIN_VERSION",
-                "-Dgradle-enterprise-injection.build-scan-upload-in-background=true"
+                "-Dgradle-enterprise.injection-enabled=true",
+                "-Dgradle-enterprise.url=$serverUrl",
+                "-Dgradle-enterprise.allow-untrusted-server=true",
+                "-Dgradle-enterprise.plugin.version=$GE_PLUGIN_VERSION",
+                "-Dgradle-enterprise.build-scan.upload-in-background=true"
             ]
 
-            if (enforceUrl) jvmArgs.add("-Dgradle-enterprise-injection.enforce-server-url=true")
-            if (ccudPluginVersion != null) jvmArgs.add("-Dgradle-enterprise-injection.ccud-plugin-version=$ccudPluginVersion")
-            if (pluginRepositoryUrl != null) jvmArgs.add("-Dgradle-enterprise-injection.plugin-repository-url=$pluginRepositoryUrl")
+            if (enforceUrl) jvmArgs.add("-Dgradle-enterprise.enforce-url=true")
+            if (ccudPluginVersion != null) jvmArgs.add("-Dgradle-enterprise.ccud-plugin.version=$ccudPluginVersion")
+            if (pluginRepositoryUrl != null) jvmArgs.add("-Dgradle-enterprise.plugin-repository.url=$pluginRepositoryUrl")
 
             return jvmArgs.collect { it.toString() } // Convert from GStrings
         }
