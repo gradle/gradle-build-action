@@ -11,16 +11,19 @@ on:
       download-dist:
         type: boolean
         default: false
+    secrets:
+      GRADLE_ENTERPRISE_ACCESS_KEY:
+        required: true
 
 env:
   DOWNLOAD_DIST: ${{ inputs.download-dist }}
   GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: provision-gradle-versions-${{ inputs.cache-key-prefix }}
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
   GRADLE_ENTERPRISE_INJECTION_ENABLED: true
-  GRADLE_ENTERPRISE_INJECTION_SERVER_URL: https://ge.solutions-team.gradle.com
-  GRADLE_ENTERPRISE_INJECTION_GE_PLUGIN_VERSION: 3.14.1
-  GRADLE_ENTERPRISE_INJECTION_CCUD_PLUGIN_VERSION: 1.11.1
-  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GE_SOLUTIONS_ACCESS_TOKEN }}
+  GRADLE_ENTERPRISE_URL: https://ge.solutions-team.gradle.com
+  GRADLE_ENTERPRISE_PLUGIN_VERSION: 3.14.1
+  GRADLE_ENTERPRISE_CCUD_PLUGIN_VERSION: 1.11.1
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
 
 jobs:
   inject-gradle-enterprise:

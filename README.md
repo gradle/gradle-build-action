@@ -744,8 +744,8 @@ name: Run build with Gradle Enterprise injection
   
 env:
   GRADLE_ENTERPRISE_INJECTION_ENABLED: true
-  GRADLE_ENTERPRISE_INJECTION_SERVER_URL: https://ge.gradle.org
-  GRADLE_ENTERPRISE_INJECTION_GE_PLUGIN_VERSION: 3.14.1
+  GRADLE_ENTERPRISE_URL: https://ge.gradle.org
+  GRADLE_ENTERPRISE_PLUGIN_VERSION: 3.14.1
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GE_ACCESS_KEY }} # Required to publish scans to ge.gradle.org
 
 jobs:
@@ -771,18 +771,9 @@ The `init-script` supports a number of additional configuration parameters that 
 | Variable | Required | Description |
 | --- | --- | --- |
 | GRADLE_ENTERPRISE_INJECTION_ENABLED | :white_check_mark: | enables Gradle Enterprise injection |
-| GRADLE_ENTERPRISE_INJECTION_SERVER_URL | :white_check_mark: | the URL of the Gradle Enterprise server |
-| GRADLE_ENTERPRISE_INJECTION_ALLOW_UNTRUSTED_SERVER | | allow communication with an untrusted server; set to _true_ if your Gradle Enterprise instance is using a self-signed certificate |
-| GRADLE_ENTERPRISE_INJECTION_ENFORCE_SERVER_URL | | enforce the configured Gradle Enterprise URL over a URL configured in the project's build; set to _true_ to enforce publication of build scans to the configured Gradle Enterprise URL |
-| GRADLE_ENTERPRISE_INJECTION_GE_PLUGIN_VERSION | :white_check_mark: | the version of the [Gradle Enterprise Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/) to apply |
-| GRADLE_ENTERPRISE_INJECTION_CCUD_PLUGIN_VERSION |  | the version of the [Common Custom User Data Gradle plugin](https://github.com/gradle/common-custom-user-data-gradle-plugin) to apply, if any |
-| GRADLE_ENTERPRISE_INJECTION_PLUGIN_REPOSITORY_URL |  | the URL of the repository to use when resolving the GE and CCUD plugins; the Gradle Plugin Portal is used by default |
-
-## Authentication
-To authenticate against the Gradle Enterprise server, you will need to define an environment variable named `GRADLE_ENTERPRISE_ACCESS_KEY`.
-This is not required directly by the Gradle Enterprise injection, but will be required by the Gradle Enterprise Gradle Plugin when connecting to the server.
-
-To do this, define a [GitHub Actions secret](https://docs.github.com/en/actions/security-guides/encrypted-secrets) at the repository or organization level, and reference this as an environment variable in your workflow file.
-See the [minimal example above](#enabling-gradle-enterprise-injection) for the syntax.
-
-To generate a Gradle Enterprise Access Key, refer to the [docs for the Gradle Enterprise Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/#manual_access_key_configuration). 
+| GRADLE_ENTERPRISE_URL | :white_check_mark: | the URL of the Gradle Enterprise server |
+| GRADLE_ENTERPRISE_ALLOW_UNTRUSTED_SERVER | | allow communication with an untrusted server; set to _true_ if your Gradle Enterprise instance is using a self-signed certificate |
+| GRADLE_ENTERPRISE_ENFORCE_URL | | enforce the configured Gradle Enterprise URL over a URL configured in the project's build; set to _true_ to enforce publication of build scans to the configured Gradle Enterprise URL |
+| GRADLE_ENTERPRISE_PLUGIN_VERSION | :white_check_mark: | the version of the [Gradle Enterprise Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/) to apply |
+| GRADLE_ENTERPRISE_CCUD_PLUGIN_VERSION |  | the version of the [Common Custom User Data Gradle plugin](https://github.com/gradle/common-custom-user-data-gradle-plugin) to apply, if any |
+| GRADLE_ENTERPRISE_PLUGIN_REPOSITORY_URL |  | the URL of the repository to use when resolving the GE and CCUD plugins; the Gradle Plugin Portal is used by default |
