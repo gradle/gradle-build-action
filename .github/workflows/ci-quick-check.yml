@@ -73,7 +73,7 @@ jobs:
 
   gradle-enterprise-injection:
     needs: build-distribution
-    uses: ./github/workflows/integ-test-inject-gradle-enterprise.yml
+    uses: ./.github/workflows/integ-test-inject-gradle-enterprise.yml
     with:
       runner-os: '["ubuntu-latest"]'
       download-dist: true

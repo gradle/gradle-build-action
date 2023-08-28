@@ -45,7 +45,7 @@ jobs:
       cache-key-prefix: ${{github.run_number}}-
 
   gradle-enterprise-injection:
-    uses: ./github/workflows/integ-test-inject-gradle-enterprise.yml
+    uses: ./.github/workflows/integ-test-inject-gradle-enterprise.yml
     with:
       cache-key-prefix: ${{github.run_number}}-
 
