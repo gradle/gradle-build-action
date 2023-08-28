@@ -11,6 +11,9 @@ on:
       download-dist:
         type: boolean
         default: false
+    secrets:
+      GRADLE_ENTERPRISE_ACCESS_KEY:
+        required: true
 
 env:
   DOWNLOAD_DIST: ${{ inputs.download-dist }}
@@ -20,7 +23,7 @@ env:
   GRADLE_ENTERPRISE_URL: https://ge.solutions-team.gradle.com
   GRADLE_ENTERPRISE_PLUGIN_VERSION: 3.14.1
   GRADLE_ENTERPRISE_CCUD_PLUGIN_VERSION: 1.11.1
-  GRADLE_ENTERPRISE_ACCESS_KEY: "XXX ${{ secrets.GE_SOLUTIONS_ACCESS_TOKEN }}"
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
 
 jobs:
   inject-gradle-enterprise:

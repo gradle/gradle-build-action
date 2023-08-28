@@ -48,6 +48,8 @@ jobs:
     uses: ./.github/workflows/integ-test-inject-gradle-enterprise.yml
     with:
       cache-key-prefix: ${{github.run_number}}-
+    secrets:
+      GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GE_SOLUTIONS_ACCESS_TOKEN }}
 
   provision-gradle-versions:
     uses: ./.github/workflows/integ-test-provision-gradle-versions.yml
