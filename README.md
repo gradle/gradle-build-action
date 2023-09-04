@@ -21,7 +21,8 @@ These features work both when Gradle is executed via the `gradle-build-action` a
 
 The recommended way to use the `gradle-build-action` is in an initial "Setup Gradle" step, with subsquent steps invoking Gradle directly with a `run` step. This makes the action minimally invasive, and allows a workflow to configure and execute a Gradle execution in any way.
 
-Most of the functionality of the `gradle-build-action` is applied via Gradle init-scripts, and so will apply to all subsequent Gradle executions on the runner, no matter how Gradle is invoked. This means that if you have an existing workflow that executes Gradle with a `run` step, you can add an initial "Setup Gradle" Step to benefit from caching, build-scan capture and other features of the gradle-build-action.
+The `gradle-build-action` works by configuring environment variables and by adding a set of Gradle init-scripts to the Gradle User Home. These will apply to all Gradle executions on the runner, no matter how Gradle is invoked. 
+This means that if you have an existing workflow that executes Gradle with a `run` step, you can add an initial "Setup Gradle" Step to benefit from caching, build-scan capture and other features of the gradle-build-action.
 
 
 ```yaml
