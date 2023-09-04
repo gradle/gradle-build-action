@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout project sources
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Setup Gradle
       uses: ./
     - name: Run build with Gradle wrapper
