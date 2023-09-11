@@ -74151,7 +74151,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.constructJobCorrelator = exports.getJobCorrelator = exports.complete = exports.setup = void 0;
+exports.constructJobCorrelator = exports.getJobCorrelator = exports.shaFromContext = exports.complete = exports.setup = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const artifact = __importStar(__nccwpck_require__(2605));
 const github = __importStar(__nccwpck_require__(5438));
@@ -74169,9 +74169,11 @@ function setup(option) {
     }
     core.info('Enabling dependency graph generation');
     const jobCorrelator = getJobCorrelator();
+    const sha = shaFromContext(github.context);
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED', 'true');
     core.exportVariable('GITHUB_JOB_CORRELATOR', jobCorrelator);
     core.exportVariable('GITHUB_JOB_ID', github.context.runId);
+    core.exportVariable('GITHUB_SHA', sha);
     core.exportVariable('DEPENDENCY_GRAPH_REPORT_DIR', path.resolve(layout.workspaceDirectory(), 'dependency-graph-reports'));
 }
 exports.setup = setup;
@@ -74287,6 +74289,22 @@ function getRelativePathFromWorkspace(file) {
     const workspaceDirectory = layout.workspaceDirectory();
     return path.relative(workspaceDirectory, file);
 }
+function shaFromContext(context) {
+    const pullRequestEvents = [
+        'pull_request',
+        'pull_request_comment',
+        'pull_request_review',
+        'pull_request_review_comment'
+    ];
+    if (pullRequestEvents.includes(context.eventName)) {
+        const pr = context.payload.pull_request;
+        return pr.head.sha;
+    }
+    else {
+        return context.sha;
+    }
+}
+exports.shaFromContext = shaFromContext;
 function getJobCorrelator() {
     return constructJobCorrelator(github.context.workflow, github.context.job, (0, input_params_1.getJobMatrix)());
 }

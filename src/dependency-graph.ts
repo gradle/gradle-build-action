@@ -4,6 +4,8 @@ import * as github from '@actions/github'
 import * as glob from '@actions/glob'
 import * as toolCache from '@actions/tool-cache'
 import {Octokit} from '@octokit/rest'
+import {Context} from '@actions/github/lib/context'
+import type {PullRequestEvent} from '@octokit/webhooks-types'
 
 import * as path from 'path'
 import fs from 'fs'
@@ -20,9 +22,11 @@ export function setup(option: DependencyGraphOption): void {
 
     core.info('Enabling dependency graph generation')
     const jobCorrelator = getJobCorrelator()
+    const sha = shaFromContext(github.context)
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED', 'true')
     core.exportVariable('GITHUB_JOB_CORRELATOR', jobCorrelator)
     core.exportVariable('GITHUB_JOB_ID', github.context.runId)
+    core.exportVariable('GITHUB_SHA', sha)
     core.exportVariable(
         'DEPENDENCY_GRAPH_REPORT_DIR',
         path.resolve(layout.workspaceDirectory(), 'dependency-graph-reports')
@@ -149,6 +153,24 @@ function getGithubToken(): string {
 function getRelativePathFromWorkspace(file: string): string {
     const workspaceDirectory = layout.workspaceDirectory()
     return path.relative(workspaceDirectory, file)
+}
+
+export function shaFromContext(context: Context): string {
+    const pullRequestEvents = [
+        'pull_request',
+        'pull_request_comment',
+        'pull_request_review',
+        'pull_request_review_comment'
+        // Note that pull_request_target is omitted here.
+        // That event runs in the context of the base commit of the PR,
+        // so the snapshot should not be associated with the head commit.
+    ]
+    if (pullRequestEvents.includes(context.eventName)) {
+        const pr = (context.payload as PullRequestEvent).pull_request
+        return pr.head.sha
+    } else {
+        return context.sha
+    }
 }
 
 export function getJobCorrelator(): string {
