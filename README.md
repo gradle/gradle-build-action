@@ -778,3 +778,14 @@ The `init-script` supports a number of additional configuration parameters that 
 | GRADLE_ENTERPRISE_PLUGIN_VERSION | :white_check_mark: | the version of the [Gradle Enterprise Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/) to apply |
 | GRADLE_ENTERPRISE_CCUD_PLUGIN_VERSION |  | the version of the [Common Custom User Data Gradle plugin](https://github.com/gradle/common-custom-user-data-gradle-plugin) to apply, if any |
 | GRADLE_ENTERPRISE_PLUGIN_REPOSITORY_URL |  | the URL of the repository to use when resolving the GE and CCUD plugins; the Gradle Plugin Portal is used by default |
+
+## Publishing to scans.gradle.com
+
+Gradle Enterprise injection is designed to enable publishing of build scans to a Gradle Enterprise instance,
+and is not suitable for publishing to the public Build Scans instance (https://scans.gradle.com).
+
+In order to publish Build Scans to scans.gradle.com, you need to:
+- Apply the Gradle Enterprise plugin to your build configuration ([see docs](https://docs.gradle.com/enterprise/get-started/#applying_the_plugin))
+- Programmatically accept the Terms of Service for scans.gradle.com ([see docs](https://docs.gradle.com/enterprise/gradle-plugin/#connecting_to_scans_gradle_com))
+- Execute the build with `--scan` or configure your build with `publishAlways()` ([see docs](https://docs.gradle.com/enterprise/get-started/#always_publishing_a_build_scan))
+
