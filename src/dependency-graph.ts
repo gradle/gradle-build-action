@@ -3,7 +3,7 @@ import * as artifact from '@actions/artifact'
 import * as github from '@actions/github'
 import * as glob from '@actions/glob'
 import * as toolCache from '@actions/tool-cache'
-import {Octokit} from '@octokit/rest'
+import {GitHub} from '@actions/github/lib/utils'
 
 import * as path from 'path'
 import fs from 'fs'
@@ -63,7 +63,7 @@ async function downloadAndSubmitDependencyGraphs(): Promise<void> {
 }
 
 async function submitDependencyGraphs(dependencyGraphFiles: string[]): Promise<void> {
-    const octokit: Octokit = getOctokit()
+    const octokit = getOctokit()
 
     for (const jsonFile of dependencyGraphFiles) {
         const jsonContent = fs.readFileSync(jsonFile, 'utf8')
@@ -86,7 +86,7 @@ async function retrieveDependencyGraphs(workspaceDirectory: string): Promise<str
 }
 
 async function retrieveDependencyGraphsForWorkflowRun(runId: number, workspaceDirectory: string): Promise<string[]> {
-    const octokit: Octokit = getOctokit()
+    const octokit = getOctokit()
 
     // Find the workflow run artifacts named "dependency-graph"
     const artifacts = await octokit.rest.actions.listWorkflowRunArtifacts({
@@ -136,10 +136,8 @@ async function findDependencyGraphFiles(dir: string): Promise<string[]> {
     return graphFiles
 }
 
-function getOctokit(): Octokit {
-    return new Octokit({
-        auth: getGithubToken()
-    })
+function getOctokit(): InstanceType<typeof GitHub> {
+    return github.getOctokit(getGithubToken())
 }
 
 function getGithubToken(): string {
