@@ -68,7 +68,10 @@ jobs:
         dependency-graph: download-and-submit
 
   multiple-builds:
-    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        os: ${{fromJSON(inputs.runner-os)}}
+    runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
@@ -85,12 +88,16 @@ jobs:
       run: ./gradlew build
       working-directory: .github/workflow-samples/groovy-dsl
     - name: Check generated dependency graphs
+      shell: bash
       run: |
         echo "gradle-assemble report file: ${{ steps.gradle-assemble.outputs.dependency-graph-file }}"
         echo "gradle-build report file: ${{ steps.gradle-build.outputs.dependency-graph-file }}"
         ls -l dependency-graph-reports
-        if ([ ! -e ${{ steps.gradle-assemble.outputs.dependency-graph-file }} ] || [ ! -e ${{ steps.gradle-build.outputs.dependency-graph-file }} ])
-        then
-            echo "Did not find expected dependency graph files"
+        if [ ! -e "${{ steps.gradle-assemble.outputs.dependency-graph-file }}" ]; then
+            echo "Did not find gradle-assemble dependency graph file"
+            exit 1
+        fi
+        if [ ! -e "${{ steps.gradle-build.outputs.dependency-graph-file }}" ]; then
+            echo "Did not find gradle-build dependency graph files"
             exit 1
         fi
