@@ -1,4 +1,4 @@
-name: Test execution with caching
+name: Test dependency graph
 
 on:
   workflow_call:
