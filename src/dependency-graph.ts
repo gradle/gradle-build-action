@@ -21,8 +21,11 @@ export function setup(option: DependencyGraphOption): void {
     core.info('Enabling dependency graph generation')
     const jobCorrelator = getJobCorrelator()
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED', 'true')
-    core.exportVariable('GITHUB_JOB_CORRELATOR', jobCorrelator)
-    core.exportVariable('GITHUB_JOB_ID', github.context.runId)
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR', jobCorrelator)
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_ID', github.context.runId)
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_REF', github.context.ref)
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_SHA', github.context.sha)
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_WORKSPACE', layout.workspaceDirectory())
     core.exportVariable(
         'DEPENDENCY_GRAPH_REPORT_DIR',
         path.resolve(layout.workspaceDirectory(), 'dependency-graph-reports')
