@@ -8,11 +8,11 @@ It is possible to directly invoke Gradle in your workflow, and the `actions/setu
 
 However, the `gradle-build-action` offers a number of advantages over this approach:
 
-- Easily [configure your workflow to use a specific version of Gradle](#use-a-specific-gradle-version) using the `gradle-version` parameter. Gradle distributions are automatically downloaded and cached. 
-- More sophisticated and more efficient caching of Gradle User Home between invocations, compared to `setup-java` and most custom configurations using `actions/cache`. [More details below](#caching).
+- Easily [configure your workflow to use a specific version of Gradle](#choose-a-specific-gradle-version) using the `gradle-version` parameter. Gradle distributions are automatically downloaded and cached. 
+- More sophisticated and more efficient caching of Gradle User Home between invocations, compared to `setup-java` and most custom configurations using `actions/cache`. [More details below](#caching-build-state-between-jobs).
 - Detailed reporting of cache usage and cache configuration options allow you to [optimize the use of the GitHub actions cache](#optimizing-cache-effectiveness).
 - [Generate and Submit a GitHub Dependency Graph](#github-dependency-graph-support) for your project, enabling Dependabot security alerts.
-- [Automatic capture of Build Scan® links](#build-scans) from the build, making these easier to locate for workflow run.
+- [Automatic capture of Build Scan® links](#build-reporting) from the build, making these easier to locate for workflow run.
 
 The `gradle-build-action` is designed to provide these benefits with minimal configuration. 
 These features work both when Gradle is executed via the `gradle-build-action` and for any Gradle execution in subsequent steps.
@@ -583,7 +583,7 @@ For example, a vulnerability in the tool you use to generate documentation is un
 There are a number of techniques you can employ to limit the scope of the generated dependency graph:
 - [Don't generate a dependency graph for all Gradle executions](#choosing-which-gradle-invocations-will-generate-a-dependency-graph)
 - [For a Gradle execution, filter which Gradle projects and configurations will contribute dependencies](#filtering-which-gradle-configurations-contribute-to-the-dependency-graph)
-- [Use a separate workflow that only resolves the required dependencies]()
+- [Use a separate workflow that only resolves the required dependencies](#use-a-dedicated-workflow-for-dependency-graph-generation)
 
 > [!NOTE]
 > Ideally, all dependencies involved in building and testing a project will be extracted and reported in a dependency graph. 
