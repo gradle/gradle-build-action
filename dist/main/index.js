@@ -70667,7 +70667,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.constructJobCorrelator = exports.getJobCorrelator = exports.complete = exports.setup = void 0;
+exports.constructJobCorrelator = exports.complete = exports.setup = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const artifact = __importStar(__nccwpck_require__(2605));
 const github = __importStar(__nccwpck_require__(5438));
@@ -70683,10 +70683,12 @@ function setup(option) {
         return;
     }
     core.info('Enabling dependency graph generation');
-    const jobCorrelator = getJobCorrelator();
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED', 'true');
-    core.exportVariable('GITHUB_JOB_CORRELATOR', jobCorrelator);
-    core.exportVariable('GITHUB_JOB_ID', github.context.runId);
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR', getJobCorrelator());
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_ID', github.context.runId);
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_REF', github.context.ref);
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_SHA', getShaFromContext());
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_WORKSPACE', layout.workspaceDirectory());
     core.exportVariable('DEPENDENCY_GRAPH_REPORT_DIR', path.resolve(layout.workspaceDirectory(), 'dependency-graph-reports'));
 }
 exports.setup = setup;
@@ -70800,10 +70802,25 @@ function getRelativePathFromWorkspace(file) {
     const workspaceDirectory = layout.workspaceDirectory();
     return path.relative(workspaceDirectory, file);
 }
+function getShaFromContext() {
+    const context = github.context;
+    const pullRequestEvents = [
+        'pull_request',
+        'pull_request_comment',
+        'pull_request_review',
+        'pull_request_review_comment'
+    ];
+    if (pullRequestEvents.includes(context.eventName)) {
+        const pr = context.payload.pull_request;
+        return pr.head.sha;
+    }
+    else {
+        return context.sha;
+    }
+}
 function getJobCorrelator() {
     return constructJobCorrelator(github.context.workflow, github.context.job, (0, input_params_1.getJobMatrix)());
 }
-exports.getJobCorrelator = getJobCorrelator;
 function constructJobCorrelator(workflow, jobId, matrixJson) {
     const matrixString = describeMatrix(matrixJson);
     const label = matrixString ? `${workflow}-${jobId}-${matrixString}` : `${workflow}-${jobId}`;
