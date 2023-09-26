@@ -4,6 +4,7 @@ import * as github from '@actions/github'
 import * as glob from '@actions/glob'
 import * as toolCache from '@actions/tool-cache'
 import {GitHub} from '@actions/github/lib/utils'
+import type {PullRequestEvent} from '@octokit/webhooks-types'
 
 import * as path from 'path'
 import fs from 'fs'
@@ -19,12 +20,11 @@ export function setup(option: DependencyGraphOption): void {
     }
 
     core.info('Enabling dependency graph generation')
-    const jobCorrelator = getJobCorrelator()
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED', 'true')
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR', jobCorrelator)
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR', getJobCorrelator())
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_ID', github.context.runId)
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_REF', github.context.ref)
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_SHA', github.context.sha)
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_SHA', getShaFromContext())
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_WORKSPACE', layout.workspaceDirectory())
     core.exportVariable(
         'DEPENDENCY_GRAPH_REPORT_DIR',
@@ -152,7 +152,26 @@ function getRelativePathFromWorkspace(file: string): string {
     return path.relative(workspaceDirectory, file)
 }
 
-export function getJobCorrelator(): string {
+function getShaFromContext(): string {
+    const context = github.context
+    const pullRequestEvents = [
+        'pull_request',
+        'pull_request_comment',
+        'pull_request_review',
+        'pull_request_review_comment'
+        // Note that pull_request_target is omitted here.
+        // That event runs in the context of the base commit of the PR,
+        // so the snapshot should not be associated with the head commit.
+    ]
+    if (pullRequestEvents.includes(context.eventName)) {
+        const pr = (context.payload as PullRequestEvent).pull_request
+        return pr.head.sha
+    } else {
+        return context.sha
+    }
+}
+
+function getJobCorrelator(): string {
     return constructJobCorrelator(github.context.workflow, github.context.job, getJobMatrix())
 }
 
