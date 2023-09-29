@@ -69620,7 +69620,8 @@ class CacheCleaner {
             fs_1.default.mkdirSync(cleanupProjectDir, { recursive: true });
             fs_1.default.writeFileSync(path_1.default.resolve(cleanupProjectDir, 'settings.gradle'), 'rootProject.name = "dummy-cleanup-project"');
             fs_1.default.writeFileSync(path_1.default.resolve(cleanupProjectDir, 'build.gradle'), 'task("noop") {}');
-            yield exec.exec(`gradle -g ${this.gradleUserHome} --no-daemon --build-cache --no-scan --quiet noop`, [], {
+            const gradleCommand = `gradle -g ${this.gradleUserHome} --no-daemon --build-cache --no-scan --quiet -DGITHUB_DEPENDENCY_GRAPH_ENABLED=false noop`;
+            yield exec.exec(gradleCommand, [], {
                 cwd: cleanupProjectDir
             });
         });
