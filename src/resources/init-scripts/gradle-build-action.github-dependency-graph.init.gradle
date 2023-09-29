@@ -1,7 +1,7 @@
 import org.gradle.util.GradleVersion
 
 // Only run when dependency graph is explicitly enabled
-if (System.env.GITHUB_DEPENDENCY_GRAPH_ENABLED != "true") {
+if (getVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED') != "true") {
   return
 }
 
@@ -15,7 +15,7 @@ if (GradleVersion.current().baseVersion < GradleVersion.version("5.0")) {
 // This is only required for top-level builds
 def isTopLevelBuild = gradle.getParent() == null
 if (isTopLevelBuild) {
-  def reportFile = getUniqueReportFile(System.env.GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR)
+  def reportFile = getUniqueReportFile(getVariable('GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR'))
 
   if (reportFile == null) {
     println "::warning::No dependency snapshot generated for step. Could not determine unique job correlator - specify GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR var for this step."
@@ -40,7 +40,7 @@ apply from: 'gradle-build-action.github-dependency-graph-gradle-plugin-apply.gro
  * - When found, this value is set as a System property override.
  */
 File getUniqueReportFile(String jobCorrelator) {
-    def reportDir = System.env.DEPENDENCY_GRAPH_REPORT_DIR
+    def reportDir = getVariable('DEPENDENCY_GRAPH_REPORT_DIR')
     def reportFile = new File(reportDir, jobCorrelator + ".json")
     if (!reportFile.exists()) return reportFile
 
@@ -56,4 +56,11 @@ File getUniqueReportFile(String jobCorrelator) {
 
     // Could not determine unique job correlator
     return null
+}
+
+/**
+* Return the environment variable value, or equivalent system property (if set)
+*/
+String getVariable(String name) {
+  return System.properties[name] ?: System.getenv(name)
 }

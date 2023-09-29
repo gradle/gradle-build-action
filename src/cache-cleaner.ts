@@ -42,7 +42,8 @@ export class CacheCleaner {
         )
         fs.writeFileSync(path.resolve(cleanupProjectDir, 'build.gradle'), 'task("noop") {}')
 
-        await exec.exec(`gradle -g ${this.gradleUserHome} --no-daemon --build-cache --no-scan --quiet noop`, [], {
+        const gradleCommand = `gradle -g ${this.gradleUserHome} --no-daemon --build-cache --no-scan --quiet -DGITHUB_DEPENDENCY_GRAPH_ENABLED=false noop`
+        await exec.exec(gradleCommand, [], {
             cwd: cleanupProjectDir
         })
     }
