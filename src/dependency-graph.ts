@@ -4,6 +4,7 @@ import * as github from '@actions/github'
 import * as glob from '@actions/glob'
 import * as toolCache from '@actions/tool-cache'
 import {GitHub} from '@actions/github/lib/utils'
+import {RequestError} from '@octokit/request-error'
 import type {PullRequestEvent} from '@octokit/webhooks-types'
 
 import * as path from 'path'
@@ -70,19 +71,35 @@ async function downloadAndSubmitDependencyGraphs(): Promise<void> {
 }
 
 async function submitDependencyGraphs(dependencyGraphFiles: string[]): Promise<void> {
-    const octokit = getOctokit()
-
     for (const jsonFile of dependencyGraphFiles) {
-        const jsonContent = fs.readFileSync(jsonFile, 'utf8')
-
-        const jsonObject = JSON.parse(jsonContent)
-        jsonObject.owner = github.context.repo.owner
-        jsonObject.repo = github.context.repo.repo
-        const response = await octokit.request('POST /repos/{owner}/{repo}/dependency-graph/snapshots', jsonObject)
-
-        const relativeJsonFile = getRelativePathFromWorkspace(jsonFile)
-        core.notice(`Submitted ${relativeJsonFile}: ${response.data.message}`)
+        try {
+            await submitDependencyGraphFile(jsonFile)
+        } catch (error) {
+            if (error instanceof RequestError) {
+                const relativeJsonFile = getRelativePathFromWorkspace(jsonFile)
+                core.warning(
+                    `Failed to submit dependency graph ${relativeJsonFile}.\n` +
+                        "Please ensure that the 'contents: write' permission is available for the workflow job.\n" +
+                        "Note that this permission is never available for a 'pull_request' trigger from a repository fork."
+                )
+            } else {
+                throw error
+            }
+        }
     }
+}
+
+async function submitDependencyGraphFile(jsonFile: string): Promise<void> {
+    const octokit = getOctokit()
+    const jsonContent = fs.readFileSync(jsonFile, 'utf8')
+
+    const jsonObject = JSON.parse(jsonContent)
+    jsonObject.owner = github.context.repo.owner
+    jsonObject.repo = github.context.repo.repo
+    const response = await octokit.request('POST /repos/{owner}/{repo}/dependency-graph/snapshots', jsonObject)
+
+    const relativeJsonFile = getRelativePathFromWorkspace(jsonFile)
+    core.notice(`Submitted ${relativeJsonFile}: ${response.data.message}`)
 }
 
 async function retrieveDependencyGraphs(workspaceDirectory: string): Promise<string[]> {
