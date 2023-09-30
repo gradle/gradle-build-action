@@ -710,8 +710,8 @@ jobs:
     steps:
       - name: Retrieve dependency graph artifact and submit
         uses: gradle/gradle-build-action@v2
-      with:
-        dependency-graph: download-and-submit
+        with:
+          dependency-graph: download-and-submit
 ```
 
 ## Gradle version compatibility

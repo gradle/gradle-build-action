@@ -14,8 +14,13 @@ import {DependencyGraphOption, getJobMatrix} from './input-params'
 
 const DEPENDENCY_GRAPH_ARTIFACT = 'dependency-graph'
 
-export function setup(option: DependencyGraphOption): void {
-    if (option === DependencyGraphOption.Disabled || option === DependencyGraphOption.DownloadAndSubmit) {
+export async function setup(option: DependencyGraphOption): Promise<void> {
+    if (option === DependencyGraphOption.Disabled) {
+        return
+    }
+    // Download and submit early, for compatability with dependency review.
+    if (option === DependencyGraphOption.DownloadAndSubmit) {
+        await downloadAndSubmitDependencyGraphs()
         return
     }
 
@@ -35,6 +40,7 @@ export function setup(option: DependencyGraphOption): void {
 export async function complete(option: DependencyGraphOption): Promise<void> {
     switch (option) {
         case DependencyGraphOption.Disabled:
+        case DependencyGraphOption.DownloadAndSubmit: // Performed in setup
             return
         case DependencyGraphOption.Generate:
             await uploadDependencyGraphs()
@@ -42,8 +48,6 @@ export async function complete(option: DependencyGraphOption): Promise<void> {
         case DependencyGraphOption.GenerateAndSubmit:
             await submitDependencyGraphs(await uploadDependencyGraphs())
             return
-        case DependencyGraphOption.DownloadAndSubmit:
-            await downloadAndSubmitDependencyGraphs()
     }
 }
 
