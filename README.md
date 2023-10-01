@@ -35,7 +35,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: actions/setup-java@v3
       with:
         distribution: temurin
@@ -84,7 +84,7 @@ jobs:
   gradle-rc:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: actions/setup-java@v3
       with:
         distribution: temurin
@@ -376,7 +376,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout project sources
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v2
     - name: Run build with Gradle wrapper
@@ -410,7 +410,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout project sources
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v2
     - name: Run build with Gradle wrapper
@@ -438,7 +438,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: actions/setup-java@v3
       with:
         distribution: temurin
@@ -559,7 +559,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup Gradle to generate and submit dependency graphs
       uses: gradle/gradle-build-action@v2
       with:
@@ -603,7 +603,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup Gradle to generate and submit dependency graphs
       uses: gradle/gradle-build-action@v2
       with:
@@ -646,7 +646,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup Gradle to generate and submit dependency graphs
       uses: gradle/gradle-build-action@v2
       with:
@@ -678,7 +678,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup Gradle to generate and submit dependency graphs
       uses: gradle/gradle-build-action@v2
       with:
@@ -702,7 +702,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup Gradle to generate and submit dependency graphs
       uses: gradle/gradle-build-action@v2
       with:
@@ -735,20 +735,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup Gradle to generate and submit dependency graphs
       uses: gradle/gradle-build-action@v2
       with:
         dependency-graph: generate # Only generate in this job
     - name: Run a build, generating the dependency graph snapshot which will be submitted
       run: ./gradlew build
-
-  dependency-review:
-    needs: build
-    runs-on: ubuntu-latest
-    - name: Perform dependency review
-      uses: actions/dependency-review-action@v3
-      
 ```
 
 ***Dependent workflow file***
@@ -842,7 +835,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v2
     - name: Run a Gradle build with Gradle Enterprise injection enabled
