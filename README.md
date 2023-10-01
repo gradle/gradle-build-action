@@ -546,8 +546,6 @@ You enable GitHub Dependency Graph support by setting the `dependency-graph` act
 | `generate-and-submit` | As per `generate`, but any generated dependency graph snapshots will be submitted at the end of the job. |
 | `download-and-submit` | Download any previously saved dependency graph snapshots, submitting them via the Dependency Submission API. This can be useful to collect all snapshots in a matrix of builds and submit them in one step. |
 
-Dependency Graph _submission_ (but not generation) requires the `contents: write` permission, which may need to be explicitly enabled in the workflow file.
-
 Example of a simple workflow that generates and submits a dependency graph:
 ```yaml
 name: Submit dependency graph
@@ -566,14 +564,62 @@ jobs:
       uses: gradle/gradle-build-action@v2
       with:
         dependency-graph: generate-and-submit
-    - name: Run a build, generating the dependency graph snapshot which will be submitted
+    - name: Run a build and generate the dependency graph which will be submitted post-job
       run: ./gradlew build
 ```
 
-The `contents: write` permission is not required to generate the dependency graph, but is required in order to submit the graph via the GitHub API.
+The `contents: write` permission is not required to generate the dependency graph, but is required in order to submit the graph via the GitHub API. This permission will need to be explicitly enabled in the workflow file for dependency graph submission to succeed.
 
-The above configuration will work for workflows that run as a result of commits to a repository branch, but not when a workflow is triggered by a PR from a repository fork.
-For a configuration that supports this setup, see [Dependency Graphs for pull request workflows](#dependency-graphs-for-pull-request-workflows).
+> [!IMPORTANT]
+> The above configuration will work for workflows that run as a result of commits to a repository branch, 
+> but not when a workflow is triggered by a PR from a repository fork.
+> This is because the `contents: write` permission is not available when executing a workflow 
+> for a PR submitted from a forked repository.
+> For a configuration that supports this setup, see [Dependency Graphs for pull request workflows](#dependency-graphs-for-pull-request-workflows).
+
+### Integrating the `dependency-review-action`
+
+The GitHub [dependency-review-action](https://github.com/actions/dependency-review-action) helps you 
+understand dependency changes (and the security impact of these changes) for a pull request.
+For the `dependency-review-action` to succeed, it must run _after_ the dependency graph has been submitted for a PR.
+
+When using `generate-and-submit`, dependency graph files are submitted at the end of the job, after all steps have been
+executed. For this reason, the `dependency-review-action` must be executed in a dependent job,
+and not as a subsequent step in the job that generates the dependency graph.
+
+Example of a pull request workflow that executes a build for a pull request and runs the `dependency-review-action`:
+
+```yaml
+name: PR check
+
+on:
+  pull_request:
+  
+permissions:
+  contents: write
+  # Note that this permission will not be available if the PR is from a forked repository
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Gradle to generate and submit dependency graphs
+      uses: gradle/gradle-build-action@v2
+      with:
+        dependency-graph: generate-and-submit
+    - name: Run a build and generate the dependency graph which will be submitted post-job
+      run: ./gradlew build
+
+  dependency-review:
+    needs: build
+    runs-on: ubuntu-latest
+    - name: Perform dependency review
+      uses: actions/dependency-review-action@v3
+```
+
+See [Dependency Graphs for pull request workflows](#dependency-graphs-for-pull-request-workflows) for a more complex
+(and less functional) example that will work for pull requests submitted from forked repositories.
 
 ## Limiting the scope of the dependency graph
 
@@ -682,6 +728,9 @@ Note: when `download-and-submit` is used in a workflow triggered via [workflow_r
 ```yaml
 name: run-build-and-generate-dependency-snapshot
 
+on:
+  pull_request:
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -693,6 +742,13 @@ jobs:
         dependency-graph: generate # Only generate in this job
     - name: Run a build, generating the dependency graph snapshot which will be submitted
       run: ./gradlew build
+
+  dependency-review:
+    needs: build
+    runs-on: ubuntu-latest
+    - name: Perform dependency review
+      uses: actions/dependency-review-action@v3
+      
 ```
 
 ***Dependent workflow file***
@@ -705,14 +761,47 @@ on:
     types: [completed]
 
 jobs:
-  submit-snapshots:
+  submit-dependency-graph:
     runs-on: ubuntu-latest
     steps:
-      - name: Retrieve dependency graph artifact and submit
-        uses: gradle/gradle-build-action@v2
+    - name: Retrieve dependency graph artifact and submit
+      uses: gradle/gradle-build-action@v2
       with:
         dependency-graph: download-and-submit
 ```
+
+### Integrating `dependency-review-action` for pull request workflows
+
+The GitHub [dependency-review-action](https://github.com/actions/dependency-review-action) helps you 
+understand dependency changes (and the security impact of these changes) for a pull request.
+
+To integrate the `dependency-review-action` into the pull request workflows above, a separate workflow should be added.
+This workflow will be triggered directly on `pull_request`, but will need to wait until the dependency graph results are
+submitted before the dependency review can complete. How long to wait is controlled by the `retry-on-snapshot-warnings` input parameters.
+
+Here's an example of a separate "Dependency Review" workflow that will wait for 10 minutes for the PR check workflow to complete.
+
+```yaml
+name: dependency-review
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 'Dependency Review'
+      uses: actions/dependency-review-action@v3
+      with:
+        retry-on-snapshot-warnings: true
+        retry-on-snapshot-warnings-timeout: 600
+```
+
+The `retry-on-snapshot-warnings-timeout` (in seconds) needs to be long enough to allow the entire `run-build-and-generate-dependency-snapshot` and `submit-dependency-snapshot` workflows (above) to complete.
 
 ## Gradle version compatibility
 

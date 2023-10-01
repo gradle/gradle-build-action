@@ -70674,29 +70674,37 @@ const artifact = __importStar(__nccwpck_require__(2605));
 const github = __importStar(__nccwpck_require__(5438));
 const glob = __importStar(__nccwpck_require__(8090));
 const toolCache = __importStar(__nccwpck_require__(7784));
+const request_error_1 = __nccwpck_require__(537);
 const path = __importStar(__nccwpck_require__(1017));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const layout = __importStar(__nccwpck_require__(8182));
 const input_params_1 = __nccwpck_require__(3885);
 const DEPENDENCY_GRAPH_ARTIFACT = 'dependency-graph';
 function setup(option) {
-    if (option === input_params_1.DependencyGraphOption.Disabled || option === input_params_1.DependencyGraphOption.DownloadAndSubmit) {
-        return;
-    }
-    core.info('Enabling dependency graph generation');
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED', 'true');
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR', getJobCorrelator());
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_ID', github.context.runId);
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_REF', github.context.ref);
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_SHA', getShaFromContext());
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_WORKSPACE', layout.workspaceDirectory());
-    core.exportVariable('DEPENDENCY_GRAPH_REPORT_DIR', path.resolve(layout.workspaceDirectory(), 'dependency-graph-reports'));
+    return __awaiter(this, void 0, void 0, function* () {
+        if (option === input_params_1.DependencyGraphOption.Disabled) {
+            return;
+        }
+        if (option === input_params_1.DependencyGraphOption.DownloadAndSubmit) {
+            yield downloadAndSubmitDependencyGraphs();
+            return;
+        }
+        core.info('Enabling dependency graph generation');
+        core.exportVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED', 'true');
+        core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR', getJobCorrelator());
+        core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_ID', github.context.runId);
+        core.exportVariable('GITHUB_DEPENDENCY_GRAPH_REF', github.context.ref);
+        core.exportVariable('GITHUB_DEPENDENCY_GRAPH_SHA', getShaFromContext());
+        core.exportVariable('GITHUB_DEPENDENCY_GRAPH_WORKSPACE', layout.workspaceDirectory());
+        core.exportVariable('DEPENDENCY_GRAPH_REPORT_DIR', path.resolve(layout.workspaceDirectory(), 'dependency-graph-reports'));
+    });
 }
 exports.setup = setup;
 function complete(option) {
     return __awaiter(this, void 0, void 0, function* () {
         switch (option) {
             case input_params_1.DependencyGraphOption.Disabled:
+            case input_params_1.DependencyGraphOption.DownloadAndSubmit:
                 return;
             case input_params_1.DependencyGraphOption.Generate:
                 yield uploadDependencyGraphs();
@@ -70704,8 +70712,6 @@ function complete(option) {
             case input_params_1.DependencyGraphOption.GenerateAndSubmit:
                 yield submitDependencyGraphs(yield uploadDependencyGraphs());
                 return;
-            case input_params_1.DependencyGraphOption.DownloadAndSubmit:
-                yield downloadAndSubmitDependencyGraphs();
         }
     });
 }
@@ -70729,16 +70735,34 @@ function downloadAndSubmitDependencyGraphs() {
 }
 function submitDependencyGraphs(dependencyGraphFiles) {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokit = getOctokit();
         for (const jsonFile of dependencyGraphFiles) {
-            const jsonContent = fs_1.default.readFileSync(jsonFile, 'utf8');
-            const jsonObject = JSON.parse(jsonContent);
-            jsonObject.owner = github.context.repo.owner;
-            jsonObject.repo = github.context.repo.repo;
-            const response = yield octokit.request('POST /repos/{owner}/{repo}/dependency-graph/snapshots', jsonObject);
-            const relativeJsonFile = getRelativePathFromWorkspace(jsonFile);
-            core.notice(`Submitted ${relativeJsonFile}: ${response.data.message}`);
+            try {
+                yield submitDependencyGraphFile(jsonFile);
+            }
+            catch (error) {
+                if (error instanceof request_error_1.RequestError) {
+                    const relativeJsonFile = getRelativePathFromWorkspace(jsonFile);
+                    core.warning(`Failed to submit dependency graph ${relativeJsonFile}.\n` +
+                        "Please ensure that the 'contents: write' permission is available for the workflow job.\n" +
+                        "Note that this permission is never available for a 'pull_request' trigger from a repository fork.");
+                }
+                else {
+                    throw error;
+                }
+            }
         }
+    });
+}
+function submitDependencyGraphFile(jsonFile) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const octokit = getOctokit();
+        const jsonContent = fs_1.default.readFileSync(jsonFile, 'utf8');
+        const jsonObject = JSON.parse(jsonContent);
+        jsonObject.owner = github.context.repo.owner;
+        jsonObject.repo = github.context.repo.repo;
+        const response = yield octokit.request('POST /repos/{owner}/{repo}/dependency-graph/snapshots', jsonObject);
+        const relativeJsonFile = getRelativePathFromWorkspace(jsonFile);
+        core.notice(`Submitted ${relativeJsonFile}: ${response.data.message}`);
     });
 }
 function retrieveDependencyGraphs(workspaceDirectory) {
@@ -71657,7 +71681,7 @@ function setup() {
         const cacheListener = new cache_reporting_1.CacheListener();
         yield caches.restore(gradleUserHome, cacheListener);
         core.saveState(CACHE_LISTENER, cacheListener.stringify());
-        dependencyGraph.setup(params.getDependencyGraphOption());
+        yield dependencyGraph.setup(params.getDependencyGraphOption());
     });
 }
 exports.setup = setup;
@@ -71679,7 +71703,7 @@ function complete() {
         else {
             (0, job_summary_1.logJobSummary)(buildResults, cacheListener);
         }
-        dependencyGraph.complete(params.getDependencyGraphOption());
+        yield dependencyGraph.complete(params.getDependencyGraphOption());
     });
 }
 exports.complete = complete;
