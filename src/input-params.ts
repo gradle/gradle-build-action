@@ -88,19 +88,6 @@ export function getDependencyGraphOption(): DependencyGraphOption {
     )
 }
 
-export function getRetentionDays(): number | undefined {
-    const val = core.getInput('retention-days')
-    if (val) {
-        const retentionDays = parseInt(val)
-        if (isNaN(retentionDays) || retentionDays < 0 || retentionDays > 90) {
-            throw TypeError(`The value ${val} is not valid for retention-days. Valid values are numbers between 0 and 90`)
-        }
-        return retentionDays
-    }
-
-    return undefined;
-}
-
 function getBooleanInput(paramName: string, paramDefault = false): boolean {
     const paramValue = core.getInput(paramName)
     switch (paramValue.toLowerCase().trim()) {
