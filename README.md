@@ -796,6 +796,35 @@ jobs:
 
 The `retry-on-snapshot-warnings-timeout` (in seconds) needs to be long enough to allow the entire `run-build-and-generate-dependency-snapshot` and `submit-dependency-snapshot` workflows (above) to complete.
 
+### Artifact retention
+
+By default, GitHub retains artifacts for 90 days
+
+If desired, it is possible to override the retention period of the artifacts by specifying the retention-days input.
+The input should be a number between 0 and 90, 0 is interpreted as default.
+
+```yaml
+name: Submit dependency graph
+on:
+  push:
+  
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Gradle to generate and submit dependency graphs
+      uses: gradle/gradle-build-action@v2
+      with:
+        dependency-graph: generate-and-submit
+        retention-days: 1
+    - name: Run a build and generate the dependency graph which will be submitted post-job
+      run: ./gradlew build
+```
+
 ## Gradle version compatibility
 
 The GitHub Dependency Graph plugin should be compatible with all versions of Gradle >= 5.0, and has been tested against 
