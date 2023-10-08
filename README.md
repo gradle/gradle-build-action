@@ -19,7 +19,7 @@ These features work both when Gradle is executed via the `gradle-build-action` a
 
 ## Use the action to setup Gradle
 
-The recommended way to use the `gradle-build-action` is in an initial "Setup Gradle" step, with subsquent steps invoking Gradle directly with a `run` step. This makes the action minimally invasive, and allows a workflow to configure and execute a Gradle execution in any way.
+The recommended way to use the `gradle-build-action` is in an initial "Setup Gradle" step, with subsequent steps invoking Gradle directly with a `run` step. This makes the action minimally invasive, and allows a workflow to configure and execute a Gradle execution in any way.
 
 The `gradle-build-action` works by configuring environment variables and by adding a set of Gradle init-scripts to the Gradle User Home. These will apply to all Gradle executions on the runner, no matter how Gradle is invoked. 
 This means that if you have an existing workflow that executes Gradle with a `run` step, you can add an initial "Setup Gradle" Step to benefit from caching, build-scan capture and other features of the gradle-build-action.
@@ -174,7 +174,7 @@ Using either of these mechanisms may interfere with the caching provided by this
 ### Cache debugging and analysis
 
 A report of all cache entries restored and saved is printed to the Job Summary when saving the cache entries. 
-This report can provide valuable insignt into how much cache space is being used.
+This report can provide valuable insight into how much cache space is being used.
 
 It is possible to enable additional debug logging for cache operations. You do via the `GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED` environment variable:
 
@@ -213,7 +213,7 @@ In certain cases a particular section of Gradle User Home will be too large to m
 ### Cache keys
 
 The actual content of the Gradle User Home after a build is the result of many factors, including:
-- Core Gradle build files (`settngs.gradle[.kts]`, `build.gradle[.kts]`, `gradle.properties`)
+- Core Gradle build files (`settings.gradle[.kts]`, `build.gradle[.kts]`, `gradle.properties`)
 - Associated Gradle configuration files (`gradle-wrapper.properties`, `dependencies.toml`, etc)
 - The entire content of `buildSrc` or any included builds that provide plugins.
 - The entire content of the repository, in the case of the local build cache.
@@ -300,7 +300,7 @@ without writing private cache entries that could lead to evicting shared entries
 
 If you have other long-lived development branches that would benefit from writing to the cache, 
 you can configure these by overriding the `cache-read-only` action parameter. 
-See [Using the caches read-only](#using-the-caches-read-only) for more details.
+See [Using the cache read-only](#using-the-cache-read-only) for more details.
 
 Similarly, you could use `cache-read-only` for certain jobs in the workflow, and instead have these jobs reuse the cache content from upstream jobs.
 
@@ -533,7 +533,7 @@ The `gradle-build-action` has support for submitting a [GitHub Dependency Graph]
 
 The dependency graph snapshot is generated via integration with the [GitHub Dependency Graph Gradle Plugin](https://plugins.gradle.org/plugin/org.gradle.github-dependency-graph-gradle-plugin), and saved as a workflow artifact. The generated snapshot files can be submitted either in the same job, or in a subsequent job (in the same or a dependent workflow).
 
-The generated dependency graph snapshot reports all of the dependencies that were resolved during a bulid execution, and is used by GitHub to generate [Dependabot Alerts](https://docs.github.com/en/code-security/dependabot/dependabot-alerts/about-dependabot-alerts) for vulnerable dependencies, as well as to populate the [Dependency Graph insights view](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/exploring-the-dependencies-of-a-repository#viewing-the-dependency-graph).
+The generated dependency graph snapshot reports all of the dependencies that were resolved during a build execution, and is used by GitHub to generate [Dependabot Alerts](https://docs.github.com/en/code-security/dependabot/dependabot-alerts/about-dependabot-alerts) for vulnerable dependencies, as well as to populate the [Dependency Graph insights view](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/exploring-the-dependencies-of-a-repository#viewing-the-dependency-graph).
 
 ## Enable Dependency Graph generation for a workflow
  
