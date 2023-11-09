@@ -90,7 +90,8 @@ export function getDependencyGraphOption(): DependencyGraphOption {
 
 export function getArtifactRetentionDays(): number {
     const val = core.getInput('artifact-retention-days')
-    return parseNumericInput('artifact-retention-days', val, 7)
+    return parseNumericInput('artifact-retention-days', val, 0)
+    // Zero indicates that the default repository settings should be used
 }
 
 export function parseNumericInput(paramName: string, paramValue: string, paramDefault: number): number {

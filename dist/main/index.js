@@ -94070,7 +94070,7 @@ function getDependencyGraphOption() {
 exports.getDependencyGraphOption = getDependencyGraphOption;
 function getArtifactRetentionDays() {
     const val = core.getInput('artifact-retention-days');
-    return parseNumericInput('artifact-retention-days', val, 7);
+    return parseNumericInput('artifact-retention-days', val, 0);
 }
 exports.getArtifactRetentionDays = getArtifactRetentionDays;
 function parseNumericInput(paramName, paramValue, paramDefault) {
