@@ -88,6 +88,23 @@ export function getDependencyGraphOption(): DependencyGraphOption {
     )
 }
 
+export function getArtifactRetentionDays(): number {
+    const val = core.getInput('artifact-retention-days')
+    return parseNumericInput('artifact-retention-days', val, 0)
+    // Zero indicates that the default repository settings should be used
+}
+
+export function parseNumericInput(paramName: string, paramValue: string, paramDefault: number): number {
+    if (paramValue.length === 0) {
+        return paramDefault
+    }
+    const numericValue = parseInt(paramValue)
+    if (isNaN(numericValue)) {
+        throw TypeError(`The value '${paramValue}' is not a valid numeric value for '${paramName}'.`)
+    }
+    return numericValue
+}
+
 function getBooleanInput(paramName: string, paramDefault = false): boolean {
     const paramValue = core.getInput(paramName)
     switch (paramValue.toLowerCase().trim()) {
