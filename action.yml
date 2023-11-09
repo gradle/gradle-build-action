@@ -54,6 +54,11 @@ inputs:
   #      gradle-home-cache-excludes: |
   #           caches/build-cache-1
 
+  gradle-home-cache-cleanup:
+    description: When 'true', the action will attempt to remove any stale/unused entries from the Gradle User Home prior to saving to the GitHub Actions cache.
+    required: false
+    default: false
+
   arguments:
     description: Gradle command line arguments (supports multi-line input)
     required: false
@@ -85,10 +90,6 @@ inputs:
     description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users (INTERNAL).
     required: false
     default: ${{ toJSON(matrix) }}
-  gradle-home-cache-cleanup:
-    description: When 'true', the action will attempt to remove any stale/unused entries from the Gradle User Home prior to saving to the GitHub Actions cache.
-    required: false
-    default: false
 
   github-token:
     description: The GitHub token used to authenticate when submitting via the Dependency Submission API.
