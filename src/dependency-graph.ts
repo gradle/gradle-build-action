@@ -11,7 +11,7 @@ import * as path from 'path'
 import fs from 'fs'
 
 import * as layout from './repository-layout'
-import {DependencyGraphOption, getJobMatrix} from './input-params'
+import {DependencyGraphOption, getJobMatrix, getArtifactRetentionDays} from './input-params'
 
 const DEPENDENCY_GRAPH_ARTIFACT = 'dependency-graph'
 
@@ -60,7 +60,9 @@ async function uploadDependencyGraphs(): Promise<string[]> {
     core.info(`Uploading dependency graph files: ${relativeGraphFiles}`)
 
     const artifactClient = artifact.create()
-    artifactClient.uploadArtifact(DEPENDENCY_GRAPH_ARTIFACT, graphFiles, workspaceDirectory)
+    artifactClient.uploadArtifact(DEPENDENCY_GRAPH_ARTIFACT, graphFiles, workspaceDirectory, {
+        retentionDays: getArtifactRetentionDays()
+    })
 
     return graphFiles
 }
