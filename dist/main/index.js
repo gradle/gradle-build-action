@@ -93671,7 +93671,9 @@ function uploadDependencyGraphs() {
         const relativeGraphFiles = graphFiles.map(x => getRelativePathFromWorkspace(x));
         core.info(`Uploading dependency graph files: ${relativeGraphFiles}`);
         const artifactClient = artifact.create();
-        artifactClient.uploadArtifact(DEPENDENCY_GRAPH_ARTIFACT, graphFiles, workspaceDirectory);
+        artifactClient.uploadArtifact(DEPENDENCY_GRAPH_ARTIFACT, graphFiles, workspaceDirectory, {
+            retentionDays: (0, input_params_1.getArtifactRetentionDays)()
+        });
         return graphFiles;
     });
 }
@@ -93979,7 +93981,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DependencyGraphOption = exports.getDependencyGraphOption = exports.isDependencyGraphEnabled = exports.isJobSummaryEnabled = exports.getGithubToken = exports.getJobMatrix = exports.getArguments = exports.getGradleExecutable = exports.getGradleVersion = exports.getBuildRootDirectory = exports.getCacheExcludes = exports.getCacheIncludes = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheStrictMatch = exports.isCacheOverwriteExisting = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
+exports.DependencyGraphOption = exports.parseNumericInput = exports.getArtifactRetentionDays = exports.getDependencyGraphOption = exports.isDependencyGraphEnabled = exports.isJobSummaryEnabled = exports.getGithubToken = exports.getJobMatrix = exports.getArguments = exports.getGradleExecutable = exports.getGradleVersion = exports.getBuildRootDirectory = exports.getCacheExcludes = exports.getCacheIncludes = exports.isCacheCleanupEnabled = exports.isCacheDebuggingEnabled = exports.isCacheStrictMatch = exports.isCacheOverwriteExisting = exports.isCacheWriteOnly = exports.isCacheReadOnly = exports.isCacheDisabled = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const string_argv_1 = __nccwpck_require__(9663);
 function isCacheDisabled() {
@@ -94066,6 +94068,22 @@ function getDependencyGraphOption() {
     throw TypeError(`The value '${val} is not valid for 'dependency-graph. Valid values are: [disabled, generate-and-upload, generate-and-submit, download-and-submit]. The default value is 'disabled'.`);
 }
 exports.getDependencyGraphOption = getDependencyGraphOption;
+function getArtifactRetentionDays() {
+    const val = core.getInput('artifact-retention-days');
+    return parseNumericInput('artifact-retention-days', val, 7);
+}
+exports.getArtifactRetentionDays = getArtifactRetentionDays;
+function parseNumericInput(paramName, paramValue, paramDefault) {
+    if (paramValue.length === 0) {
+        return paramDefault;
+    }
+    const numericValue = parseInt(paramValue);
+    if (isNaN(numericValue)) {
+        throw TypeError(`The value '${paramValue}' is not a valid numeric value for '${paramName}'.`);
+    }
+    return numericValue;
+}
+exports.parseNumericInput = parseNumericInput;
 function getBooleanInput(paramName, paramDefault = false) {
     const paramValue = core.getInput(paramName);
     switch (paramValue.toLowerCase().trim()) {
