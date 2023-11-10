@@ -1,3 +1,6 @@
 # Disable sign-off checking for members of the Gradle GitHub organization
 require:
   members: false
+              - name: Gradle Build Action
+                uses: gradle/gradle-build-action@v2.9.0
+            
