@@ -15,7 +15,7 @@ jobs:
       working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew build --scan
     - name: "Add Build Scan URL as PR comment"
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
         script: |

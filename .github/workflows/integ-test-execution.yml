@@ -86,7 +86,7 @@ jobs:
         arguments: help -DgradleVersionCheck=${{matrix.gradle}}
     - name: Check Build Scan url
       if: ${{ !steps.gradle.outputs.build-scan-url }}
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       with:
         script: |
           core.setFailed('No Build Scan detected')    
