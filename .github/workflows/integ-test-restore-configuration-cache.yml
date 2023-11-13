@@ -60,7 +60,7 @@ jobs:
       working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test --configuration-cache
     - name: Check that configuration-cache was used
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       with:
         script: |
           const fs = require('fs')
@@ -156,7 +156,7 @@ jobs:
       working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew test --configuration-cache
     - name: Check that configuration-cache was used
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       with:
         script: |
           const fs = require('fs')
