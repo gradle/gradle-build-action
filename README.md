@@ -417,6 +417,7 @@ jobs:
       run: ./gradlew build --scan
     - name: Upload build reports
       uses: actions/upload-artifact@v3
+      if: always()
       with:
         name: build-reports
         path: build/reports/
