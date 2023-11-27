@@ -809,6 +809,21 @@ limited to Gradle "8.1.0" and later:
 To use this plugin with versions of Gradle older than "8.1.0", you'll need to invoke Gradle with the
 configuration-cache disabled.
 
+## Reducing storage costs for saved dependency graph artifacts
+
+When `generate` or `generate-and-submit` is used with the action, the dependency graph that is generated is stored as a workflow artifact. 
+By default, these artifacts are retained for a period of 30 days (or as configured for the repository).
+To reduce storage costs for these artifacts, you can set the `artifact-retention-days` value to a lower number.
+
+```yaml
+    steps:
+    - name: Generate dependency graph, but only retain artifact for one day
+      uses: gradle/gradle-build-action@v2
+      with:
+        dependency-graph: generate
+        artifact-retention-days: 1
+```
+
 # Gradle Enterprise plugin injection
 
 The `gradle-build-action` provides support for injecting and configuring the Gradle Enterprise Gradle plugin into any Gradle build, without any modification to the project sources.
