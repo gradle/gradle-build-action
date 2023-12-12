@@ -547,9 +547,9 @@ You enable GitHub Dependency Graph support by setting the `dependency-graph` act
 | `generate-and-submit` | As per `generate`, but any generated dependency graph snapshots will be submitted at the end of the job. |
 | `download-and-submit` | Download any previously saved dependency graph snapshots, submitting them via the Dependency Submission API. This can be useful to collect all snapshots in a matrix of builds and submit them in one step. |
 
-Example of a simple workflow that generates and submits a dependency graph:
+Example of a CI workflow that generates and submits a dependency graph:
 ```yaml
-name: Submit dependency graph
+name: CI build
 on:
   push:
   
@@ -565,11 +565,12 @@ jobs:
       uses: gradle/gradle-build-action@v2
       with:
         dependency-graph: generate-and-submit
-    - name: Run a build and generate the dependency graph which will be submitted post-job
+    - name: Run the usual CI build (dependency-graph will be generated and submitted post-job)
       run: ./gradlew build
 ```
 
-The `contents: write` permission is not required to generate the dependency graph, but is required in order to submit the graph via the GitHub API. This permission will need to be explicitly enabled in the workflow file for dependency graph submission to succeed.
+The `contents: write` permission is required in order to submit (but not generate) the dependency graph file. 
+Depending on [repository settings](https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token), this permission may be available by default or may need to be explicitly enabled in the workflow file (as above).
 
 > [!IMPORTANT]
 > The above configuration will work for workflows that run as a result of commits to a repository branch, 
