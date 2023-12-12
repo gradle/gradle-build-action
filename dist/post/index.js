@@ -93490,7 +93490,12 @@ function save(gradleUserHome, cacheListener, daemonController) {
         if ((0, cache_utils_1.isCacheCleanupEnabled)()) {
             core.info('Forcing cache cleanup.');
             const cacheCleaner = new cache_cleaner_1.CacheCleaner(gradleUserHome, process.env['RUNNER_TEMP']);
-            yield cacheCleaner.forceCleanup();
+            try {
+                yield cacheCleaner.forceCleanup();
+            }
+            catch (e) {
+                core.warning(`Cache cleanup failed. Will continue. ${String(e)}`);
+            }
         }
         yield core.group('Caching Gradle state', () => __awaiter(this, void 0, void 0, function* () {
             return new cache_base_1.GradleStateCache(gradleUserHome).save(cacheListener);

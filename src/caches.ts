@@ -90,7 +90,11 @@ export async function save(
     if (isCacheCleanupEnabled()) {
         core.info('Forcing cache cleanup.')
         const cacheCleaner = new CacheCleaner(gradleUserHome, process.env['RUNNER_TEMP']!)
-        await cacheCleaner.forceCleanup()
+        try {
+            await cacheCleaner.forceCleanup()
+        } catch (e) {
+            core.warning(`Cache cleanup failed. Will continue. ${String(e)}`)
+        }
     }
 
     await core.group('Caching Gradle state', async () => {
