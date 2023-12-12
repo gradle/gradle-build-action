@@ -578,6 +578,27 @@ The `contents: write` permission is not required to generate the dependency grap
 > for a PR submitted from a forked repository.
 > For a configuration that supports this setup, see [Dependency Graphs for pull request workflows](#dependency-graphs-for-pull-request-workflows).
 
+### Using a custom plugin repository
+
+By default, the action downloads the `github-dependency-graph-gradle-plugin` from the Gradle Plugin Portal (https://plugins.gradle.org). If your GitHub Actions environment does not have access to this URL, you can specify a custom plugin repository to use. 
+Do so by setting the `GRADLE_PLUGIN_REPOSITORY_URL` environment variable with your Gradle invocation.
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Gradle to generate and submit dependency graphs
+      uses: gradle/gradle-build-action@v2
+      with:
+        dependency-graph: generate-and-submit
+    - name: Run a build, resolving the 'dependency-graph' plugin from the plugin portal proxy
+      run: ./gradlew build
+      env:
+        GRADLE_PLUGIN_REPOSITORY_URL: "https://gradle-plugins-proxy.mycorp.com"
+```
+
 ### Integrating the `dependency-review-action`
 
 The GitHub [dependency-review-action](https://github.com/actions/dependency-review-action) helps you 
@@ -825,6 +846,8 @@ To reduce storage costs for these artifacts, you can set the `artifact-retention
         dependency-graph: generate
         artifact-retention-days: 1
 ```
+
+
 
 # Gradle Enterprise plugin injection
 
