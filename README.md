@@ -684,7 +684,7 @@ jobs:
       uses: gradle/gradle-build-action@v2
       with:
         dependency-graph: generate-and-submit
-    - name: Run a build, generating the dependency graph from 'runtimeClasspath' configurations
+    - name: Run a build, generating the dependency graph from any resolved 'runtimeClasspath' configurations
       run: ./gradlew build
       env:
         DEPENDENCY_GRAPH_INCLUDE_PROJECTS: "^:(?!buildSrc).*"
@@ -693,10 +693,10 @@ jobs:
 
 ### Use a dedicated workflow for dependency graph generation
 
-Instead of generating a dependency graph from your existing CI workflow, it's possible to create a separate dedicated workflow (or Job) that is solely intended for generating a dependency graph.
-Such a workflow will still need to execute Gradle, but can do so in a way that is targeted at resolving exactly the dependencies required.
+Instead of generating a dependency graph from your existing CI workflow, it's possible to create a separate dedicated workflow (or Job) that is intended for generating a dependency graph.
+Such a workflow will still need to execute Gradle, but can do so in a way that is targeted at resolving the specific dependencies required.
 
-For example, the following workflow will report only those dependencies that are part of the `runtimeClasspath` or the `my-app` project. 
+For example, the following workflow will report those dependencies that are resolved in order to build the `distributionZip` for the `my-app` project. Test dependencies and other dependencies not required by the `distributionZip` will not be included.
 
 ```yaml
 jobs:
@@ -708,11 +708,12 @@ jobs:
       uses: gradle/gradle-build-action@v2
       with:
         dependency-graph: generate-and-submit
-    - name: Extract the 'runtimeClasspath' dependencies for 'my-app'
-      run: ./gradlew :my-app:dependencies --configuration runtimeClasspath
+    - name: Build the distribution Zip for `my-app`
+      run: ./gradlew :my-app:distributionZip
 ```
 
-Note that the above example will also include `buildSrc` dependencies, since these are resolved as part of running the `dependencies` task.
+Note that the above example will also include any `buildSrc` dependencies, dependencies resolved when configuring your Gradle build or dependencies resolved while applying plugin. All of these dependencies are resolved in the process of running the `distributionZip` task, and thus will form part of the generated dependency graph.
+
 If this isn't desirable, you will still need to use the filtering mechanism described above.
 
 ## Dependency Graphs for pull request workflows
