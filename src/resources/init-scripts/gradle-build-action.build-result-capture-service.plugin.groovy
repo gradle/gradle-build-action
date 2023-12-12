@@ -50,12 +50,16 @@ abstract class BuildResultsRecorder implements BuildService<BuildResultsRecorder
         if (!runnerTempDir || !githubActionStep) {
             return
         }
-        
-        def buildResultsDir = new File(runnerTempDir, ".build-results")
-        buildResultsDir.mkdirs()
-        def buildResultsFile = new File(buildResultsDir, githubActionStep + getParameters().getInvocationId().get() + ".json")
-        if (!buildResultsFile.exists()) {
-            buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
+
+        try {
+            def buildResultsDir = new File(runnerTempDir, ".build-results")
+            buildResultsDir.mkdirs()
+            def buildResultsFile = new File(buildResultsDir, githubActionStep + getParameters().getInvocationId().get() + ".json")
+            if (!buildResultsFile.exists()) {
+                buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
+            }
+        } catch (Exception e) {
+            println "\ngradle-build-action failed to write build-results file. Will continue.\n> ${e.getLocalizedMessage()}"
         }
     }
 }

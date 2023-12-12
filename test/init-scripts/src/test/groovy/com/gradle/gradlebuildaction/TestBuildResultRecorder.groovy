@@ -148,6 +148,23 @@ class TestBuildResultRecorder extends BaseInitScriptTest {
         testGradleVersion << ALL_VERSIONS
     }
 
+    def "produces no build results file when RUNNER_TEMP dir is not a writable directory with #testGradleVersion"() {
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
+
+        when:
+        def invalidDir = new File(testProjectDir, 'invalid-runner-temp')
+        invalidDir.createNewFile()
+
+        run(['help'], initScript, testGradleVersion.gradleVersion, [], [RUNNER_TEMP: invalidDir.absolutePath])
+
+        then:
+        def buildResultsDir = new File(testProjectDir, '.build-results')
+        assert !buildResultsDir.exists()
+
+        where:
+        testGradleVersion << ALL_VERSIONS
+    }
+
     def "produces build results file with build scan when GE plugin is applied in settingsEvaluated"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 

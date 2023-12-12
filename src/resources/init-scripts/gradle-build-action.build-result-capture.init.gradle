@@ -121,18 +121,23 @@ class BuildResults {
         if (!runnerTempDir || !githubActionStep) {
             return
         }
-        
-        def buildResultsDir = new File(runnerTempDir, ".build-results")
-        buildResultsDir.mkdirs()
-        def buildResultsFile = new File(buildResultsDir, githubActionStep + invocationId + ".json")
 
-        // Overwrite any contents written by buildFinished or build service, since this result is a superset.
-        if (buildResultsFile.exists()) {
-            if (overwrite) {
-                buildResultsFile.text = groovy.json.JsonOutput.toJson(buildResults)
+        try {
+            def buildResultsDir = new File(runnerTempDir, ".build-results")
+            buildResultsDir.mkdirs()
+            def buildResultsFile = new File(buildResultsDir, githubActionStep + invocationId + ".json")
+
+            // Overwrite any contents written by buildFinished or build service, since this result is a superset.
+            if (buildResultsFile.exists()) {
+                if (overwrite) {
+                    buildResultsFile.text = groovy.json.JsonOutput.toJson(buildResults)
+                }
+            } else {
+                buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
             }
-        } else {
-            buildResultsFile << groovy.json.JsonOutput.toJson(buildResults)
+
+        } catch (Exception e) {
+            println "\ngradle-build-action failed to write build-results file. Will continue.\n> ${e.getLocalizedMessage()}"
         }
     }
 }
