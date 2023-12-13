@@ -87,12 +87,12 @@ jobs:
       runner-os: '["ubuntu-latest"]'
       download-dist: true
 
-  # restore-configuration-cache:
-  #   needs: build-distribution
-  #   uses: ./.github/workflows/integ-test-restore-configuration-cache.yml
-  #   with:
-  #     runner-os: '["ubuntu-latest"]'
-  #     download-dist: true
+  restore-configuration-cache:
+    needs: build-distribution
+    uses: ./.github/workflows/integ-test-restore-configuration-cache.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
 
   restore-containerized-gradle-home:
     needs: build-distribution
