@@ -20,7 +20,7 @@ jobs:
         distribution: temurin
         java-version: 8
     - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2.10.0 # Use a released version to avoid breakages
+      uses: gradle/gradle-build-action@v2.11.0 # Use a released version to avoid breakages
     - name: Run integration tests
       working-directory: test/init-scripts
       run: ./gradlew check
