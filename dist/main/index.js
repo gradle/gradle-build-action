@@ -93696,10 +93696,7 @@ function submitDependencyGraphs(dependencyGraphFiles) {
             }
             catch (error) {
                 if (error instanceof request_error_1.RequestError) {
-                    const relativeJsonFile = getRelativePathFromWorkspace(jsonFile);
-                    core.warning(`Failed to submit dependency graph ${relativeJsonFile}.\n` +
-                        "Please ensure that the 'contents: write' permission is available for the workflow job.\n" +
-                        "Note that this permission is never available for a 'pull_request' trigger from a repository fork.");
+                    core.warning(buildWarningMessage(jsonFile, error));
                 }
                 else {
                     throw error;
@@ -93707,6 +93704,17 @@ function submitDependencyGraphs(dependencyGraphFiles) {
             }
         }
     });
+}
+function buildWarningMessage(jsonFile, error) {
+    const relativeJsonFile = getRelativePathFromWorkspace(jsonFile);
+    const mainWarning = `Failed to submit dependency graph ${relativeJsonFile}.\n${String(error)}`;
+    if (error.message === 'Resource not accessible by integration') {
+        return `${mainWarning}
+Please ensure that the 'contents: write' permission is available for the workflow job.
+Note that this permission is never available for a 'pull_request' trigger from a repository fork.
+        `;
+    }
+    return mainWarning;
 }
 function submitDependencyGraphFile(jsonFile) {
     return __awaiter(this, void 0, void 0, function* () {
