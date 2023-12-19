@@ -168,7 +168,7 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
     }
 }
 
-void applyPluginExternally(PluginManager pluginManager, String pluginClassName) {
+void applyPluginExternally(def pluginManager, String pluginClassName) {
     def externallyApplied = 'gradle.enterprise.externally-applied'
     def oldValue = System.getProperty(externallyApplied)
     System.setProperty(externallyApplied, 'true')
