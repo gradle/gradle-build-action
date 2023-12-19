@@ -78,17 +78,24 @@ async function submitDependencyGraphs(dependencyGraphFiles: string[]): Promise<v
             await submitDependencyGraphFile(jsonFile)
         } catch (error) {
             if (error instanceof RequestError) {
-                const relativeJsonFile = getRelativePathFromWorkspace(jsonFile)
-                core.warning(
-                    `Failed to submit dependency graph ${relativeJsonFile}.\n` +
-                        "Please ensure that the 'contents: write' permission is available for the workflow job.\n" +
-                        "Note that this permission is never available for a 'pull_request' trigger from a repository fork."
-                )
+                core.warning(buildWarningMessage(jsonFile, error))
             } else {
                 throw error
             }
         }
     }
+}
+
+function buildWarningMessage(jsonFile: string, error: RequestError): string {
+    const relativeJsonFile = getRelativePathFromWorkspace(jsonFile)
+    const mainWarning = `Failed to submit dependency graph ${relativeJsonFile}.\n${String(error)}`
+    if (error.message === 'Resource not accessible by integration') {
+        return `${mainWarning}
+Please ensure that the 'contents: write' permission is available for the workflow job.
+Note that this permission is never available for a 'pull_request' trigger from a repository fork.
+        `
+    }
+    return mainWarning
 }
 
 async function submitDependencyGraphFile(jsonFile: string): Promise<void> {
