@@ -144,7 +144,7 @@ export class GradleStateCache {
      */
     private async deleteExcludedPaths(): Promise<void> {
         const rawPaths: string[] = params.getCacheExcludes()
-        // rawPaths.push('caches/*/cc-keystore')
+        rawPaths.push('caches/*/cc-keystore')
         const resolvedPaths = rawPaths.map(x => path.resolve(this.gradleUserHome, x))
 
         for (const p of resolvedPaths) {

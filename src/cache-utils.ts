@@ -11,7 +11,7 @@ import * as params from './input-params'
 
 import {CacheEntryListener} from './cache-reporting'
 
-const CACHE_PROTOCOL_VERSION = 'v8-'
+const CACHE_PROTOCOL_VERSION = 'v9-'
 
 const CACHE_KEY_PREFIX_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX'
 const CACHE_KEY_OS_VAR = 'GRADLE_BUILD_ACTION_CACHE_KEY_ENVIRONMENT'
