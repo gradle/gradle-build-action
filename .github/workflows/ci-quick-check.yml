@@ -45,7 +45,7 @@ jobs:
 
   caching-config:
     needs: build-distribution
-    uses: ./.github/workflows/integ-test-action-inputs-caching.yml
+    uses: ./.github/workflows/integ-test-caching-config.yml
     with:
       runner-os: '["ubuntu-latest"]'
       download-dist: true

@@ -34,6 +34,7 @@ jobs:
       uses: ./
       with:
         cache-read-only: false # For testing, allow writing cache entries on non-default branches
+        cache-encryption-key: Da25KUVSE5jbGds2zXmfXw==
     - name: Groovy build with configuration-cache enabled
       working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test --configuration-cache
@@ -55,6 +56,7 @@ jobs:
       uses: ./
       with:
         cache-read-only: true
+        cache-encryption-key: Da25KUVSE5jbGds2zXmfXw==
     - name: Groovy build with configuration-cache enabled
       id: execute
       working-directory: .github/workflow-samples/groovy-dsl
@@ -88,6 +90,7 @@ jobs:
         GRADLE_BUILD_ACTION_SKIP_RESTORE: "generated-gradle-jars|wrapper-zips|java-toolchains|instrumented-jars|dependencies|kotlin-dsl"
       with:
         cache-read-only: true
+        cache-encryption-key: Da25KUVSE5jbGds2zXmfXw==
     - name: Check execute Gradle build with configuration cache enabled (but not restored)
       working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test --configuration-cache
@@ -108,6 +111,7 @@ jobs:
       uses: ./
       with:
         cache-read-only: false # For testing, allow writing cache entries on non-default branches
+        cache-encryption-key: Da25KUVSE5jbGds2zXmfXw==
     - name: Execute 'help' with configuration-cache enabled
       working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew help --configuration-cache
@@ -129,6 +133,7 @@ jobs:
       uses: ./
       with:
         cache-read-only: false # For testing, allow writing cache entries on non-default branches
+        cache-encryption-key: Da25KUVSE5jbGds2zXmfXw==
     - name: Execute 'test' with configuration-cache enabled
       working-directory: .github/workflow-samples/kotlin-dsl
       run: ./gradlew test --configuration-cache
@@ -151,6 +156,7 @@ jobs:
       uses: ./
       with:
         cache-read-only: true
+        cache-encryption-key: Da25KUVSE5jbGds2zXmfXw==
     - name: Execute 'test' again with configuration-cache enabled
       id: execute
       working-directory: .github/workflow-samples/kotlin-dsl

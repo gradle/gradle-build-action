@@ -1,4 +1,4 @@
-name: Test action inputs for caching
+name: Test caching configuration
 
 on:
   workflow_call:
@@ -39,7 +39,7 @@ jobs:
         # Exclude build-cache from main cache entry
         gradle-home-cache-excludes: |
             caches/build-cache-*
-            caches/*/executionHistory/**
+            caches/*/executionHistory
     - name: Build using Gradle wrapper
       working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew test
@@ -65,7 +65,7 @@ jobs:
             enterprise
         gradle-home-cache-excludes: |
             caches/build-cache-*
-            caches/*/executionHistory/**
+            caches/*/executionHistory
         cache-read-only: true
     - name: Execute Gradle build with --offline
       working-directory: .github/workflow-samples/groovy-dsl

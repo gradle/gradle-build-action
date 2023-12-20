@@ -25,7 +25,7 @@ jobs:
       cache-key-prefix: ${{github.run_number}}-
 
   caching-config:
-    uses: ./.github/workflows/integ-test-action-inputs-caching.yml
+    uses: ./.github/workflows/integ-test-caching-config.yml
     with:
       cache-key-prefix: ${{github.run_number}}-
 
