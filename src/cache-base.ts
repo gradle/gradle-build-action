@@ -1,5 +1,7 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
+import * as glob from '@actions/glob'
+
 import path from 'path'
 import fs from 'fs'
 import * as params from './input-params'
@@ -127,7 +129,7 @@ export class GradleStateCache {
      */
     async beforeSave(listener: CacheListener): Promise<void> {
         await this.debugReportGradleUserHomeSize('before saving common artifacts')
-        this.deleteExcludedPaths()
+        await this.deleteExcludedPaths()
         await Promise.all([
             new GradleHomeEntryExtractor(this.gradleUserHome).extract(listener)
             // new ConfigurationCacheEntryExtractor(this.gradleUserHome).extract(listener)
@@ -140,13 +142,21 @@ export class GradleStateCache {
     /**
      * Delete any file paths that are excluded by the `gradle-home-cache-excludes` parameter.
      */
-    private deleteExcludedPaths(): void {
+    private async deleteExcludedPaths(): Promise<void> {
         const rawPaths: string[] = params.getCacheExcludes()
+        // rawPaths.push('caches/*/cc-keystore')
         const resolvedPaths = rawPaths.map(x => path.resolve(this.gradleUserHome, x))
 
         for (const p of resolvedPaths) {
-            cacheDebug(`Deleting excluded path: ${p}`)
-            tryDelete(p)
+            cacheDebug(`Removing excluded path: ${p}`)
+            const globber = await glob.create(p, {
+                implicitDescendants: false
+            })
+
+            for (const toDelete of await globber.glob()) {
+                cacheDebug(`Removing excluded file: ${toDelete}`)
+                await tryDelete(toDelete)
+            }
         }
     }
 
