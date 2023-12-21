@@ -1,5 +1,6 @@
 import path from 'path'
 import fs from 'fs'
+import crypto from 'crypto'
 import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 
@@ -351,14 +352,43 @@ export class ConfigurationCacheEntryExtractor extends AbstractEntryExtractor {
      * entry is not reusable.
      */
     async restore(listener: CacheListener): Promise<void> {
-        if (listener.fullyRestored) {
-            return super.restore(listener)
+        if (!listener.fullyRestored) {
+            core.info('Not restoring configuration-cache state, as Gradle User Home was not fully restored')
+            for (const cacheEntry of this.loadExtractedCacheEntries()) {
+                listener.entry(cacheEntry.pattern).markNotRestored('Gradle User Home not fully restored')
+            }
+            return
         }
 
-        core.info('Not restoring configuration-cache state, as Gradle User Home was not fully restored')
-        for (const cacheEntry of this.loadExtractedCacheEntries()) {
-            listener.entry(cacheEntry.pattern).markRequested('NOT_RESTORED')
+        if (!params.getCacheEncryptionKey()) {
+            core.info('Not restoring configuration-cache state, as no encryption key was provided')
+            for (const cacheEntry of this.loadExtractedCacheEntries()) {
+                listener.entry(cacheEntry.pattern).markNotRestored('No encryption key provided')
+            }
+            return
         }
+
+        const encryptionKey = this.getAESEncryptionKey()
+        core.exportVariable('GRADLE_ENCRYPTION_KEY', encryptionKey)
+        return await super.restore(listener)
+    }
+
+    async extract(listener: CacheListener): Promise<void> {
+        if (!params.getCacheEncryptionKey()) {
+            core.info('Not saving configuration-cache state, as no encryption key was provided')
+            for (const cacheEntry of this.getExtractedCacheEntryDefinitions()) {
+                listener.entry(cacheEntry.pattern).markNotSaved('No encryption key provided')
+            }
+            return
+        }
+
+        await super.extract(listener)
+    }
+
+    private getAESEncryptionKey(): string | undefined {
+        const secret = params.getCacheEncryptionKey()
+        const key = crypto.pbkdf2Sync(secret, '', 1000, 16, 'sha256')
+        return key.toString('base64')
     }
 
     /**

@@ -29,6 +29,10 @@ export function isCacheCleanupEnabled(): boolean {
     return getBooleanInput('gradle-home-cache-cleanup')
 }
 
+export function getCacheEncryptionKey(): string {
+    return core.getInput('cache-encryption-key')
+}
+
 export function getCacheIncludes(): string[] {
     return core.getMultilineInput('gradle-home-cache-includes')
 }

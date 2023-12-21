@@ -40,6 +40,13 @@ inputs:
     required: false
     default: false
 
+  cache-encryption-key:
+    description: |
+      A base64 encoded AES key used to encrypt the configuration-cache data. The key is exported as 'GRADLE_ENCRYPTION_KEY' for later steps. 
+      A suitable key can be generated with `openssl rand -base64 16`.
+      Configuration-cache data will not be saved/restored without an encryption key being provided.
+    required: false
+
   gradle-home-cache-includes:
     description: Paths within Gradle User Home to cache.
     required: false
