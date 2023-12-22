@@ -402,8 +402,7 @@ export class ConfigurationCacheEntryExtractor extends AbstractEntryExtractor {
      * Extract cache entries for the configuration cache in each project.
      */
     protected getExtractedCacheEntryDefinitions(): ExtractedCacheEntryDefinition[] {
-        return this.getProjectRoots().map(projectRoot => {
-            const configCachePath = path.resolve(projectRoot, '.gradle/configuration-cache')
+        return this.getConfigCacheDirs().map(configCachePath => {
             return new ExtractedCacheEntryDefinition(
                 'configuration-cache',
                 configCachePath,
@@ -413,12 +412,15 @@ export class ConfigurationCacheEntryExtractor extends AbstractEntryExtractor {
     }
 
     /**
-     * For every Gradle invocation, we record the project root directory. This method returns the entire
-     * set of project roots, to allow saving of configuration-cache entries for each.
+     * For every Gradle invocation, we record the project root directory.
+     * This method returns any configuraton-cache directories found in any of these project roots.
      */
-    private getProjectRoots(): string[] {
+    private getConfigCacheDirs(): string[] {
         const buildResults = loadBuildResults()
-        const projectRootDirs = buildResults.map(x => x.rootProjectDir)
-        return [...new Set(projectRootDirs)] // Remove duplicates
+        const configCacheDirs = buildResults
+            .map(x => path.resolve(x.rootProjectDir, '.gradle/configuration-cache'))
+            .filter(x => fs.existsSync(x))
+
+        return [...new Set(configCacheDirs)] // Remove duplicates
     }
 }
