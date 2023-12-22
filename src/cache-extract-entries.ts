@@ -257,7 +257,7 @@ abstract class AbstractEntryExtractor {
         }
 
         const filedata = fs.readFileSync(cacheMetadataFile, 'utf-8')
-        cacheDebug(`Loaded cache metadata: ${filedata}`)
+        cacheDebug(`Loaded cache metadata for ${this.extractorName}: ${filedata}`)
         const extractedCacheEntryMetadata = JSON.parse(filedata) as ExtractedCacheEntryMetadata
         return extractedCacheEntryMetadata.entries
     }
@@ -265,12 +265,12 @@ abstract class AbstractEntryExtractor {
     /**
      * Saves information about the extracted cache entries into the 'cache-metadata.json' file.
      */
-    private saveMetadataForCacheResults(results: ExtractedCacheEntry[]): void {
+    protected saveMetadataForCacheResults(results: ExtractedCacheEntry[]): void {
         const extractedCacheEntryMetadata = new ExtractedCacheEntryMetadata()
         extractedCacheEntryMetadata.entries = results.filter(x => x.cacheKey !== undefined)
 
         const filedata = JSON.stringify(extractedCacheEntryMetadata)
-        cacheDebug(`Saving cache metadata: ${filedata}`)
+        cacheDebug(`Saving cache metadata for ${this.extractorName}: ${filedata}`)
 
         fs.writeFileSync(this.getCacheMetadataFile(), filedata, 'utf-8')
     }
@@ -353,24 +353,31 @@ export class ConfigurationCacheEntryExtractor extends AbstractEntryExtractor {
      */
     async restore(listener: CacheListener): Promise<void> {
         if (!listener.fullyRestored) {
-            core.info('Not restoring configuration-cache state, as Gradle User Home was not fully restored')
-            for (const cacheEntry of this.loadExtractedCacheEntries()) {
-                listener.entry(cacheEntry.pattern).markNotRestored('Gradle User Home not fully restored')
-            }
+            this.markNotRestored(listener, 'Gradle User Home was not fully restored')
             return
         }
 
         if (!params.getCacheEncryptionKey()) {
-            core.info('Not restoring configuration-cache state, as no encryption key was provided')
-            for (const cacheEntry of this.loadExtractedCacheEntries()) {
-                listener.entry(cacheEntry.pattern).markNotRestored('No encryption key provided')
-            }
+            this.markNotRestored(listener, 'Encryption Key was not provided')
             return
         }
 
         const encryptionKey = this.getAESEncryptionKey()
         core.exportVariable('GRADLE_ENCRYPTION_KEY', encryptionKey)
         return await super.restore(listener)
+    }
+
+    private markNotRestored(listener: CacheListener, reason: string): void {
+        const cacheEntries = this.loadExtractedCacheEntries()
+        if (cacheEntries.length > 0) {
+            core.info(`Not restoring configuration-cache state, as ${reason}`)
+            for (const cacheEntry of cacheEntries) {
+                listener.entry(cacheEntry.pattern).markNotRestored(reason).markNotSaved(reason)
+            }
+
+            // Update the results file based on no entries restored
+            this.saveMetadataForCacheResults([])
+        }
     }
 
     async extract(listener: CacheListener): Promise<void> {
