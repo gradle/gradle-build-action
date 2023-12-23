@@ -24811,7 +24811,8 @@ const BlobPropertiesInternal = {
                     name: "Enum",
                     allowedValues: [
                         "rehydrate-pending-to-hot",
-                        "rehydrate-pending-to-cool"
+                        "rehydrate-pending-to-cool",
+                        "rehydrate-pending-to-cold"
                     ]
                 }
             },
@@ -31981,7 +31982,7 @@ const timeoutInSeconds = {
 const version = {
     parameterPath: "version",
     mapper: {
-        defaultValue: "2021-12-02",
+        defaultValue: "2023-11-03",
         isConstant: true,
         serializedName: "x-ms-version",
         type: {
@@ -36812,8 +36813,8 @@ const logger = logger$1.createClientLogger("storage-blob");
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
-const SDK_VERSION = "12.13.0";
-const SERVICE_VERSION = "2021-12-02";
+const SDK_VERSION = "12.17.0";
+const SERVICE_VERSION = "2023-11-03";
 const BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES = 256 * 1024 * 1024; // 256MB
 const BLOCK_BLOB_MAX_STAGE_BLOCK_BYTES = 4000 * 1024 * 1024; // 4000MB
 const BLOCK_BLOB_MAX_BLOCKS = 50000;
@@ -37177,7 +37178,11 @@ function extractConnectionStringParts(connectionString) {
     else {
         // SAS connection string
         const accountSas = getValueInConnString(connectionString, "SharedAccessSignature");
-        const accountName = getAccountNameFromUrl(blobEndpoint);
+        let accountName = getValueInConnString(connectionString, "AccountName");
+        // if accountName is empty, try to read it from BlobEndpoint
+        if (!accountName) {
+            accountName = getAccountNameFromUrl(blobEndpoint);
+        }
         if (!blobEndpoint) {
             throw new Error("Invalid BlobEndpoint in the provided SAS Connection String");
         }
@@ -37471,10 +37476,10 @@ function isIpEndpointStyle(parsedUrl) {
     }
     const host = parsedUrl.getHost() + (parsedUrl.getPort() === undefined ? "" : ":" + parsedUrl.getPort());
     // Case 1: Ipv6, use a broad regex to find out candidates whose host contains two ':'.
-    // Case 2: localhost(:port), use broad regex to match port part.
+    // Case 2: localhost(:port) or host.docker.internal, use broad regex to match port part.
     // Case 3: Ipv4, use broad regex which just check if host contains Ipv4.
     // For valid host please refer to https://man7.org/linux/man-pages/man7/hostname.7.html.
-    return (/^.*:.*:.*$|^localhost(:[0-9]+)?$|^(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])(\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])){3}(:[0-9]+)?$/.test(host) ||
+    return (/^.*:.*:.*$|^(localhost|host.docker.internal)(:[0-9]+)?$|^(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])(\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])){3}(:[0-9]+)?$/.test(host) ||
         (parsedUrl.getPort() !== undefined && PathStylePorts.includes(parsedUrl.getPort())));
 }
 /**
@@ -37650,9 +37655,7 @@ function ConvertInternalResponseOfListBlobHierarchy(internalResponse) {
     var _a;
     return Object.assign(Object.assign({}, internalResponse), { segment: {
             blobPrefixes: (_a = internalResponse.segment.blobPrefixes) === null || _a === void 0 ? void 0 : _a.map((blobPrefixInternal) => {
-                const blobPrefix = {
-                    name: BlobNameToString(blobPrefixInternal.name),
-                };
+                const blobPrefix = Object.assign(Object.assign({}, blobPrefixInternal), { name: BlobNameToString(blobPrefixInternal.name) });
                 return blobPrefix;
             }),
             blobItems: internalResponse.segment.blobItems.map((blobItemInteral) => {
@@ -38671,7 +38674,7 @@ class StorageSharedKeyCredential extends Credential {
  * Changes may cause incorrect behavior and will be lost if the code is regenerated.
  */
 const packageName = "azure-storage-blob";
-const packageVersion = "12.13.0";
+const packageVersion = "12.17.0";
 class StorageClientContext extends coreHttp__namespace.ServiceClient {
     /**
      * Initializes a new instance of the StorageClientContext class.
@@ -38697,7 +38700,7 @@ class StorageClientContext extends coreHttp__namespace.ServiceClient {
         // Parameter assignments
         this.url = url;
         // Assigning values to Constant parameters
-        this.version = options.version || "2021-12-02";
+        this.version = options.version || "2023-11-03";
     }
 }
 
@@ -41878,6 +41881,9 @@ exports.StorageBlobAudience = void 0;
      */
     StorageBlobAudience["DiskComputeOAuthScopes"] = "https://disk.compute.azure.com/.default";
 })(exports.StorageBlobAudience || (exports.StorageBlobAudience = {}));
+function getBlobServiceAccountAudience(storageAccountName) {
+    return `https://${storageAccountName}.blob.core.windows.net/.default`;
+}
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
@@ -42723,6 +42729,9 @@ class BlobClient extends StorageClient {
             // (url: string, credential?: StorageSharedKeyCredential | AnonymousCredential | TokenCredential, options?: StoragePipelineOptions)
             // The second parameter is undefined. Use anonymous credential.
             url = urlOrConnectionString;
+            if (blobNameOrOptions && typeof blobNameOrOptions !== "string") {
+                options = blobNameOrOptions;
+            }
             pipeline = newPipeline(new AnonymousCredential(), options);
         }
         else if (credentialOrPipelineOrContainerName &&
@@ -44026,6 +44035,9 @@ class BlockBlobClient extends BlobClient {
             // (url: string, credential?: StorageSharedKeyCredential | AnonymousCredential | TokenCredential, options?: StoragePipelineOptions)
             // The second parameter is undefined. Use anonymous credential.
             url = urlOrConnectionString;
+            if (blobNameOrOptions && typeof blobNameOrOptions !== "string") {
+                options = blobNameOrOptions;
+            }
             pipeline = newPipeline(new AnonymousCredential(), options);
         }
         else if (credentialOrPipelineOrContainerName &&
@@ -46629,9 +46641,7 @@ class ContainerClient extends StorageClient {
                         const blobItem = Object.assign(Object.assign({}, blobItemInteral), { name: BlobNameToString(blobItemInteral.name), tags: toTags(blobItemInteral.blobTags), objectReplicationSourceProperties: parseObjectReplicationRecord(blobItemInteral.objectReplicationMetadata) });
                         return blobItem;
                     }), blobPrefixes: (_a = response.segment.blobPrefixes) === null || _a === void 0 ? void 0 : _a.map((blobPrefixInternal) => {
-                        const blobPrefix = {
-                            name: BlobNameToString(blobPrefixInternal.name),
-                        };
+                        const blobPrefix = Object.assign(Object.assign({}, blobPrefixInternal), { name: BlobNameToString(blobPrefixInternal.name) });
                         return blobPrefix;
                     }) }) });
             return wrappedResponse;
@@ -48584,6 +48594,7 @@ exports.StorageSharedKeyCredential = StorageSharedKeyCredential;
 exports.StorageSharedKeyCredentialPolicy = StorageSharedKeyCredentialPolicy;
 exports.generateAccountSASQueryParameters = generateAccountSASQueryParameters;
 exports.generateBlobSASQueryParameters = generateBlobSASQueryParameters;
+exports.getBlobServiceAccountAudience = getBlobServiceAccountAudience;
 exports.isPipelineLike = isPipelineLike;
 exports.logger = logger;
 exports.newPipeline = newPipeline;
