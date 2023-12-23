@@ -171,7 +171,7 @@ class TestBuildResultRecorder extends BaseInitScriptTest {
         when:
         settingsFile.text = """
             plugins {
-                id 'com.gradle.enterprise' version '3.15.1' apply(false)
+                id 'com.gradle.enterprise' version '3.16.1' apply(false)
             }
             gradle.settingsEvaluated {
                 apply plugin: 'com.gradle.enterprise'

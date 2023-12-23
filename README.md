@@ -771,7 +771,7 @@ name: Run build with Gradle Enterprise injection
 env:
   GRADLE_ENTERPRISE_INJECTION_ENABLED: true
   GRADLE_ENTERPRISE_URL: https://ge.gradle.org
-  GRADLE_ENTERPRISE_PLUGIN_VERSION: 3.15.1
+  GRADLE_ENTERPRISE_PLUGIN_VERSION: 3.16.1
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GE_ACCESS_KEY }} # Required to publish scans to ge.gradle.org
 
 jobs:
@@ -785,7 +785,7 @@ jobs:
       run: ./gradlew build
 ```
 
-This configuration will automatically apply `v3.15.1` of the [Gradle Enterprise Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/), and publish build scans to https://ge.gradle.org.
+This configuration will automatically apply `v3.16.1` of the [Gradle Enterprise Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/), and publish build scans to https://ge.gradle.org.
 
 Note that the `ge.gradle.org` server requires authentication in order to publish scans. The provided `GRADLE_ENTERPRISE_ACCESS_KEY` isn't required by the Gradle Enterprise injection script, 
 but will be used by the GE plugin in order to authenticate with the server.
