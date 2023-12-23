@@ -46,7 +46,7 @@ export async function complete(): Promise<void> {
         core.info('Gradle setup post-action only performed for first gradle-build-action step in workflow.')
         return
     }
-    core.info('In final post-action step, saving state and writing summary')
+    core.info('In post-action step')
 
     const buildResults = loadBuildResults()
 
@@ -63,6 +63,8 @@ export async function complete(): Promise<void> {
     }
 
     await dependencyGraph.complete(params.getDependencyGraphOption())
+
+    core.info('Completed post-action step')
 }
 
 async function determineGradleUserHome(): Promise<string> {

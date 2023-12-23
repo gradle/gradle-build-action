@@ -198,6 +198,9 @@ function getSavedMessage(entry: CacheEntryListener, cacheReadOnly: boolean): str
         if (cacheReadOnly) {
             return '(Entry not saved: cache is read-only)'
         }
+        if (entry.notRestored) {
+            return '(Entry not saved: not restored)'
+        }
         return '(Entry not saved: reason unknown)'
     }
     if (entry.savedSize === 0) {

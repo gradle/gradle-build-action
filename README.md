@@ -97,7 +97,6 @@ jobs:
     - run: echo "The release-candidate version was ${{ steps.setup-gradle.outputs.gradle-version }}"
 ```
 
-
 ## Caching build state between Jobs
 
 The `gradle-build-action` will use the GitHub Actions cache to save and restore reusable state that may be speed up a subsequent build invocation. This includes most content that is downloaded from the internet as part of a build, as well as expensive to create content like compiled build scripts, transformed Jar files, etc.
@@ -422,103 +421,6 @@ jobs:
         name: build-reports
         path: build/reports/
 ```
-
-## Use the action to invoke Gradle
-
-If the `gradle-build-action` is configured with an `arguments` input, then Gradle will execute a Gradle build with the arguments provided. NOTE: We recommend using the `gradle-build-action` as a "Setup Gradle" step as described above, with Gradle being invoked via a regular `run` command.
-
-If no `arguments` are provided, the action will not execute Gradle, but will still cache Gradle state and configure build-scan capture for all subsequent Gradle executions.
-
-```yaml
-name: Run Gradle on PRs
-on: pull_request
-jobs:
-  gradle:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-java@v3
-      with:
-        distribution: temurin
-        java-version: 11
-    
-    - name: Setup and execute Gradle 'test' task
-      uses: gradle/gradle-build-action@v2
-      with:
-        arguments: test
-```
-
-### Multiple Gradle executions in the same Job
-
-It is possible to configure multiple Gradle executions to run sequentially in the same job. 
-The initial Action step will perform the Gradle setup.
-
-```yaml
-- uses: gradle/gradle-build-action@v2
-  with:
-    arguments: assemble
-- uses: gradle/gradle-build-action@v2
-  with:
-    arguments: check
-```
-
-### Gradle command-line arguments
-
-The `arguments` input can be used to pass arbitrary arguments to the `gradle` command line.
-Arguments can be supplied in a single line, or as a multi-line input.
-
-Here are some valid examples:
-```yaml
-arguments: build
-arguments: check --scan
-arguments: some arbitrary tasks
-arguments: build -PgradleProperty=foo
-arguments: |
-    build
-    --scan
-    -PgradleProperty=foo
-    -DsystemProperty=bar
-```
-
-If you need to pass environment variables, use the GitHub Actions workflow syntax:
-
-```yaml
-- uses: gradle/gradle-build-action@v2
-  env:
-    CI: true
-  with:
-    arguments: build
-```
-
-### Gradle build located in a subdirectory
-
-By default, the action will execute Gradle in the root directory of your project. 
-Use the `build-root-directory` input to target a Gradle build in a subdirectory.
-
-```yaml
-- uses: gradle/gradle-build-action@v2
-  with:
-    arguments: build
-    build-root-directory: some/subdirectory
-```
-
-### Using a specific Gradle executable
-
-The action will first look for a Gradle wrapper script in the root directory of your project. 
-If not found, `gradle` will be executed from the PATH.
-Use the `gradle-executable` input to execute using a specific Gradle installation.
-
-```yaml
- - uses: gradle/gradle-build-action@v2
-   with:
-     arguments: build
-     gradle-executable: /path/to/installed/gradle
-```
-
-This mechanism can also be used to target a Gradle wrapper script that is located in a non-default location.
 
 ## Support for GitHub Enterprise Server (GHES)
 

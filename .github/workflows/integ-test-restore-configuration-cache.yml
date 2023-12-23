@@ -34,9 +34,11 @@ jobs:
       uses: ./
       with:
         cache-read-only: false # For testing, allow writing cache entries on non-default branches
+        cache-encryption-key: Da25KUVSE5jbGds2zXmfXw==
+        gradle-version: release-nightly
     - name: Groovy build with configuration-cache enabled
       working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test --configuration-cache
+      run: gradle test --configuration-cache
 
   verify-build-groovy:
     env:
@@ -55,10 +57,12 @@ jobs:
       uses: ./
       with:
         cache-read-only: true
+        cache-encryption-key: Da25KUVSE5jbGds2zXmfXw==
+        gradle-version: release-nightly
     - name: Groovy build with configuration-cache enabled
       id: execute
       working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test --configuration-cache
+      run: gradle test --configuration-cache
     - name: Check that configuration-cache was used
       uses: actions/github-script@v7
       with:
@@ -88,9 +92,11 @@ jobs:
         GRADLE_BUILD_ACTION_SKIP_RESTORE: "generated-gradle-jars|wrapper-zips|java-toolchains|instrumented-jars|dependencies|kotlin-dsl"
       with:
         cache-read-only: true
+        cache-encryption-key: Da25KUVSE5jbGds2zXmfXw==
+        gradle-version: release-nightly
     - name: Check execute Gradle build with configuration cache enabled (but not restored)
       working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew test --configuration-cache
+      run: gradle test --configuration-cache
 
   seed-build-kotlin:
     env:
@@ -108,9 +114,11 @@ jobs:
       uses: ./
       with:
         cache-read-only: false # For testing, allow writing cache entries on non-default branches
+        cache-encryption-key: Da25KUVSE5jbGds2zXmfXw==
+        gradle-version: release-nightly
     - name: Execute 'help' with configuration-cache enabled
       working-directory: .github/workflow-samples/kotlin-dsl
-      run: ./gradlew help --configuration-cache
+      run: gradle help --configuration-cache
 
   modify-build-kotlin:
     env:
@@ -129,9 +137,11 @@ jobs:
       uses: ./
       with:
         cache-read-only: false # For testing, allow writing cache entries on non-default branches
+        cache-encryption-key: Da25KUVSE5jbGds2zXmfXw==
+        gradle-version: release-nightly
     - name: Execute 'test' with configuration-cache enabled
       working-directory: .github/workflow-samples/kotlin-dsl
-      run: ./gradlew test --configuration-cache
+      run: gradle test --configuration-cache
 
   # Test restore configuration-cache from the third build invocation
   verify-build-kotlin:
@@ -151,10 +161,12 @@ jobs:
       uses: ./
       with:
         cache-read-only: true
+        cache-encryption-key: Da25KUVSE5jbGds2zXmfXw==
+        gradle-version: release-nightly
     - name: Execute 'test' again with configuration-cache enabled
       id: execute
       working-directory: .github/workflow-samples/kotlin-dsl
-      run: ./gradlew test --configuration-cache
+      run: gradle test --configuration-cache
     - name: Check that configuration-cache was used
       uses: actions/github-script@v7
       with:

@@ -1,11 +1,13 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
+import * as glob from '@actions/glob'
+
 import path from 'path'
 import fs from 'fs'
 import * as params from './input-params'
 import {CacheListener} from './cache-reporting'
 import {saveCache, restoreCache, cacheDebug, isCacheDebuggingEnabled, tryDelete, generateCacheKey} from './cache-utils'
-import {GradleHomeEntryExtractor} from './cache-extract-entries'
+import {GradleHomeEntryExtractor, ConfigurationCacheEntryExtractor} from './cache-extract-entries'
 
 const RESTORED_CACHE_KEY_KEY = 'restored-cache-key'
 
@@ -79,7 +81,7 @@ export class GradleStateCache {
     async afterRestore(listener: CacheListener): Promise<void> {
         await this.debugReportGradleUserHomeSize('as restored from cache')
         await new GradleHomeEntryExtractor(this.gradleUserHome).restore(listener)
-        // await new ConfigurationCacheEntryExtractor(this.gradleUserHome).restore(listener)
+        await new ConfigurationCacheEntryExtractor(this.gradleUserHome).restore(listener)
         await this.debugReportGradleUserHomeSize('after restoring common artifacts')
     }
 
@@ -127,10 +129,10 @@ export class GradleStateCache {
      */
     async beforeSave(listener: CacheListener): Promise<void> {
         await this.debugReportGradleUserHomeSize('before saving common artifacts')
-        this.deleteExcludedPaths()
+        await this.deleteExcludedPaths()
         await Promise.all([
-            new GradleHomeEntryExtractor(this.gradleUserHome).extract(listener)
-            // new ConfigurationCacheEntryExtractor(this.gradleUserHome).extract(listener)
+            new GradleHomeEntryExtractor(this.gradleUserHome).extract(listener),
+            new ConfigurationCacheEntryExtractor(this.gradleUserHome).extract(listener)
         ])
         await this.debugReportGradleUserHomeSize(
             "after extracting common artifacts (only 'caches' and 'notifications' will be stored)"
@@ -140,13 +142,21 @@ export class GradleStateCache {
     /**
      * Delete any file paths that are excluded by the `gradle-home-cache-excludes` parameter.
      */
-    private deleteExcludedPaths(): void {
+    private async deleteExcludedPaths(): Promise<void> {
         const rawPaths: string[] = params.getCacheExcludes()
+        rawPaths.push('caches/*/cc-keystore')
         const resolvedPaths = rawPaths.map(x => path.resolve(this.gradleUserHome, x))
 
         for (const p of resolvedPaths) {
-            cacheDebug(`Deleting excluded path: ${p}`)
-            tryDelete(p)
+            cacheDebug(`Removing excluded path: ${p}`)
+            const globber = await glob.create(p, {
+                implicitDescendants: false
+            })
+
+            for (const toDelete of await globber.glob()) {
+                cacheDebug(`Removing excluded file: ${toDelete}`)
+                await tryDelete(toDelete)
+            }
         }
     }
 
