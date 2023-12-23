@@ -393,7 +393,7 @@ export class ConfigurationCacheEntryExtractor extends AbstractEntryExtractor {
         if (cacheEntries.length > 0) {
             core.info(`Not restoring configuration-cache state, as ${reason}`)
             for (const cacheEntry of cacheEntries) {
-                listener.entry(cacheEntry.pattern).markNotRestored(reason).markNotSaved(reason)
+                listener.entry(cacheEntry.pattern).markNotRestored(reason)
             }
 
             // Update the results file based on no entries restored
@@ -403,9 +403,12 @@ export class ConfigurationCacheEntryExtractor extends AbstractEntryExtractor {
 
     async extract(listener: CacheListener): Promise<void> {
         if (!params.getCacheEncryptionKey()) {
-            core.info('Not saving configuration-cache state, as no encryption key was provided')
-            for (const cacheEntry of this.getExtractedCacheEntryDefinitions()) {
-                listener.entry(cacheEntry.pattern).markNotSaved('No encryption key provided')
+            const cacheEntryDefinitions = this.getExtractedCacheEntryDefinitions()
+            if (cacheEntryDefinitions.length > 0) {
+                core.info('Not saving configuration-cache state, as no encryption key was provided')
+                for (const cacheEntry of cacheEntryDefinitions) {
+                    listener.entry(cacheEntry.pattern).markNotSaved('No encryption key provided')
+                }
             }
             return
         }
