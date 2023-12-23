@@ -8,14 +8,6 @@ inputs:
     description: Gradle version to use. If specified, this Gradle version will be downloaded, added to the PATH and used for invoking Gradle.
     required: false
 
-  gradle-executable:
-    description: Path to the Gradle executable. If specified, this executable will be added to the PATH and used for invoking Gradle.
-    required: false
-
-  build-root-directory:
-    description: Path to the root directory of the build. Default is the root of the GitHub workspace.
-    required: false
-
   cache-disabled:
     description: When 'true', all caching is disabled. No entries will be written to or read from the cache.
     required: false
@@ -84,7 +76,17 @@ inputs:
   arguments:
     description: Gradle command line arguments (supports multi-line input)
     required: false
-    deprecation-message: The `gradle-build-action` will configure your runner so that any subsequent Gradle execution will benefit. Using the action to execute Gradle directly is deprecated in favor of executing Gradle in a subsequent Step. See https://github.com/gradle/gradle-build-action?tab=readme-ov-file#use-the-action-to-setup-gradle. 
+    deprecation-message: Using the action to execute Gradle directly is deprecated in favor of using the action to setup Gradle, and executing Gradle in a subsequent Step. See https://github.com/gradle/gradle-build-action?tab=readme-ov-file#use-the-action-to-setup-gradle. 
+
+  build-root-directory:
+    description: Path to the root directory of the build. Default is the root of the GitHub workspace.
+    required: false
+    deprecation-message: Using the action to execute Gradle directly is deprecated in favor of using the action to setup Gradle, and executing Gradle in a subsequent Step. See https://github.com/gradle/gradle-build-action?tab=readme-ov-file#use-the-action-to-setup-gradle. 
+
+  gradle-executable:
+    description: Path to the Gradle executable. If specified, this executable will be added to the PATH and used for invoking Gradle.
+    required: false
+    deprecation-message: Using the action to execute Gradle directly is deprecated in favor of using the action to setup Gradle, and executing Gradle in a subsequent Step. See https://github.com/gradle/gradle-build-action?tab=readme-ov-file#use-the-action-to-setup-gradle. 
 
   # EXPERIMENTAL & INTERNAL ACTION INPUTS
   # The following action properties allow fine-grained tweaking of the action caching behaviour.
@@ -94,6 +96,7 @@ inputs:
     description: When 'true', the action will not attempt to restore the Gradle User Home entries from other Jobs.
     required: false
     default: false
+    
   workflow-job-context:
     description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users (INTERNAL).
     required: false
