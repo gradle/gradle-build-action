@@ -8,11 +8,9 @@
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
     "lint": "eslint src/**/*.ts",
-
     "compile-main": "ncc build src/main.ts --out dist/main --source-map --no-source-map-register",
     "compile-post": "ncc build src/post.ts --out dist/post --source-map --no-source-map-register",
     "compile": "npm run compile-main && npm run compile-post",
-
     "test": "jest",
     "check": "npm run format && npm run lint",
     "build": "npm run check && npm run compile",
@@ -40,11 +38,12 @@
     "@actions/tool-cache": "2.0.1",
     "@octokit/rest": "19.0.13",
     "@octokit/webhooks-types": "7.3.1",
+    "semver": "^7.5.4",
     "string-argv": "0.3.2"
   },
   "devDependencies": {
-    "@types/node": "20.10.0",
     "@types/jest": "29.5.11",
+    "@types/node": "20.10.0",
     "@types/unzipper": "0.10.9",
     "@typescript-eslint/parser": "6.14.0",
     "@vercel/ncc": "0.38.1",
