@@ -27,7 +27,6 @@ if (isTopLevelBuild) {
       new File(githubOutput) << "dependency-graph-file=${reportFile.absolutePath}\n"
   }
 
-
   println "Generating dependency graph into '${reportFile}'"
 }
 

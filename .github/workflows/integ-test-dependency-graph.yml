@@ -31,7 +31,7 @@ jobs:
     - name: Setup Gradle for dependency-graph generate
       uses: ./
       with:
-        dependency-graph: generate
+        dependency-graph: generate-and-upload
     - name: Run gradle build
       run: ./gradlew build
       working-directory: .github/workflow-samples/groovy-dsl
@@ -55,7 +55,7 @@ jobs:
       working-directory: .github/workflow-samples/kotlin-dsl
   
   submit:
-    needs: [groovy-generate, kotlin-generate]
+    needs: [groovy-generate]
     runs-on: "ubuntu-latest"
     steps:
     - name: Checkout sources
@@ -80,7 +80,7 @@ jobs:
     - name: Setup Gradle for dependency-graph generate
       uses: ./
       with:
-        dependency-graph: generate
+        dependency-graph: generate-and-submit
     - id: gradle-assemble
       run: ./gradlew assemble
       working-directory: .github/workflow-samples/groovy-dsl

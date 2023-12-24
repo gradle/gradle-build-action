@@ -1,8 +1,7 @@
 import * as core from '@actions/core'
-import * as artifact from '@actions/artifact'
 import * as github from '@actions/github'
 import * as glob from '@actions/glob'
-import * as toolCache from '@actions/tool-cache'
+import {DefaultArtifactClient} from '@actions/artifact'
 import {GitHub} from '@actions/github/lib/utils'
 import {RequestError} from '@octokit/request-error'
 import type {PullRequestEvent} from '@octokit/webhooks-types'
@@ -13,7 +12,7 @@ import fs from 'fs'
 import * as layout from './repository-layout'
 import {DependencyGraphOption, getJobMatrix, getArtifactRetentionDays} from './input-params'
 
-const DEPENDENCY_GRAPH_ARTIFACT = 'dependency-graph'
+const DEPENDENCY_GRAPH_PREFIX = 'dependency-graph_'
 
 export async function setup(option: DependencyGraphOption): Promise<void> {
     if (option === DependencyGraphOption.Disabled) {
@@ -39,37 +38,48 @@ export async function setup(option: DependencyGraphOption): Promise<void> {
 }
 
 export async function complete(option: DependencyGraphOption): Promise<void> {
-    switch (option) {
-        case DependencyGraphOption.Disabled:
-        case DependencyGraphOption.DownloadAndSubmit: // Performed in setup
-            return
-        case DependencyGraphOption.Generate:
-            await uploadDependencyGraphs()
-            return
-        case DependencyGraphOption.GenerateAndSubmit:
-            await submitDependencyGraphs(await uploadDependencyGraphs())
-            return
+    try {
+        switch (option) {
+            case DependencyGraphOption.Disabled:
+            case DependencyGraphOption.Generate: // Performed via init-script: nothing to do here
+            case DependencyGraphOption.DownloadAndSubmit: // Performed in setup
+                return
+            case DependencyGraphOption.GenerateAndSubmit:
+                await submitDependencyGraphs(await findGeneratedDependencyGraphFiles())
+                return
+            case DependencyGraphOption.GenerateAndUpload:
+                await uploadDependencyGraphs(await findGeneratedDependencyGraphFiles())
+        }
+    } catch (e) {
+        core.warning(`Failed to ${option} dependency graph. Will continue. ${String(e)}`)
     }
 }
 
-async function uploadDependencyGraphs(): Promise<string[]> {
+async function findGeneratedDependencyGraphFiles(): Promise<string[]> {
     const workspaceDirectory = layout.workspaceDirectory()
-    const graphFiles = await findDependencyGraphFiles(workspaceDirectory)
+    return await findDependencyGraphFiles(workspaceDirectory)
+}
 
-    const relativeGraphFiles = graphFiles.map(x => getRelativePathFromWorkspace(x))
-    core.info(`Uploading dependency graph files: ${relativeGraphFiles}`)
+async function uploadDependencyGraphs(dependencyGraphFiles: string[]): Promise<void> {
+    const workspaceDirectory = layout.workspaceDirectory()
 
-    const artifactClient = artifact.create()
-    artifactClient.uploadArtifact(DEPENDENCY_GRAPH_ARTIFACT, graphFiles, workspaceDirectory, {
-        retentionDays: getArtifactRetentionDays()
-    })
-
-    return graphFiles
+    const artifactClient = new DefaultArtifactClient()
+    for (const dependencyGraphFile of dependencyGraphFiles) {
+        const relativePath = getRelativePathFromWorkspace(dependencyGraphFile)
+        core.info(`Uploading dependency graph file: ${relativePath}`)
+        const artifactName = `${DEPENDENCY_GRAPH_PREFIX}${path.basename(dependencyGraphFile)}`
+        await artifactClient.uploadArtifact(artifactName, [dependencyGraphFile], workspaceDirectory, {
+            retentionDays: getArtifactRetentionDays()
+        })
+    }
 }
 
 async function downloadAndSubmitDependencyGraphs(): Promise<void> {
-    const workspaceDirectory = layout.workspaceDirectory()
-    submitDependencyGraphs(await retrieveDependencyGraphs(workspaceDirectory))
+    try {
+        await submitDependencyGraphs(await downloadDependencyGraphs())
+    } catch (e) {
+        core.warning(`Download and submit dependency graph failed. Will continue. ${String(e)}`)
+    }
 }
 
 async function submitDependencyGraphs(dependencyGraphFiles: string[]): Promise<void> {
@@ -111,56 +121,37 @@ async function submitDependencyGraphFile(jsonFile: string): Promise<void> {
     core.notice(`Submitted ${relativeJsonFile}: ${response.data.message}`)
 }
 
-async function retrieveDependencyGraphs(workspaceDirectory: string): Promise<string[]> {
-    if (github.context.payload.workflow_run) {
-        return await retrieveDependencyGraphsForWorkflowRun(github.context.payload.workflow_run.id, workspaceDirectory)
-    }
-    return retrieveDependencyGraphsForCurrentWorkflow(workspaceDirectory)
-}
+async function downloadDependencyGraphs(): Promise<string[]> {
+    const workspaceDirectory = layout.workspaceDirectory()
 
-async function retrieveDependencyGraphsForWorkflowRun(runId: number, workspaceDirectory: string): Promise<string[]> {
-    const octokit = getOctokit()
+    const findBy = github.context.payload.workflow_run
+        ? {
+              token: getGithubToken(),
+              workflowRunId: github.context.payload.workflow_run.id,
+              repositoryName: github.context.repo.repo,
+              repositoryOwner: github.context.repo.owner
+          }
+        : undefined
 
-    // Find the workflow run artifacts named "dependency-graph"
-    const artifacts = await octokit.rest.actions.listWorkflowRunArtifacts({
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        run_id: runId
-    })
-
-    const matchArtifact = artifacts.data.artifacts.find(candidate => {
-        return candidate.name === DEPENDENCY_GRAPH_ARTIFACT
-    })
-
-    if (matchArtifact === undefined) {
-        throw new Error(`Dependency graph artifact not found. Has it been generated by workflow run '${runId}'?`)
-    }
-
-    // Download the dependency-graph artifact
-    const download = await octokit.rest.actions.downloadArtifact({
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        artifact_id: matchArtifact.id,
-        archive_format: 'zip'
-    })
-
-    const downloadBuffer = download.data as ArrayBuffer
-    const downloadZip = path.resolve(workspaceDirectory, 'dependency-graph.zip')
-    fs.writeFileSync(downloadZip, Buffer.from(downloadBuffer))
-
-    // Expance the dependency-graph zip and locate each dependency-graph JSON file
-    const extractDir = path.resolve(workspaceDirectory, 'dependency-graph')
-    const extracted = await toolCache.extractZip(downloadZip, extractDir)
-    core.info(`Extracted dependency graph artifacts to ${extracted}: ${fs.readdirSync(extracted)}`)
-
-    return findDependencyGraphFiles(extracted)
-}
-
-async function retrieveDependencyGraphsForCurrentWorkflow(workspaceDirectory: string): Promise<string[]> {
-    const artifactClient = artifact.create()
+    const artifactClient = new DefaultArtifactClient()
     const downloadPath = path.resolve(workspaceDirectory, 'dependency-graph')
-    await artifactClient.downloadArtifact(DEPENDENCY_GRAPH_ARTIFACT, downloadPath)
-    return await findDependencyGraphFiles(downloadPath)
+
+    const dependencyGraphArtifacts = (
+        await artifactClient.listArtifacts({
+            latest: true,
+            findBy
+        })
+    ).artifacts.filter(candidate => candidate.name.startsWith(DEPENDENCY_GRAPH_PREFIX))
+
+    for (const artifact of dependencyGraphArtifacts) {
+        const downloadedArtifact = await artifactClient.downloadArtifact(artifact.id, {
+            path: downloadPath,
+            findBy
+        })
+        core.info(`Downloading dependency-graph artifact ${artifact.name} to ${downloadedArtifact.downloadPath}`)
+    }
+
+    return findDependencyGraphFiles(downloadPath)
 }
 
 async function findDependencyGraphFiles(dir: string): Promise<string[]> {

@@ -84,11 +84,13 @@ export function getDependencyGraphOption(): DependencyGraphOption {
             return DependencyGraphOption.Generate
         case 'generate-and-submit':
             return DependencyGraphOption.GenerateAndSubmit
+        case 'generate-and-upload':
+            return DependencyGraphOption.GenerateAndUpload
         case 'download-and-submit':
             return DependencyGraphOption.DownloadAndSubmit
     }
     throw TypeError(
-        `The value '${val} is not valid for 'dependency-graph. Valid values are: [disabled, generate-and-upload, generate-and-submit, download-and-submit]. The default value is 'disabled'.`
+        `The value '${val} is not valid for 'dependency-graph. Valid values are: [disabled, generate, generate-and-submit, generate-and-upload, download-and-submit]. The default value is 'disabled'.`
     )
 }
 
@@ -123,8 +125,9 @@ function getBooleanInput(paramName: string, paramDefault = false): boolean {
 }
 
 export enum DependencyGraphOption {
-    Disabled,
-    Generate,
-    GenerateAndSubmit,
-    DownloadAndSubmit
+    Disabled = 'disabled',
+    Generate = 'generate',
+    GenerateAndSubmit = 'generate-and-submit',
+    GenerateAndUpload = 'generate-and-upload',
+    DownloadAndSubmit = 'download-and-submit'
 }
