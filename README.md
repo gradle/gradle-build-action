@@ -160,6 +160,30 @@ If you want override the default and have the `gradle-build-action` caches overw
 cache-overwrite-existing: true
 ```
 
+### Saving configuration-cache data
+
+When Gradle is executed with the [configuration-cache](https://docs.gradle.org/current/userguide/configuration_cache.html) enabled, the configuration-cache data is stored
+in the project directory, at `<project-dir>/.gradle/configuration-cache`. Due to the way the configuration-cache works, [this file may contain stored credentials and other
+secrets](https://docs.gradle.org/release-nightly/userguide/configuration_cache.html#config_cache:secrets), and this data needs to be encrypted in order to be safely stored in the GitHub Actions cache.
+
+In order to benefit from configuration caching in your GitHub Actions workflow, you must:
+- Enable the configuration cache for your build
+- Execute your build with Gradle 8.6 or newer. This can be achieved directly, or via the Gradle Wrapper.
+- Provide a [valid Gradle encryption key](https://docs.gradle.org/release-nightly/userguide/configuration_cache.html#config_cache:secrets:configuring_encryption_key) via the `cache-encryption-key` action parameter
+
+```yaml
+jobs:
+  gradle-with-configuration-cache:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: gradle/gradle-build-action@v3
+      with:
+        gradle-version: 8.6
+        cache-encryption-key: Da25KUVSE5jbGds2zXmfXw==
+    - run: gradle build --configuration-cache
+```
+
 ### Incompatibility with other caching mechanisms
 
 When using `gradle-build-action` we recommend that you avoid using other mechanisms to save and restore the Gradle User Home. 
