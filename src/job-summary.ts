@@ -1,35 +1,34 @@
 import * as core from '@actions/core'
+import {SUMMARY_ENV_VAR} from '@actions/core/lib/summary'
+
+import * as params from './input-params'
 import {BuildResult} from './build-results'
-import {writeCachingReport, CacheListener, logCachingReport} from './cache-reporting'
+import {CacheListener, generateCachingReport} from './cache-reporting'
 
-export async function writeJobSummary(buildResults: BuildResult[], cacheListener: CacheListener): Promise<void> {
-    core.info('Writing job summary')
+export async function generateJobSummary(buildResults: BuildResult[], cacheListener: CacheListener): Promise<void> {
+    const summaryTable = renderSummaryTable(buildResults)
+    const cachingReport = generateCachingReport(cacheListener)
 
-    if (buildResults.length === 0) {
-        core.debug('No Gradle build results found. Summary table will not be generated.')
+    if (shouldGenerateJobSummary()) {
+        core.summary.addRaw(summaryTable)
+        core.summary.addRaw(cachingReport)
+        await core.summary.write()
     } else {
-        writeSummaryTable(buildResults)
+        core.info('============================')
+        core.info(summaryTable)
+        core.info('============================')
+        core.info(cachingReport)
+        core.info('============================')
     }
-
-    writeCachingReport(cacheListener)
-
-    await core.summary.write()
 }
 
-export async function logJobSummary(buildResults: BuildResult[], cacheListener: CacheListener): Promise<void> {
-    if (buildResults.length === 0) {
-        core.debug('No Gradle build results found. Summary table will not be logged.')
-    } else {
-        logSummaryTable(buildResults)
+function renderSummaryTable(results: BuildResult[]): string {
+    if (results.length === 0) {
+        return 'No Gradle build results detected.'
     }
 
-    logCachingReport(cacheListener)
-}
-
-function writeSummaryTable(results: BuildResult[]): void {
-    core.summary.addHeading('Gradle Builds', 3)
-
-    core.summary.addRaw(`
+    return `
+<h3>Gradle Builds</h3>
 <table>
     <tr>
         <th>Root Project</th>
@@ -39,7 +38,7 @@ function writeSummaryTable(results: BuildResult[]): void {
         <th>Build Scan®</th>
     </tr>${results.map(result => renderBuildResultRow(result)).join('')}
 </table>
-    `)
+    `
 }
 
 function renderBuildResultRow(result: BuildResult): string {
@@ -77,18 +76,11 @@ function renderBuildScanBadge(outcomeText: string, outcomeColor: string, targetU
     return `<a href="${targetUrl}" rel="nofollow">${badgeHtml}</a>`
 }
 
-function logSummaryTable(results: BuildResult[]): void {
-    core.info('============================')
-    core.info('Gradle Builds')
-    core.info('----------------------------')
-    core.info('Root Project | Requested Tasks | Gradle Version | Build Outcome | Build Scan®')
-    core.info('----------------------------')
-    for (const result of results) {
-        core.info(
-            `${result.rootProjectName} | ${result.requestedTasks} | ${result.gradleVersion} | ${
-                result.buildFailed ? 'FAILED' : 'SUCCESS'
-            } | ${result.buildScanFailed ? 'Publish failed' : result.buildScanUri}`
-        )
+function shouldGenerateJobSummary(): boolean {
+    // Check if Job Summary is supported on this platform
+    if (!process.env[SUMMARY_ENV_VAR]) {
+        return false
     }
-    core.info('============================')
+
+    return params.isJobSummaryEnabled()
 }

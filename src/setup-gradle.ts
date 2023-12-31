@@ -1,14 +1,13 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
-import {SUMMARY_ENV_VAR} from '@actions/core/lib/summary'
 import * as path from 'path'
 import * as os from 'os'
 import * as caches from './caches'
 import * as layout from './repository-layout'
 import * as params from './input-params'
 import * as dependencyGraph from './dependency-graph'
+import * as jobSummary from './job-summary'
 
-import {logJobSummary, writeJobSummary} from './job-summary'
 import {loadBuildResults} from './build-results'
 import {CacheListener} from './cache-reporting'
 import {DaemonController} from './daemon-controller'
@@ -56,11 +55,7 @@ export async function complete(): Promise<void> {
 
     await caches.save(gradleUserHome, cacheListener, daemonController)
 
-    if (shouldGenerateJobSummary()) {
-        await writeJobSummary(buildResults, cacheListener)
-    } else {
-        logJobSummary(buildResults, cacheListener)
-    }
+    await jobSummary.generateJobSummary(buildResults, cacheListener)
 
     await dependencyGraph.complete(params.getDependencyGraphOption())
 
@@ -92,13 +87,4 @@ async function determineUserHome(): Promise<string> {
     const userHome = found[1]
     core.debug(`Determined user.home from java -version output: '${userHome}'`)
     return userHome
-}
-
-function shouldGenerateJobSummary(): boolean {
-    // Check if Job Summary is supported on this platform
-    if (!process.env[SUMMARY_ENV_VAR]) {
-        return false
-    }
-
-    return params.isJobSummaryEnabled()
 }
