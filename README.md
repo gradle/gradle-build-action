@@ -169,7 +169,7 @@ secrets](https://docs.gradle.org/release-nightly/userguide/configuration_cache.h
 In order to benefit from configuration caching in your GitHub Actions workflow, you must:
 - Execute your build with Gradle 8.6 or newer. This can be achieved directly, or via the Gradle Wrapper.
 - Enable the configuration cache for your build.
-- Generate a [valid Gradle encryption key](https://docs.gradle.org/release-nightly/userguide/configuration_cache.html#config_cache:secrets:configuring_encryption_key) and save it as a [GitHub Actions secret](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions).
+- Generate a [valid Gradle encryption key](https://docs.gradle.org/8.6-rc-1/userguide/configuration_cache.html#config_cache:secrets:configuring_encryption_key) and save it as a [GitHub Actions secret](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions).
 - Provide the secret key via the `cache-encryption-key` action parameter.
 
 ```yaml
@@ -180,7 +180,7 @@ jobs:
     - uses: actions/checkout@v4
     - uses: gradle/gradle-build-action@v3
       with:
-        gradle-version: 8.6
+        gradle-version: 8.6-rc-1
         cache-encryption-key: ${{ secrets.GradleEncryptionKey }}
     - run: gradle build --configuration-cache
 ```
