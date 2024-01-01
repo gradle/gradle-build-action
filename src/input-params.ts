@@ -71,6 +71,10 @@ export function isJobSummaryEnabled(): boolean {
     return getBooleanInput('generate-job-summary', true)
 }
 
+export function isPRCommentEnabled(): boolean {
+    return getBooleanInput('add-pr-comment', false)
+}
+
 export function isDependencyGraphEnabled(): boolean {
     return getBooleanInput('generate-dependency-graph', true)
 }

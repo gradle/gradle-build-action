@@ -63,6 +63,11 @@ inputs:
     required: false
     default: true
 
+  add-pr-comment:
+    description: When 'true', a summary of the Gradle builds will be added as a PR comment. No action will be taken if the workflow was not triggered from a pull request.
+    required: false
+    default: false
+
   dependency-graph:
     description: Specifies if a GitHub dependency snapshot should be generated for each Gradle build, and if so, how. Valid values are 'disabled' (default), 'generate', 'generate-and-submit', 'generate-and-upload' and 'download-and-submit'.
     required: false
