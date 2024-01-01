@@ -8,7 +8,7 @@ env:
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
-  run-gradle-builds:
+  many-gradle-builds:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout sources
@@ -41,6 +41,27 @@ jobs:
       working-directory: .github/workflow-samples/groovy-dsl
       continue-on-error: true
       run: ./gradlew not-a-real-task
+
+  successful-builds-with-no-summary:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v4
+    - name: Build distribution
+      shell: bash
+      run: |
+        npm install
+        npm run build
+    - name: Setup Gradle
+      uses: ./
+      with:
+        add-job-summary: on-failure
+    - name: Build kotlin-dsl project
+      working-directory: .github/workflow-samples/kotlin-dsl
+      run: ./gradlew assemble
+    - name: Build kotlin-dsl project without Build Scan®
+      working-directory: .github/workflow-samples/kotlin-dsl
+      run: ./gradlew assemble check --no-scan
 
   pre-existing-gradle-home:
     runs-on: ubuntu-latest

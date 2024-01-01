@@ -10,7 +10,7 @@ export async function generateJobSummary(buildResults: BuildResult[], cacheListe
     const summaryTable = renderSummaryTable(buildResults)
     const cachingReport = generateCachingReport(cacheListener)
 
-    if (shouldGenerateJobSummary()) {
+    if (shouldGenerateJobSummary(buildResults)) {
         core.info('Generating Job Summary')
 
         core.summary.addRaw(summaryTable)
@@ -24,7 +24,7 @@ export async function generateJobSummary(buildResults: BuildResult[], cacheListe
         core.info('============================')
     }
 
-    if (shouldAddPRComment()) {
+    if (shouldAddPRComment(buildResults)) {
         await addPRComment(summaryTable)
     }
 }
@@ -111,15 +111,32 @@ function renderBuildScanBadge(outcomeText: string, outcomeColor: string, targetU
     return `<a href="${targetUrl}" rel="nofollow">${badgeHtml}</a>`
 }
 
-function shouldGenerateJobSummary(): boolean {
+function shouldGenerateJobSummary(buildResults: BuildResult[]): boolean {
     // Check if Job Summary is supported on this platform
     if (!process.env[SUMMARY_ENV_VAR]) {
         return false
     }
 
-    return params.isJobSummaryEnabled()
+    // Check if Job Summary is disabled using the deprecated input
+    if (!params.isJobSummaryEnabled()) {
+        return false
+    }
+
+    return shouldAddJobSummary(params.getJobSummaryOption(), buildResults)
 }
 
-function shouldAddPRComment(): boolean {
-    return params.isPRCommentEnabled()
+function shouldAddPRComment(buildResults: BuildResult[]): boolean {
+    return shouldAddJobSummary(params.getPRCommentOption(), buildResults)
+}
+
+function shouldAddJobSummary(option: params.JobSummaryOption, buildResults: BuildResult[]): boolean {
+    switch (option) {
+        case params.JobSummaryOption.Always:
+            return true
+        case params.JobSummaryOption.Never:
+            return false
+        case params.JobSummaryOption.OnFailure:
+            core.info(`Got these build results: ${JSON.stringify(buildResults)}`)
+            return buildResults.some(result => result.buildFailed)
+    }
 }
