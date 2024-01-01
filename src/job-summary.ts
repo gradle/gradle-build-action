@@ -1,4 +1,5 @@
 import * as core from '@actions/core'
+import * as github from '@actions/github'
 import {SUMMARY_ENV_VAR} from '@actions/core/lib/summary'
 
 import * as params from './input-params'
@@ -10,6 +11,8 @@ export async function generateJobSummary(buildResults: BuildResult[], cacheListe
     const cachingReport = generateCachingReport(cacheListener)
 
     if (shouldGenerateJobSummary()) {
+        core.info('Generating Job Summary')
+
         core.summary.addRaw(summaryTable)
         core.summary.addRaw(cachingReport)
         await core.summary.write()
@@ -20,6 +23,39 @@ export async function generateJobSummary(buildResults: BuildResult[], cacheListe
         core.info(cachingReport)
         core.info('============================')
     }
+
+    if (shouldAddPRComment()) {
+        await addPRComment(summaryTable)
+    }
+}
+
+async function addPRComment(jobSummary: string): Promise<void> {
+    try {
+        const github_token = params.getGithubToken()
+
+        const context = github.context
+        if (context.payload.pull_request == null) {
+            core.info('No pull_request trigger: not adding PR comment')
+            return
+        }
+
+        const pull_request_number = context.payload.pull_request.number
+        core.info(`Adding Job Summary as comment to PR #${pull_request_number}.`)
+
+        const prComment = `<h3>Job Summary for gradle-build-action</h3>
+<h5>${github.context.workflow} :: <em>${github.context.job}</em></h5>
+
+${jobSummary}`
+
+        const octokit = github.getOctokit(github_token)
+        await octokit.rest.issues.createComment({
+            ...context.repo,
+            issue_number: pull_request_number,
+            body: prComment
+        })
+    } catch (error) {
+        core.warning(`Failed to generate PR comment: ${String(error)}`)
+    }
 }
 
 function renderSummaryTable(results: BuildResult[]): string {
@@ -28,10 +64,9 @@ function renderSummaryTable(results: BuildResult[]): string {
     }
 
     return `
-<h3>Gradle Builds</h3>
 <table>
     <tr>
-        <th>Root Project</th>
+        <th>Gradle Root Project</th>
         <th>Requested Tasks</th>
         <th>Gradle Version</th>
         <th>Build Outcome</th>
@@ -83,4 +118,8 @@ function shouldGenerateJobSummary(): boolean {
     }
 
     return params.isJobSummaryEnabled()
+}
+
+function shouldAddPRComment(): boolean {
+    return params.isPRCommentEnabled()
 }
