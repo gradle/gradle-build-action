@@ -11,6 +11,9 @@ on:
       download-dist:
         type: boolean
         default: false
+    secrets:
+      GRADLE_ENCRYPTION_KEY:
+        required: true
 
 env:
   DOWNLOAD_DIST: ${{ inputs.download-dist }}

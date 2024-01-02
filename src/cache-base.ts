@@ -26,6 +26,7 @@ export class GradleStateCache {
     }
 
     init(): void {
+        // Copy init-scripts to Gradle User Home
         const actionCacheDir = path.resolve(this.gradleUserHome, '.gradle-build-action')
         fs.mkdirSync(actionCacheDir, {recursive: true})
 
@@ -33,6 +34,12 @@ export class GradleStateCache {
         fs.mkdirSync(initScriptsDir, {recursive: true})
 
         this.initializeGradleUserHome(this.gradleUserHome, initScriptsDir)
+
+        // Export the GRADLE_ENCRYPTION_KEY variable if provided
+        const encryptionKey = params.getCacheEncryptionKey()
+        if (encryptionKey) {
+            core.exportVariable('GRADLE_ENCRYPTION_KEY', encryptionKey)
+        }
     }
 
     cacheOutputExists(): boolean {

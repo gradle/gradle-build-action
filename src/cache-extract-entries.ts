@@ -1,6 +1,5 @@
 import path from 'path'
 import fs from 'fs'
-import crypto from 'crypto'
 import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 import * as semver from 'semver'
@@ -383,8 +382,6 @@ export class ConfigurationCacheEntryExtractor extends AbstractEntryExtractor {
             return
         }
 
-        const encryptionKey = this.getAESEncryptionKey()
-        core.exportVariable('GRADLE_ENCRYPTION_KEY', encryptionKey)
         return await super.restore(listener)
     }
 
@@ -414,12 +411,6 @@ export class ConfigurationCacheEntryExtractor extends AbstractEntryExtractor {
         }
 
         await super.extract(listener)
-    }
-
-    private getAESEncryptionKey(): string | undefined {
-        const secret = params.getCacheEncryptionKey()
-        const key = crypto.pbkdf2Sync(secret, '', 1000, 16, 'sha256')
-        return key.toString('base64')
     }
 
     /**
