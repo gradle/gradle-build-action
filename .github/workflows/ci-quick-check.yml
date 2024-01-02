@@ -95,6 +95,8 @@ jobs:
     with:
       runner-os: '["ubuntu-latest"]'
       download-dist: true
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
   restore-containerized-gradle-home:
     needs: build-distribution

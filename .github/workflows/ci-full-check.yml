@@ -58,10 +58,12 @@ jobs:
     with:
       cache-key-prefix: ${{github.run_number}}-
 
-  # restore-configuration-cache:
-  #   uses: ./.github/workflows/integ-test-restore-configuration-cache.yml
-  #   with:
-  #     cache-key-prefix: ${{github.run_number}}-
+  restore-configuration-cache:
+    uses: ./.github/workflows/integ-test-restore-configuration-cache.yml
+    with:
+      cache-key-prefix: ${{github.run_number}}-
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
   restore-custom-gradle-home:
     uses: ./.github/workflows/integ-test-restore-custom-gradle-home.yml
