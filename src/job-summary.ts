@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import {SUMMARY_ENV_VAR} from '@actions/core/lib/summary'
+import {RequestError} from '@octokit/request-error'
 
 import * as params from './input-params'
 import {BuildResult} from './build-results'
@@ -30,32 +31,46 @@ export async function generateJobSummary(buildResults: BuildResult[], cacheListe
 }
 
 async function addPRComment(jobSummary: string): Promise<void> {
-    try {
-        const github_token = params.getGithubToken()
+    const context = github.context
+    if (context.payload.pull_request == null) {
+        core.info('No pull_request trigger: not adding PR comment')
+        return
+    }
 
-        const context = github.context
-        if (context.payload.pull_request == null) {
-            core.info('No pull_request trigger: not adding PR comment')
-            return
-        }
+    const pull_request_number = context.payload.pull_request.number
+    core.info(`Adding Job Summary as comment to PR #${pull_request_number}.`)
 
-        const pull_request_number = context.payload.pull_request.number
-        core.info(`Adding Job Summary as comment to PR #${pull_request_number}.`)
-
-        const prComment = `<h3>Job Summary for gradle-build-action</h3>
+    const prComment = `<h3>Job Summary for gradle-build-action</h3>
 <h5>${github.context.workflow} :: <em>${github.context.job}</em></h5>
 
 ${jobSummary}`
 
-        const octokit = github.getOctokit(github_token)
+    const github_token = params.getGithubToken()
+    const octokit = github.getOctokit(github_token)
+    try {
         await octokit.rest.issues.createComment({
             ...context.repo,
             issue_number: pull_request_number,
             body: prComment
         })
     } catch (error) {
-        core.warning(`Failed to generate PR comment: ${String(error)}`)
+        if (error instanceof RequestError) {
+            core.warning(buildWarningMessage(error))
+        } else {
+            throw error
+        }
     }
+}
+
+function buildWarningMessage(error: RequestError): string {
+    const mainWarning = `Failed to generate PR comment.\n${String(error)}`
+    if (error.message === 'Resource not accessible by integration') {
+        return `${mainWarning}
+Please ensure that the 'pull-requests: write' permission is available for the workflow job.
+Note that this permission is never available for a workflow triggered from a repository fork.
+        `
+    }
+    return mainWarning
 }
 
 function renderSummaryTable(results: BuildResult[]): string {
