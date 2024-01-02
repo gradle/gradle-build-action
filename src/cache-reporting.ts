@@ -1,4 +1,3 @@
-import * as core from '@actions/core'
 import * as cache from '@actions/cache'
 
 /**
@@ -112,47 +111,36 @@ export class CacheEntryListener {
     }
 }
 
-export function writeCachingReport(listener: CacheListener): void {
+export function generateCachingReport(listener: CacheListener): string {
     const entries = listener.cacheEntries
 
-    core.summary.addRaw(
-        `\n<details><summary><h4>Caching for gradle-build-action was ${listener.cacheStatus} - expand for details</h4></summary>\n`
-    )
+    return `
+<details>
+<summary><h4>Caching for gradle-build-action was ${listener.cacheStatus} - expand for details</h4></summary>
+${renderEntryTable(entries)}
 
-    core.summary.addTable([
-        [
-            {data: '', header: true},
-            {data: 'Count', header: true},
-            {data: 'Total Size (Mb)', header: true}
-        ],
-        ['Entries Restored', `${getCount(entries, e => e.restoredSize)}`, `${getSize(entries, e => e.restoredSize)}`],
-        ['Entries Saved', `${getCount(entries, e => e.savedSize)}`, `${getSize(entries, e => e.savedSize)}`]
-    ])
-
-    core.summary.addHeading('Cache Entry Details', 5)
-
-    const entryDetails = renderEntryDetails(listener)
-    core.summary.addRaw(`<pre>
-${entryDetails}
+<h5>Cache Entry Details</h5>
+<pre>
+    ${renderEntryDetails(listener)}
 </pre>
 </details>
-`)
+    `
 }
 
-export function logCachingReport(listener: CacheListener): void {
-    const entries = listener.cacheEntries
-
-    core.startGroup(`Caching for gradle-build-action was ${listener.cacheStatus} - expand for details`)
-
-    core.info(
-        `Entries Restored: ${getCount(entries, e => e.restoredSize)} (${getSize(entries, e => e.restoredSize)} Mb)`
-    )
-    core.info(`Entries Saved   : ${getCount(entries, e => e.savedSize)} (${getSize(entries, e => e.savedSize)} Mb)`)
-
-    core.info(`Cache Entry Details`)
-    core.info(renderEntryDetails(listener))
-
-    core.endGroup()
+function renderEntryTable(entries: CacheEntryListener[]): string {
+    return `
+<table>
+    <tr><td></td><th>Count</th><th>Total Size (Mb)</th></tr>
+    <tr><td>Entries Restored</td>
+        <td>${getCount(entries, e => e.restoredSize)}</td>
+        <td>${getSize(entries, e => e.restoredSize)}</td>
+    </tr>
+    <tr><td>Entries Saved</td>
+        <td>${getCount(entries, e => e.savedSize)}</td>
+        <td>${getSize(entries, e => e.savedSize)}</td>
+    </tr>
+</table>
+    `
 }
 
 function renderEntryDetails(listener: CacheListener): string {

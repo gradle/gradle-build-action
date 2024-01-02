@@ -58,10 +58,15 @@ inputs:
     required: false
     default: false
 
-  generate-job-summary:
-    description: When 'false', no Job Summary will be generated for the Job.
+  add-job-summary:
+    description: Specifies when a Job Summary should be inluded in the action results. Valid values are 'never', 'always' (default), and 'on-failure'.
     required: false
-    default: true
+    default: 'always'
+
+  add-job-summary-as-pr-comment:
+    description: Specifies when each Job Summary should be added as a PR comment. Valid values are 'never' (default), 'always', and 'on-failure'. No action will be taken if the workflow was not triggered from a pull request.
+    required: false
+    default: 'never'
 
   dependency-graph:
     description: Specifies if a GitHub dependency snapshot should be generated for each Gradle build, and if so, how. Valid values are 'disabled' (default), 'generate', 'generate-and-submit', 'generate-and-upload' and 'download-and-submit'.
@@ -87,6 +92,12 @@ inputs:
     description: Path to the Gradle executable. If specified, this executable will be added to the PATH and used for invoking Gradle.
     required: false
     deprecation-message: Using the action to execute Gradle directly is deprecated in favor of using the action to setup Gradle, and executing Gradle in a subsequent Step. See https://github.com/gradle/gradle-build-action?tab=readme-ov-file#use-the-action-to-setup-gradle. 
+
+  generate-job-summary:
+    description: When 'false', no Job Summary will be generated for the Job.
+    required: false
+    default: true
+    deprecation-message: Superceded by the new 'add-job-summary' and 'add-job-summary-as-pr-comment' parameters.
 
   # EXPERIMENTAL & INTERNAL ACTION INPUTS
   # The following action properties allow fine-grained tweaking of the action caching behaviour.
