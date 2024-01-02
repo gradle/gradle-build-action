@@ -2,6 +2,10 @@ name: Demo adding Build Scan® comment to PR
 on:
   pull_request:
     types: [assigned, review_requested]
+
+permissions:
+  pull-requests: write
+
 jobs:
   successful-build-with-always-comment:
     runs-on: ubuntu-latest

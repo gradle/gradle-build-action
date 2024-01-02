@@ -53,6 +53,8 @@ jobs:
   dependency-graph:
     needs: build-distribution
     uses: ./.github/workflows/integ-test-dependency-graph.yml
+    permissions:
+      contents: write
     with:
       runner-os: '["ubuntu-latest"]'
       download-dist: true

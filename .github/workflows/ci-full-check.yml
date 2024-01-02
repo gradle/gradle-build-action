@@ -31,6 +31,8 @@ jobs:
 
   dependency-graph:
     uses: ./.github/workflows/integ-test-dependency-graph.yml
+    permissions:
+      contents: write
     with:
       cache-key-prefix: ${{github.run_number}}-
 
