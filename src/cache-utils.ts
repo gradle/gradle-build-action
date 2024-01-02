@@ -86,10 +86,10 @@ export function generateCacheKey(cacheName: string): CacheKey {
     // At the most general level, share caches for all executions on the same OS
     const cacheKeyForEnvironment = `${cacheKeyBase}|${getCacheKeyEnvironment()}`
 
-    // Prefer caches that run this job
+    // Then prefer caches that run job with the same ID
     const cacheKeyForJob = `${cacheKeyForEnvironment}|${getCacheKeyJob()}`
 
-    // Prefer (even more) jobs that run this job with the same context (matrix)
+    // Prefer (even more) jobs that run this job in the same workflow with the same context (matrix)
     const cacheKeyForJobContext = `${cacheKeyForJob}[${getCacheKeyJobInstance()}]`
 
     // Exact match on Git SHA
@@ -113,12 +113,7 @@ function getCacheKeyEnvironment(): string {
 }
 
 function getCacheKeyJob(): string {
-    return process.env[CACHE_KEY_JOB_VAR] || getCacheKeyForJob(github.context.workflow, github.context.job)
-}
-
-export function getCacheKeyForJob(workflowName: string, jobId: string): string {
-    const sanitizedWorkflow = workflowName.replace(/,/g, '').toLowerCase()
-    return `${sanitizedWorkflow}-${jobId}`
+    return process.env[CACHE_KEY_JOB_VAR] || github.context.job
 }
 
 function getCacheKeyJobInstance(): string {
@@ -127,25 +122,11 @@ function getCacheKeyJobInstance(): string {
         return override
     }
 
-    // By default, we hash the full `matrix` data for the run, to uniquely identify this job invocation
+    // By default, we hash the workflow name and the full `matrix` data for the run, to uniquely identify this job invocation
     // The only way we can obtain the `matrix` data is via the `workflow-job-context` parameter in action.yml.
+    const workflowName = github.context.workflow
     const workflowJobContext = params.getJobMatrix()
-    return hashStrings([workflowJobContext])
-}
-
-export function getUniqueLabelForJobInstance(): string {
-    return getUniqueLabelForJobInstanceValues(github.context.workflow, github.context.job, params.getJobMatrix())
-}
-
-export function getUniqueLabelForJobInstanceValues(workflow: string, jobId: string, matrixJson: string): string {
-    const matrix = JSON.parse(matrixJson)
-    const matrixString = Object.values(matrix).join('-')
-    const label = matrixString ? `${workflow}-${jobId}-${matrixString}` : `${workflow}-${jobId}`
-    return sanitize(label)
-}
-
-function sanitize(value: string): string {
-    return value.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase()
+    return hashStrings([workflowName, workflowJobContext])
 }
 
 function getCacheKeyJobExecution(): string {
