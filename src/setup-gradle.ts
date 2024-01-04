@@ -13,10 +13,12 @@ import {CacheListener} from './cache-reporting'
 import {DaemonController} from './daemon-controller'
 
 const GRADLE_SETUP_VAR = 'GRADLE_BUILD_ACTION_SETUP_COMPLETED'
+const USER_HOME = 'USER_HOME'
 const GRADLE_USER_HOME = 'GRADLE_USER_HOME'
 const CACHE_LISTENER = 'CACHE_LISTENER'
 
 export async function setup(): Promise<void> {
+    const userHome = await determineUserHome()
     const gradleUserHome = await determineGradleUserHome()
 
     // Bypass setup on all but first action step in workflow.
@@ -29,11 +31,12 @@ export async function setup(): Promise<void> {
     // Record setup complete: visible in post-action, to control action completion
     core.saveState(GRADLE_SETUP_VAR, true)
 
-    // Save the Gradle User Home for use in the post-action step.
+    // Save the User Home and Gradle User Home for use in the post-action step.
+    core.saveState(USER_HOME, userHome)
     core.saveState(GRADLE_USER_HOME, gradleUserHome)
 
     const cacheListener = new CacheListener()
-    await caches.restore(gradleUserHome, cacheListener)
+    await caches.restore(userHome, gradleUserHome, cacheListener)
 
     core.saveState(CACHE_LISTENER, cacheListener.stringify())
 
@@ -49,11 +52,12 @@ export async function complete(): Promise<void> {
 
     const buildResults = loadBuildResults()
 
+    const userHome = core.getState(USER_HOME)
     const gradleUserHome = core.getState(GRADLE_USER_HOME)
     const cacheListener: CacheListener = CacheListener.rehydrate(core.getState(CACHE_LISTENER))
     const daemonController = new DaemonController(buildResults)
 
-    await caches.save(gradleUserHome, cacheListener, daemonController)
+    await caches.save(userHome, gradleUserHome, cacheListener, daemonController)
 
     await jobSummary.generateJobSummary(buildResults, cacheListener)
 
