@@ -88,11 +88,6 @@ inputs:
     required: false
     deprecation-message: Using the action to execute Gradle directly is deprecated in favor of using the action to setup Gradle, and executing Gradle in a subsequent Step. See https://github.com/gradle/gradle-build-action?tab=readme-ov-file#use-the-action-to-setup-gradle. 
 
-  gradle-executable:
-    description: Path to the Gradle executable. If specified, this executable will be added to the PATH and used for invoking Gradle.
-    required: false
-    deprecation-message: Using the action to execute Gradle directly is deprecated in favor of using the action to setup Gradle, and executing Gradle in a subsequent Step. See https://github.com/gradle/gradle-build-action?tab=readme-ov-file#use-the-action-to-setup-gradle. 
-
   generate-job-summary:
     description: When 'false', no Job Summary will be generated for the Job.
     required: false

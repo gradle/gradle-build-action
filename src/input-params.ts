@@ -49,10 +49,6 @@ export function getGradleVersion(): string {
     return core.getInput('gradle-version')
 }
 
-export function getGradleExecutable(): string {
-    return core.getInput('gradle-executable')
-}
-
 export function getArguments(): string[] {
     const input = core.getInput('arguments')
     return parseArgsStringToArgv(input)
