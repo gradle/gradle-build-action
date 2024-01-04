@@ -13,7 +13,7 @@ import {CacheCleaner} from './cache-cleaner'
 
 const CACHE_RESTORED_VAR = 'GRADLE_BUILD_ACTION_CACHE_RESTORED'
 
-export async function restore(gradleUserHome: string, cacheListener: CacheListener): Promise<void> {
+export async function restore(userHome: string, gradleUserHome: string, cacheListener: CacheListener): Promise<void> {
     // Bypass restore cache on all but first action step in workflow.
     if (process.env[CACHE_RESTORED_VAR]) {
         core.info('Cache only restored on first action step.')
@@ -21,7 +21,7 @@ export async function restore(gradleUserHome: string, cacheListener: CacheListen
     }
     core.exportVariable(CACHE_RESTORED_VAR, true)
 
-    const gradleStateCache = new GradleStateCache(gradleUserHome)
+    const gradleStateCache = new GradleStateCache(userHome, gradleUserHome)
 
     if (isCacheDisabled()) {
         core.info('Cache is disabled: will not restore state from previous builds.')
@@ -65,6 +65,7 @@ export async function restore(gradleUserHome: string, cacheListener: CacheListen
 }
 
 export async function save(
+    userHome: string,
     gradleUserHome: string,
     cacheListener: CacheListener,
     daemonController: DaemonController
@@ -98,6 +99,6 @@ export async function save(
     }
 
     await core.group('Caching Gradle state', async () => {
-        return new GradleStateCache(gradleUserHome).save(cacheListener)
+        return new GradleStateCache(userHome, gradleUserHome).save(cacheListener)
     })
 }

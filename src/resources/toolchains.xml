@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<toolchains>
+  <!-- JDK Toolchains installed by default on GitHub-hosted runners -->
+  <toolchain>
+    <type>jdk</type>
+    <provides>
+      <version>8</version>
+      <vendor>Eclipse Temurin</vendor>
+    </provides>
+    <configuration>
+      <jdkHome>${env.JAVA_HOME_8_X64}</jdkHome>
+    </configuration>
+  </toolchain>
+  <toolchain>
+    <type>jdk</type>
+    <provides>
+      <version>11</version>
+      <vendor>Eclipse Temurin</vendor>
+    </provides>
+    <configuration>
+      <jdkHome>${env.JAVA_HOME_11_X64}</jdkHome>
+    </configuration>
+  </toolchain>
+  <toolchain>
+    <type>jdk</type>
+    <provides>
+      <version>17</version>
+      <vendor>Eclipse Temurin</vendor>
+    </provides>
+    <configuration>
+      <jdkHome>${env.JAVA_HOME_17_X64}</jdkHome>
+    </configuration>
+  </toolchain>
+  <toolchain>
+    <type>jdk</type>
+    <provides>
+      <version>21</version>
+      <vendor>Eclipse Temurin</vendor>
+    </provides>
+    <configuration>
+      <jdkHome>${env.JAVA_HOME_21_X64}</jdkHome>
+    </configuration>
+  </toolchain>
+</toolchains>

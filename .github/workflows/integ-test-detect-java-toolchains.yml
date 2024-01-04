@@ -21,6 +21,7 @@ jobs:
   # Test that pre-installed runner JDKs are detected
   pre-installed-toolchains:
     strategy:
+      fail-fast: false
       matrix:
         os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
@@ -35,7 +36,7 @@ jobs:
       shell: bash
       working-directory: .github/workflow-samples/groovy-dsl
       run: | 
-        gradle -q javaToolchains > output.txt
+        gradle --info javaToolchains > output.txt
         cat output.txt
     - name: Verify detected toolchains
       shell: bash
@@ -44,10 +45,12 @@ jobs:
         grep -q 'Eclipse Temurin JDK 1.8' output.txt || (echo "::error::Did not detect preinstalled JDK 1.8" && exit 1)
         grep -q 'Eclipse Temurin JDK 11' output.txt || (echo "::error::Did not detect preinstalled JDK 11" && exit 1)
         grep -q 'Eclipse Temurin JDK 17' output.txt || (echo "::error::Did not detect preinstalled JDK 17" && exit 1)
+        grep -q 'Eclipse Temurin JDK 21' output.txt || (echo "::error::Did not detect preinstalled JDK 21" && exit 1)
 
   # Test that JDKs provisioned by setup-java are detected
   setup-java-installed-toolchain:
     strategy:
+      fail-fast: false
       matrix:
         os: ${{fromJSON(inputs.runner-os)}}
     runs-on: ${{ matrix.os }}
@@ -72,42 +75,19 @@ jobs:
       shell: bash
       working-directory: .github/workflow-samples/groovy-dsl
       run: | 
-        gradle -q javaToolchains > output.txt
+        gradle --info javaToolchains > output.txt
         cat output.txt
-    - name: Verify detected toolchains
+    - name: Verify setup JDKs are detected
       shell: bash
       working-directory: .github/workflow-samples/groovy-dsl
       run: | 
         grep -q 'Eclipse Temurin JDK 16' output.txt || (echo "::error::Did not detect setup-java installed JDK 16" && exit 1)
         grep -q 'Eclipse Temurin JDK 20' output.txt || (echo "::error::Did not detect setup-java installed JDK 20" && exit 1)
-
-  # Test that predefined JDK detection property is not overwritten by action
-  check-no-overwrite:
-    strategy:
-      matrix:
-        os: ${{fromJSON(inputs.runner-os)}}
-    runs-on: ${{ matrix.os }}
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-    - name: Download distribution if required
-      uses: ./.github/actions/download-dist
-    - name: Configure java installations env var in Gradle User Home
+    - name: Verify pre-installed toolchains are detected
       shell: bash
+      working-directory: .github/workflow-samples/groovy-dsl
       run: | 
-        mkdir -p ~/.gradle
-        echo "org.gradle.java.installations.fromEnv=XXXXX" > ~/.gradle/gradle.properties
-    - name: Setup Gradle
-      uses: ./
-    - name: Check gradle.properties
-      shell: bash
-      run: |
-        cat ~/.gradle/gradle.properties
-        if grep -q 'org.gradle.java.installations.fromEnv=JAVA_HOME' ~/.gradle/gradle.properties ; then
-          echo 'Found overwritten fromEnv'
-          exit 1
-        fi
-        if ! grep -q 'org.gradle.java.installations.fromEnv=XXXXX' ~/.gradle/gradle.properties ; then
-          echo 'Did NOT find original fromEnv'
-          exit 1
-        fi
+        grep -q 'Eclipse Temurin JDK 1.8' output.txt || (echo "::error::Did not detect preinstalled JDK 1.8" && exit 1)
+        grep -q 'Eclipse Temurin JDK 11' output.txt || (echo "::error::Did not detect preinstalled JDK 11" && exit 1)
+        grep -q 'Eclipse Temurin JDK 17' output.txt || (echo "::error::Did not detect preinstalled JDK 17" && exit 1)
+        grep -q 'Eclipse Temurin JDK 21' output.txt || (echo "::error::Did not detect preinstalled JDK 21" && exit 1)

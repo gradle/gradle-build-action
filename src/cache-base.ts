@@ -17,23 +17,18 @@ export class GradleStateCache {
     private cacheName: string
     private cacheDescription: string
 
+    protected readonly userHome: string
     protected readonly gradleUserHome: string
 
-    constructor(gradleUserHome: string) {
+    constructor(userHome: string, gradleUserHome: string) {
+        this.userHome = userHome
         this.gradleUserHome = gradleUserHome
         this.cacheName = 'gradle'
         this.cacheDescription = 'Gradle User Home'
     }
 
     init(): void {
-        // Copy init-scripts to Gradle User Home
-        const actionCacheDir = path.resolve(this.gradleUserHome, '.gradle-build-action')
-        fs.mkdirSync(actionCacheDir, {recursive: true})
-
-        const initScriptsDir = path.resolve(this.gradleUserHome, 'init.d')
-        fs.mkdirSync(initScriptsDir, {recursive: true})
-
-        this.initializeGradleUserHome(this.gradleUserHome, initScriptsDir)
+        this.initializeGradleUserHome()
 
         // Export the GRADLE_ENCRYPTION_KEY variable if provided
         const encryptionKey = params.getCacheEncryptionKey()
@@ -188,8 +183,21 @@ export class GradleStateCache {
         return path.resolve(this.gradleUserHome, rawPath)
     }
 
-    private initializeGradleUserHome(gradleUserHome: string, initScriptsDir: string): void {
-        // Copy init scripts from src/resources
+    private initializeGradleUserHome(): void {
+        // Create a directory for storing action metadata
+        const actionCacheDir = path.resolve(this.gradleUserHome, '.gradle-build-action')
+        fs.mkdirSync(actionCacheDir, {recursive: true})
+
+        this.copyInitScripts()
+
+        // Copy the default toolchain definitions to `~/.m2/toolchains.xml`
+        this.registerToolchains()
+    }
+
+    private copyInitScripts(): void {
+        // Copy init scripts from src/resources to Gradle UserHome
+        const initScriptsDir = path.resolve(this.gradleUserHome, 'init.d')
+        fs.mkdirSync(initScriptsDir, {recursive: true})
         const initScriptFilenames = [
             'gradle-build-action.build-result-capture.init.gradle',
             'gradle-build-action.build-result-capture-service.plugin.groovy',
@@ -198,15 +206,36 @@ export class GradleStateCache {
             'gradle-build-action.inject-gradle-enterprise.init.gradle'
         ]
         for (const initScriptFilename of initScriptFilenames) {
-            const initScriptContent = this.readInitScriptAsString(initScriptFilename)
+            const initScriptContent = this.readResourceFileAsString('init-scripts', initScriptFilename)
             const initScriptPath = path.resolve(initScriptsDir, initScriptFilename)
             fs.writeFileSync(initScriptPath, initScriptContent)
         }
     }
 
-    private readInitScriptAsString(resource: string): string {
+    private registerToolchains(): void {
+        const preInstalledToolchains = this.readResourceFileAsString('toolchains.xml')
+        const m2dir = path.resolve(this.userHome, '.m2')
+        const toolchainXmlTarget = path.resolve(m2dir, 'toolchains.xml')
+        if (!fs.existsSync(toolchainXmlTarget)) {
+            // Write a new toolchains.xml file if it doesn't exist
+            fs.mkdirSync(m2dir, {recursive: true})
+            fs.writeFileSync(toolchainXmlTarget, preInstalledToolchains)
+
+            core.info(`Wrote default JDK locations to ${toolchainXmlTarget}`)
+        } else {
+            // Merge into an existing toolchains.xml file
+            const existingToolchainContent = fs.readFileSync(toolchainXmlTarget, 'utf8')
+            const appendedContent = preInstalledToolchains.split('<toolchains>').pop()!
+            const mergedContent = existingToolchainContent.replace('</toolchains>', appendedContent)
+
+            fs.writeFileSync(toolchainXmlTarget, mergedContent)
+            core.info(`Merged default JDK locations into ${toolchainXmlTarget}`)
+        }
+    }
+
+    private readResourceFileAsString(...paths: string[]): string {
         // Resolving relative to __dirname will allow node to find the resource at runtime
-        const absolutePath = path.resolve(__dirname, '..', '..', 'src', 'resources', 'init-scripts', resource)
+        const absolutePath = path.resolve(__dirname, '..', '..', 'src', 'resources', ...paths)
         return fs.readFileSync(absolutePath, 'utf8')
     }
 
