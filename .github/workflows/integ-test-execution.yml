@@ -46,12 +46,6 @@ jobs:
         gradle-version: release-candidate
         build-root-directory: .github/workflow-samples/no-wrapper
         arguments: help
-    - name: Test use defined Gradle executable
-      uses: ./
-      with:
-        gradle-executable: .github/workflow-samples/groovy-dsl/gradlew${{ matrix.script-suffix }}
-        build-root-directory: .github/workflow-samples/no-wrapper
-        arguments: help
 
   gradle-versions:
     strategy:

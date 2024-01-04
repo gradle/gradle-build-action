@@ -22,11 +22,6 @@ export async function provisionGradle(): Promise<string | undefined> {
         return addToPath(await installGradle(gradleVersion))
     }
 
-    const gradleExecutable = params.getGradleExecutable()
-    if (gradleExecutable !== '') {
-        return addToPath(gradleExecutable)
-    }
-
     return undefined
 }
 

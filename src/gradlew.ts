@@ -28,7 +28,7 @@ function validateGradleWrapper(buildRootDirectory: string): void {
 function verifyExists(file: string, description: string): void {
     if (!fs.existsSync(file)) {
         throw new Error(
-            `Cannot locate ${description} at '${file}'. Specify 'gradle-version' or 'gradle-executable' for projects without Gradle wrapper configured.`
+            `Cannot locate ${description} at '${file}'. Specify 'gradle-version' for projects without Gradle wrapper configured.`
         )
     }
 }
