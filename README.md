@@ -259,9 +259,9 @@ This allows the most recent state to always be available in the GitHub actions c
 ### Finding a matching cache entry
 
 In most cases, no exact match will exist for the cache key. Instead, the Gradle User Home will be restored for the closest matching cache entry, using a set of "restore keys". The entries will be matched with the following precedence:
-- An exact match on OS, workflow, job, matrix and Git SHA
-- The most recent entry saved for the same OS, workflow, job and matrix values
-- The most recent entry saved for the same OS, workflow and job
+- An exact match on OS, workflow name, job id, matrix and Git SHA
+- The most recent entry saved for the same OS, workflow name, job id and matrix values
+- The most recent entry saved for the same OS and job id
 - The most recent entry saved for the same OS
 
 Due to branch scoping of cache entries, the above match will be first performed for entries from the same branch, and then for the default ('main') branch.
