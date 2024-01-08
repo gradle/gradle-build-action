@@ -327,8 +327,8 @@ you can configure this by disabling the `cache-read-only` action parameter for t
 See [Using the cache read-only](#using-the-cache-read-only) for more details.
 
 Note there are some cases where writing cache entries is typically unhelpful (these are disabled by default):
-- For `pull_request` triggered runs, the cache scope is limited to the merge ref (`refs/pull/.../merge`) and can only be restored by re-runs of the pull request.
-- For `merge_queue` triggered runs, the cache scope is limited to a temporary branch with a special prefix created to validate pull request changes.
+- For `pull_request` triggered runs, the cache scope is limited to the merge ref (`refs/pull/.../merge`) and can only be restored by re-runs of the same pull request.
+- For `merge_group` triggered runs, the cache scope is limited to a temporary branch with a special prefix created to validate pull request changes, and won't be available on subsequent Merge Queue executions.
 
   
 ### Exclude content from Gradle User Home cache
