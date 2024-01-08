@@ -120,7 +120,7 @@ cache-disabled: true
 
 By default, the `gradle-build-action` will only write to the cache from Jobs on the default (`main`/`master`) branch.
 Jobs on other branches will read entries from the cache but will not write updated entries. 
-See [Optimizing cache effectiveness](#optimizing-cache-effectiveness) for a more detailed explanation.
+See [Optimizing cache effectiveness](#select-which-branches-should-write-to-the-cache) for a more detailed explanation.
 
 In some circumstances it makes sense to change this default, and to configure a workflow Job to read existing cache entries but not to write changes back.
 
@@ -314,20 +314,23 @@ There are some techniques that can be used to avoid/mitigate this issue:
 ### Select which branches should write to the cache
 
 GitHub cache entries are not shared between builds on different branches. 
-This means that each PR branch will have it's own Gradle User Home cache, and will not benefit from cache entries written by other PR branches.
-An exception to this is that cache entries written in parent and upstream branches are visible to child branches, and cache entries for the default (`master`/`main`) branch can be read by actions invoked for any other branch.
+Workflow runs can restore caches created in either the current branch or the default branch (usually main).
+This means that each branch will have it's own Gradle User Home cache scope, and will not benefit from cache entries written for other (non-default) branches.
 
 By default, the `gradle-build-action` will only _write_ to the cache for builds run on the default (`master`/`main`) branch. 
-Jobs run on other branches will only read from the cache. In most cases, this is the desired behaviour, 
-because Jobs run against other branches will benefit from the cache Gradle User Home from `main`, 
-without writing private cache entries that could lead to evicting shared entries.
+Jobs run on other branches will only read from the cache. In most cases, this is the desired behavior. 
+This is because Jobs run on other branches will benefit from the cache Gradle User Home from `main`, 
+without writing private cache entries that which could lead to evicting these shared entries.
 
 If you have other long-lived development branches that would benefit from writing to the cache, 
-you can configure these by overriding the `cache-read-only` action parameter. 
+you can configure this by disabling the `cache-read-only` action parameter for these branches. 
 See [Using the cache read-only](#using-the-cache-read-only) for more details.
 
-Similarly, you could use `cache-read-only` for certain jobs in the workflow, and instead have these jobs reuse the cache content from upstream jobs.
+Note there are some cases where writing cache entries is typically unhelpful (these are disabled by default):
+- For `pull_request` triggered runs, the cache scope is limited to the merge ref (`refs/pull/.../merge`) and can only be restored by re-runs of the pull request.
+- For `merge_queue` triggered runs, the cache scope is limited to a temporary branch with a special prefix created to validate pull request changes.
 
+  
 ### Exclude content from Gradle User Home cache
 
 As well as any wrapper distributions, the action will attempt to save and restore the `caches` and `notifications` directories from Gradle User Home.
