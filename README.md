@@ -801,9 +801,9 @@ name: Run build with Develocity injection
   
 env:
   DEVELOCITY_INJECTION_ENABLED: true
-  DEVELOCITY_URL: https://ge.gradle.org
+  DEVELOCITY_URL: https://develocity.gradle.org
   DEVELOCITY_PLUGIN_VERSION: 3.16.1
-  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }} # Required to publish scans to ge.gradle.org
+  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }} # Required to publish scans to develocity.gradle.org
 
 jobs:
   build:
@@ -816,9 +816,9 @@ jobs:
       run: ./gradlew build
 ```
 
-This configuration will automatically apply `v3.16.1` of the [Develocity Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/), and publish build scans to https://ge.gradle.org.
+This configuration will automatically apply `v3.16.1` of the [Develocity Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/), and publish build scans to https://develocity.gradle.org.
 
-Note that the `ge.gradle.org` server requires authentication in order to publish scans. The provided `DEVELOCITY_ACCESS_KEY` isn't required by the Develocity injection script, 
+Note that the `develocity.gradle.org` server requires authentication in order to publish scans. The provided `DEVELOCITY_ACCESS_KEY` isn't required by the Develocity injection script, 
 but will be used by the GE plugin in order to authenticate with the server.
 
 ## Configuring Develocity injection
@@ -833,7 +833,7 @@ The `init-script` supports a number of additional configuration parameters that 
 | DEVELOCITY_ENFORCE_URL            | | enforce the configured Develocity URL over a URL configured in the project's build; set to _true_ to enforce publication of build scans to the configured Develocity URL |
 | DEVELOCITY_PLUGIN_VERSION         | :white_check_mark: | the version of the [Develocity Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/) to apply |
 | DEVELOCITY_CCUD_PLUGIN_VERSION    |  | the version of the [Common Custom User Data Gradle plugin](https://github.com/gradle/common-custom-user-data-gradle-plugin) to apply, if any |
-| DEVELOCITY_PLUGIN_REPOSITORY_URL  |  | the URL of the repository to use when resolving the GE and CCUD plugins; the Gradle Plugin Portal is used by default |
+| DEVELOCITY_PLUGIN_REPOSITORY_URL  |  | the URL of the repository to use when resolving the Develocity and CCUD plugins; the Gradle Plugin Portal is used by default |
 
 ## Publishing to scans.gradle.com
 
