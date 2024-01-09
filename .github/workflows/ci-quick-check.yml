@@ -73,14 +73,14 @@ jobs:
       runner-os: '["ubuntu-latest"]'
       download-dist: true
 
-  gradle-enterprise-injection:
+  develocity-injection:
     needs: build-distribution
-    uses: ./.github/workflows/integ-test-inject-gradle-enterprise.yml
+    uses: ./.github/workflows/integ-test-inject-develocity.yml
     with:
       runner-os: '["ubuntu-latest"]'
       download-dist: true
     secrets:
-      GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GE_SOLUTIONS_ACCESS_TOKEN }}
+      DEVELOCITY_ACCESS_KEY: ${{ secrets.GE_SOLUTIONS_ACCESS_TOKEN }}
 
   provision-gradle-versions:
     needs: build-distribution

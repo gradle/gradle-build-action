@@ -5,28 +5,28 @@ import org.gradle.util.GradleVersion
 
 import static org.junit.Assume.assumeTrue
 
-class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
+class TestDevelocityInjection extends BaseInitScriptTest {
     static final List<TestGradleVersion> CCUD_COMPATIBLE_VERSIONS = ALL_VERSIONS - [GRADLE_3_X]
 
-    def initScript = 'gradle-build-action.inject-gradle-enterprise.init.gradle'
+    def initScript = 'gradle-build-action.inject-develocity.init.gradle'
 
     private static final GradleVersion GRADLE_6 = GradleVersion.version('6.0')
 
-    def "does not apply GE plugins when not requested"() {
+    def "does not apply Develocity plugins when not requested"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         when:
         def result = run([], initScript, testGradleVersion.gradleVersion)
 
         then:
-        outputMissesGePluginApplicationViaInitScript(result)
+        outputMissesDevelocityPluginApplicationViaInitScript(result)
         outputMissesCcudPluginApplicationViaInitScript(result)
 
         where:
         testGradleVersion << ALL_VERSIONS
     }
 
-    def "does not override GE plugin when already defined in project"() {
+    def "does not override Develocity plugin when already defined in project"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         given:
@@ -36,7 +36,7 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         def result = run(testGradleVersion, testConfig())
 
         then:
-        outputMissesGePluginApplicationViaInitScript(result)
+        outputMissesDevelocityPluginApplicationViaInitScript(result)
         outputMissesCcudPluginApplicationViaInitScript(result)
 
         and:
@@ -46,14 +46,14 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         testGradleVersion << ALL_VERSIONS
     }
 
-    def "applies GE plugin via init script when not defined in project"() {
+    def "applies Develocity plugin via init script when not defined in project"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         when:
         def result = run(testGradleVersion, testConfig())
 
         then:
-        outputContainsGePluginApplicationViaInitScript(result, testGradleVersion.gradleVersion)
+        outputContainsDevelocityPluginApplicationViaInitScript(result, testGradleVersion.gradleVersion)
         outputMissesCcudPluginApplicationViaInitScript(result)
 
         and:
@@ -63,14 +63,14 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         testGradleVersion << ALL_VERSIONS
     }
 
-    def "applies GE and CCUD plugins via init script when not defined in project"() {
+    def "applies Develocity and CCUD plugins via init script when not defined in project"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         when:
         def result = run(testGradleVersion, testConfig().withCCUDPlugin())
 
         then:
-        outputContainsGePluginApplicationViaInitScript(result, testGradleVersion.gradleVersion)
+        outputContainsDevelocityPluginApplicationViaInitScript(result, testGradleVersion.gradleVersion)
         outputContainsCcudPluginApplicationViaInitScript(result)
 
         and:
@@ -80,7 +80,7 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         testGradleVersion << CCUD_COMPATIBLE_VERSIONS
     }
 
-    def "applies CCUD plugin via init script where GE plugin already applied"() {
+    def "applies CCUD plugin via init script where Develocity plugin already applied"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         given:
@@ -90,7 +90,7 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         def result = run(testGradleVersion, testConfig().withCCUDPlugin())
 
         then:
-        outputMissesGePluginApplicationViaInitScript(result)
+        outputMissesDevelocityPluginApplicationViaInitScript(result)
         outputContainsCcudPluginApplicationViaInitScript(result)
 
         and:
@@ -110,7 +110,7 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         def result = run(testGradleVersion, testConfig().withCCUDPlugin())
 
         then:
-        outputMissesGePluginApplicationViaInitScript(result)
+        outputMissesDevelocityPluginApplicationViaInitScript(result)
         outputMissesCcudPluginApplicationViaInitScript(result)
 
         and:
@@ -120,18 +120,18 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         testGradleVersion << CCUD_COMPATIBLE_VERSIONS
     }
 
-    def "ignores GE URL and allowUntrustedServer when GE plugin is not applied by the init script"() {
+    def "ignores Develocity URL and allowUntrustedServer when Develocity plugin is not applied by the init script"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         given:
         declareGePluginApplication(testGradleVersion.gradleVersion)
 
         when:
-        def config = testConfig().withServer(URI.create('https://ge-server.invalid'))
+        def config = testConfig().withServer(URI.create('https://develocity-server.invalid'))
         def result = run(testGradleVersion, config)
 
         then:
-        outputMissesGePluginApplicationViaInitScript(result)
+        outputMissesDevelocityPluginApplicationViaInitScript(result)
         outputMissesCcudPluginApplicationViaInitScript(result)
 
         and:
@@ -141,7 +141,7 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         testGradleVersion << ALL_VERSIONS
     }
 
-    def "configures GE URL and allowUntrustedServer when GE plugin is applied by the init script"() {
+    def "configures Develocity URL and allowUntrustedServer when Develocity plugin is applied by the init script"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         when:
@@ -149,8 +149,8 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         def result = run(testGradleVersion, config)
 
         then:
-        outputContainsGePluginApplicationViaInitScript(result, testGradleVersion.gradleVersion)
-        outputContainsGeConnectionInfo(result, mockScansServer.address.toString(), true)
+        outputContainsDevelocityPluginApplicationViaInitScript(result, testGradleVersion.gradleVersion)
+        outputContainsDevelocityConnectionInfo(result, mockScansServer.address.toString(), true)
         outputMissesCcudPluginApplicationViaInitScript(result)
         outputContainsPluginRepositoryInfo(result, 'https://plugins.gradle.org/m2')
 
@@ -161,22 +161,22 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         testGradleVersion << ALL_VERSIONS
     }
 
-    def "enforces GE URL and allowUntrustedServer in project if enforce url parameter is enabled"() {
+    def "enforces Develocity URL and allowUntrustedServer in project if enforce url parameter is enabled"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         given:
-        declareGePluginApplication(testGradleVersion.gradleVersion, URI.create('https://ge-server.invalid'))
+        declareGePluginApplication(testGradleVersion.gradleVersion, URI.create('https://develocity-server.invalid'))
 
         when:
         def config = testConfig().withServer(mockScansServer.address, true)
         def result = run(testGradleVersion, config)
 
         then:
-        outputMissesGePluginApplicationViaInitScript(result)
+        outputMissesDevelocityPluginApplicationViaInitScript(result)
         outputMissesCcudPluginApplicationViaInitScript(result)
 
         and:
-        outputEnforcesGeUrl(result, mockScansServer.address.toString(), true)
+        outputEnforcesDevelocityUrl(result, mockScansServer.address.toString(), true)
 
         and:
         outputContainsBuildScanUrl(result)
@@ -185,7 +185,7 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         testGradleVersion << ALL_VERSIONS
     }
 
-    def "can configure alternative repository for plugins when GE plugin is applied by the init script"() {
+    def "can configure alternative repository for plugins when Develocity plugin is applied by the init script"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         when:
@@ -193,8 +193,8 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         def result = run(testGradleVersion, config)
 
         then:
-        outputContainsGePluginApplicationViaInitScript(result, testGradleVersion.gradleVersion)
-        outputContainsGeConnectionInfo(result, mockScansServer.address.toString(), true)
+        outputContainsDevelocityPluginApplicationViaInitScript(result, testGradleVersion.gradleVersion)
+        outputContainsDevelocityConnectionInfo(result, mockScansServer.address.toString(), true)
         outputMissesCcudPluginApplicationViaInitScript(result)
         outputContainsPluginRepositoryInfo(result, 'https://plugins.grdev.net/m2')
 
@@ -213,7 +213,7 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         def result = run(testGradleVersion, config)
 
         then:
-        outputMissesGePluginApplicationViaInitScript(result)
+        outputMissesDevelocityPluginApplicationViaInitScript(result)
         outputMissesCcudPluginApplicationViaInitScript(result)
         result.output.contains('Common Custom User Data Gradle plugin must be at least 1.7. Configured version is 1.6.6.')
 
@@ -221,15 +221,15 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         testGradleVersion << ALL_VERSIONS
     }
 
-    def "can configure GE via CCUD system property overrides when CCUD plugin is inject via init script"() {
+    def "can configure Develocity via CCUD system property overrides when CCUD plugin is inject via init script"() {
         assumeTrue testGradleVersion.compatibleWithCurrentJvm
 
         when:
-        def config = testConfig().withCCUDPlugin().withServer(URI.create('https://ge-server.invalid'))
+        def config = testConfig().withCCUDPlugin().withServer(URI.create('https://develocity-server.invalid'))
         def result = run(testGradleVersion, config, ["help", "-Dgradle.enterprise.url=${mockScansServer.address}".toString()])
 
         then:
-        outputContainsGePluginApplicationViaInitScript(result, testGradleVersion.gradleVersion)
+        outputContainsDevelocityPluginApplicationViaInitScript(result, testGradleVersion.gradleVersion)
         outputContainsCcudPluginApplicationViaInitScript(result)
 
         and:
@@ -247,7 +247,7 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         def result = run(testGradleVersion, config, ["help", "--configuration-cache"])
 
         then:
-        outputContainsGePluginApplicationViaInitScript(result, testGradleVersion.gradleVersion)
+        outputContainsDevelocityPluginApplicationViaInitScript(result, testGradleVersion.gradleVersion)
         outputContainsCcudPluginApplicationViaInitScript(result)
 
         and:
@@ -257,7 +257,7 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         result = run(testGradleVersion, config, ["help", "--configuration-cache"])
 
         then:
-        outputMissesGePluginApplicationViaInitScript(result)
+        outputMissesDevelocityPluginApplicationViaInitScript(result)
         outputMissesCcudPluginApplicationViaInitScript(result)
 
         and:
@@ -273,7 +273,7 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         assert 1 == result.output.count(message)
     }
 
-    void outputContainsGePluginApplicationViaInitScript(BuildResult result, GradleVersion gradleVersion) {
+    void outputContainsDevelocityPluginApplicationViaInitScript(BuildResult result, GradleVersion gradleVersion) {
         def pluginApplicationLogMsgGradle4And5 = "Applying com.gradle.scan.plugin.BuildScanPlugin via init script"
         def pluginApplicationLogMsgGradle6AndHigher = "Applying com.gradle.enterprise.gradleplugin.GradleEnterprisePlugin via init script"
         if (gradleVersion < GRADLE_6) {
@@ -287,7 +287,7 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         }
     }
 
-    void outputMissesGePluginApplicationViaInitScript(BuildResult result) {
+    void outputMissesDevelocityPluginApplicationViaInitScript(BuildResult result) {
         def pluginApplicationLogMsgGradle4And5 = "Applying com.gradle.scan.plugin.BuildScanPlugin via init script"
         def pluginApplicationLogMsgGradle6AndHigher = "Applying com.gradle.enterprise.gradleplugin.GradleEnterprisePlugin via init script"
         assert !result.output.contains(pluginApplicationLogMsgGradle4And5)
@@ -305,20 +305,20 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
         assert !result.output.contains(pluginApplicationLogMsg)
     }
 
-    void outputContainsGeConnectionInfo(BuildResult result, String geUrl, boolean geAllowUntrustedServer) {
-        def geConnectionInfo = "Connection to Gradle Enterprise: $geUrl, allowUntrustedServer: $geAllowUntrustedServer"
+    void outputContainsDevelocityConnectionInfo(BuildResult result, String geUrl, boolean geAllowUntrustedServer) {
+        def geConnectionInfo = "Connection to Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer"
         assert result.output.contains(geConnectionInfo)
         assert 1 == result.output.count(geConnectionInfo)
     }
 
     void outputContainsPluginRepositoryInfo(BuildResult result, String gradlePluginRepositoryUrl) {
-        def repositoryInfo = "Gradle Enterprise plugins resolution: ${gradlePluginRepositoryUrl}"
+        def repositoryInfo = "Develocity plugins resolution: ${gradlePluginRepositoryUrl}"
         assert result.output.contains(repositoryInfo)
         assert 1 == result.output.count(repositoryInfo)
     }
 
-    void outputEnforcesGeUrl(BuildResult result, String geUrl, boolean geAllowUntrustedServer) {
-        def enforceUrl = "Enforcing Gradle Enterprise: $geUrl, allowUntrustedServer: $geAllowUntrustedServer"
+    void outputEnforcesDevelocityUrl(BuildResult result, String geUrl, boolean geAllowUntrustedServer) {
+        def enforceUrl = "Enforcing Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer"
         assert result.output.contains(enforceUrl)
         assert 1 == result.output.count(enforceUrl)
     }
@@ -369,31 +369,31 @@ class TestGradleEnterpriseInjection  extends BaseInitScriptTest {
 
         def getEnvVars() {
             Map<String, String> envVars = [
-                GRADLE_ENTERPRISE_INJECTION_ENABLED: "true",
-                GRADLE_ENTERPRISE_URL: serverUrl,
-                GRADLE_ENTERPRISE_ALLOW_UNTRUSTED_SERVER: "true",
-                GRADLE_ENTERPRISE_PLUGIN_VERSION: GE_PLUGIN_VERSION,
-                GRADLE_ENTERPRISE_BUILD_SCAN_UPLOAD_IN_BACKGROUND: "true" // Need to upload in background since our Mock server doesn't cope with foreground upload
+                DEVELOCITY_INJECTION_ENABLED: "true",
+                DEVELOCITY_URL: serverUrl,
+                DEVELOCITY_ALLOW_UNTRUSTED_SERVER: "true",
+                DEVELOCITY_PLUGIN_VERSION: GE_PLUGIN_VERSION,
+                DEVELOCITY_BUILD_SCAN_UPLOAD_IN_BACKGROUND: "true" // Need to upload in background since our Mock server doesn't cope with foreground upload
             ]
-            if (enforceUrl) envVars.put("GRADLE_ENTERPRISE_ENFORCE_URL", "true")
-            if (ccudPluginVersion != null) envVars.put("GRADLE_ENTERPRISE_CCUD_PLUGIN_VERSION", ccudPluginVersion)
-            if (pluginRepositoryUrl != null) envVars.put("GRADLE_ENTERPRISE_PLUGIN_REPOSITORY_URL", pluginRepositoryUrl)
+            if (enforceUrl) envVars.put("DEVELOCITY_ENFORCE_URL", "true")
+            if (ccudPluginVersion != null) envVars.put("DEVELOCITY_CCUD_PLUGIN_VERSION", ccudPluginVersion)
+            if (pluginRepositoryUrl != null) envVars.put("DEVELOCITY_PLUGIN_REPOSITORY_URL", pluginRepositoryUrl)
 
             return envVars
         }
 
         def getJvmArgs() {
             List<String> jvmArgs = [
-                "-Dgradle-enterprise.injection-enabled=true",
-                "-Dgradle-enterprise.url=$serverUrl",
-                "-Dgradle-enterprise.allow-untrusted-server=true",
-                "-Dgradle-enterprise.plugin.version=$GE_PLUGIN_VERSION",
-                "-Dgradle-enterprise.build-scan.upload-in-background=true"
+                "-Ddevelocity.injection-enabled=true",
+                "-Ddevelocity.url=$serverUrl",
+                "-Ddevelocity.allow-untrusted-server=true",
+                "-Ddevelocity.plugin.version=$GE_PLUGIN_VERSION",
+                "-Ddevelocity.build-scan.upload-in-background=true"
             ]
 
-            if (enforceUrl) jvmArgs.add("-Dgradle-enterprise.enforce-url=true")
-            if (ccudPluginVersion != null) jvmArgs.add("-Dgradle-enterprise.ccud-plugin.version=$ccudPluginVersion")
-            if (pluginRepositoryUrl != null) jvmArgs.add("-Dgradle-enterprise.plugin-repository.url=$pluginRepositoryUrl")
+            if (enforceUrl) jvmArgs.add("-Ddevelocity.enforce-url=true")
+            if (ccudPluginVersion != null) jvmArgs.add("-Ddevelocity.ccud-plugin.version=$ccudPluginVersion")
+            if (pluginRepositoryUrl != null) jvmArgs.add("-Ddevelocity.plugin-repository.url=$pluginRepositoryUrl")
 
             return jvmArgs.collect { it.toString() } // Convert from GStrings
         }
