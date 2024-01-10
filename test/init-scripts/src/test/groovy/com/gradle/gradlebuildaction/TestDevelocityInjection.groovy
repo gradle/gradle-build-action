@@ -372,12 +372,12 @@ class TestDevelocityInjection extends BaseInitScriptTest {
                 DEVELOCITY_INJECTION_ENABLED: "true",
                 DEVELOCITY_URL: serverUrl,
                 DEVELOCITY_ALLOW_UNTRUSTED_SERVER: "true",
-                DEVELOCITY_PLUGIN_VERSION: GE_PLUGIN_VERSION,
+                DEVELOCITY_PLUGIN_VERSION: DEVELOCITY_PLUGIN_VERSION,
                 DEVELOCITY_BUILD_SCAN_UPLOAD_IN_BACKGROUND: "true" // Need to upload in background since our Mock server doesn't cope with foreground upload
             ]
             if (enforceUrl) envVars.put("DEVELOCITY_ENFORCE_URL", "true")
             if (ccudPluginVersion != null) envVars.put("DEVELOCITY_CCUD_PLUGIN_VERSION", ccudPluginVersion)
-            if (pluginRepositoryUrl != null) envVars.put("DEVELOCITY_PLUGIN_REPOSITORY_URL", pluginRepositoryUrl)
+            if (pluginRepositoryUrl != null) envVars.put("GRADLE_PLUGIN_REPOSITORY_URL", pluginRepositoryUrl)
 
             return envVars
         }
@@ -387,13 +387,13 @@ class TestDevelocityInjection extends BaseInitScriptTest {
                 "-Ddevelocity.injection-enabled=true",
                 "-Ddevelocity.url=$serverUrl",
                 "-Ddevelocity.allow-untrusted-server=true",
-                "-Ddevelocity.plugin.version=$GE_PLUGIN_VERSION",
+                "-Ddevelocity.plugin.version=$DEVELOCITY_PLUGIN_VERSION",
                 "-Ddevelocity.build-scan.upload-in-background=true"
             ]
 
             if (enforceUrl) jvmArgs.add("-Ddevelocity.enforce-url=true")
             if (ccudPluginVersion != null) jvmArgs.add("-Ddevelocity.ccud-plugin.version=$ccudPluginVersion")
-            if (pluginRepositoryUrl != null) jvmArgs.add("-Ddevelocity.plugin-repository.url=$pluginRepositoryUrl")
+            if (pluginRepositoryUrl != null) jvmArgs.add("-Dgradle.plugin-repository.url=$pluginRepositoryUrl")
 
             return jvmArgs.collect { it.toString() } // Convert from GStrings
         }

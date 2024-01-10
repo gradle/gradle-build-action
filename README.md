@@ -801,7 +801,7 @@ name: Run build with Develocity injection
   
 env:
   DEVELOCITY_INJECTION_ENABLED: true
-  DEVELOCITY_URL: https://develocity.gradle.org
+  DEVELOCITY_URL: https://develocity.your-server.com
   DEVELOCITY_PLUGIN_VERSION: 3.16.1
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }} # Required to publish scans to develocity.gradle.org
 
@@ -833,7 +833,7 @@ The `init-script` supports a number of additional configuration parameters that 
 | DEVELOCITY_ENFORCE_URL            | | enforce the configured Develocity URL over a URL configured in the project's build; set to _true_ to enforce publication of build scans to the configured Develocity URL |
 | DEVELOCITY_PLUGIN_VERSION         | :white_check_mark: | the version of the [Develocity Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/) to apply |
 | DEVELOCITY_CCUD_PLUGIN_VERSION    |  | the version of the [Common Custom User Data Gradle plugin](https://github.com/gradle/common-custom-user-data-gradle-plugin) to apply, if any |
-| DEVELOCITY_PLUGIN_REPOSITORY_URL  |  | the URL of the repository to use when resolving the Develocity and CCUD plugins; the Gradle Plugin Portal is used by default |
+| GRADLE_PLUGIN_REPOSITORY_URL      |  | the URL of the repository to use when resolving the Develocity and CCUD plugins; the Gradle Plugin Portal is used by default |
 
 ## Publishing to scans.gradle.com
 

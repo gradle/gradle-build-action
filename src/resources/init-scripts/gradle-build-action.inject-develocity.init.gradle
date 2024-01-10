@@ -20,7 +20,7 @@ initscript {
         return
     }
 
-    def pluginRepositoryUrl = getInputParam('develocity.plugin-repository.url')
+    def pluginRepositoryUrl = getInputParam('gradle.plugin-repository.url')
     def gePluginVersion = getInputParam('develocity.plugin.version')
     def ccudPluginVersion = getInputParam('develocity.ccud-plugin.version')
 

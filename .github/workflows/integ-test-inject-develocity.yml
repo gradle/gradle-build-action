@@ -23,7 +23,7 @@ env:
   DEVELOCITY_URL: https://ge.solutions-team.gradle.com
   DEVELOCITY_PLUGIN_VERSION: 3.16.1
   DEVELOCITY_CCUD_PLUGIN_VERSION: 1.12.1
-  DEVELOCITY_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
 
 jobs:
   inject-develocity:
