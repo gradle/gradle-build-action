@@ -247,11 +247,11 @@ For this reason, it's very difficult to create a cache key that will determinist
 
 The Gradle User Home cache key is composed of:
 - The current operating system (`RUNNER_OS`)
-- The workflow name and Job ID
-- A hash of the Job matrix parameters
+- The Job id
+- A hash of the Job matrix parameters and the workflow name
 - The git SHA for the latest commit
 
-Specifically, the cache key is: `${cache-protocol}-gradle|${runner-os}|${workflow-name}-${job-id}[${hash-of-job-matrix}]-${git-sha}`
+Specifically, the cache key is: `${cache-protocol}-gradle|${runner-os}|${job-id}[${hash-of-job-matrix-and-workflow-name}]-${git-sha}`
 
 As such, the cache key is likely to change on each subsequent run of GitHub actions. 
 This allows the most recent state to always be available in the GitHub actions cache.
@@ -259,8 +259,8 @@ This allows the most recent state to always be available in the GitHub actions c
 ### Finding a matching cache entry
 
 In most cases, no exact match will exist for the cache key. Instead, the Gradle User Home will be restored for the closest matching cache entry, using a set of "restore keys". The entries will be matched with the following precedence:
-- An exact match on OS, workflow name, job id, matrix and Git SHA
-- The most recent entry saved for the same OS, workflow name, job id and matrix values
+- An exact match on OS, job id, workflow name, matrix and Git SHA
+- The most recent entry saved for the same OS, job id, workflow name and matrix values
 - The most recent entry saved for the same OS and job id
 - The most recent entry saved for the same OS
 
