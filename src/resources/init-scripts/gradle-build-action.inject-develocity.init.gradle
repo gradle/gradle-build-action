@@ -15,21 +15,21 @@ initscript {
     }
 
     // finish early if injection is disabled
-    def gradleInjectionEnabled = getInputParam("gradle-enterprise.injection-enabled")
+    def gradleInjectionEnabled = getInputParam("develocity.injection-enabled")
     if (gradleInjectionEnabled != "true") {
         return
     }
 
-    def pluginRepositoryUrl = getInputParam('gradle-enterprise.plugin-repository.url')
-    def gePluginVersion = getInputParam('gradle-enterprise.plugin.version')
-    def ccudPluginVersion = getInputParam('gradle-enterprise.ccud-plugin.version')
+    def pluginRepositoryUrl = getInputParam('gradle.plugin-repository.url')
+    def gePluginVersion = getInputParam('develocity.plugin.version')
+    def ccudPluginVersion = getInputParam('develocity.ccud-plugin.version')
 
     def atLeastGradle5 = GradleVersion.current() >= GradleVersion.version('5.0')
     def atLeastGradle4 = GradleVersion.current() >= GradleVersion.version('4.0')
 
     if (gePluginVersion || ccudPluginVersion && atLeastGradle4) {
         pluginRepositoryUrl = pluginRepositoryUrl ?: 'https://plugins.gradle.org/m2'
-        logger.quiet("Gradle Enterprise plugins resolution: $pluginRepositoryUrl")
+        logger.quiet("Develocity plugins resolution: $pluginRepositoryUrl")
 
         repositories {
             maven { url pluginRepositoryUrl }
@@ -52,9 +52,9 @@ initscript {
 def BUILD_SCAN_PLUGIN_ID = 'com.gradle.build-scan'
 def BUILD_SCAN_PLUGIN_CLASS = 'com.gradle.scan.plugin.BuildScanPlugin'
 
-def GRADLE_ENTERPRISE_PLUGIN_ID = 'com.gradle.enterprise'
-def GRADLE_ENTERPRISE_PLUGIN_CLASS = 'com.gradle.enterprise.gradleplugin.GradleEnterprisePlugin'
-def GRADLE_ENTERPRISE_EXTENSION_CLASS = 'com.gradle.enterprise.gradleplugin.GradleEnterpriseExtension'
+def DEVELOCITY_PLUGIN_ID = 'com.gradle.enterprise'
+def DEVELOCITY_PLUGIN_CLASS = 'com.gradle.enterprise.gradleplugin.GradleEnterprisePlugin'
+def DEVELOCITY_EXTENSION_CLASS = 'com.gradle.enterprise.gradleplugin.GradleEnterpriseExtension'
 def CI_AUTO_INJECTION_CUSTOM_VALUE_NAME = 'CI auto injection'
 def CI_AUTO_INJECTION_CUSTOM_VALUE_VALUE = 'gradle-build-action'
 def CCUD_PLUGIN_ID = 'com.gradle.common-custom-user-data-gradle-plugin'
@@ -71,17 +71,17 @@ def getInputParam = { String name ->
 }
 
 // finish early if injection is disabled
-def gradleInjectionEnabled = getInputParam("gradle-enterprise.injection-enabled")
+def gradleInjectionEnabled = getInputParam("develocity.injection-enabled")
 if (gradleInjectionEnabled != "true") {
     return
 }
 
-def geUrl = getInputParam('gradle-enterprise.url')
-def geAllowUntrustedServer = Boolean.parseBoolean(getInputParam('gradle-enterprise.allow-untrusted-server'))
-def geEnforceUrl = Boolean.parseBoolean(getInputParam('gradle-enterprise.enforce-url'))
-def buildScanUploadInBackground = Boolean.parseBoolean(getInputParam('gradle-enterprise.build-scan.upload-in-background'))
-def gePluginVersion = getInputParam('gradle-enterprise.plugin.version')
-def ccudPluginVersion = getInputParam('gradle-enterprise.ccud-plugin.version')
+def geUrl = getInputParam('develocity.url')
+def geAllowUntrustedServer = Boolean.parseBoolean(getInputParam('develocity.allow-untrusted-server'))
+def geEnforceUrl = Boolean.parseBoolean(getInputParam('develocity.enforce-url'))
+def buildScanUploadInBackground = Boolean.parseBoolean(getInputParam('develocity.build-scan.upload-in-background'))
+def gePluginVersion = getInputParam('develocity.plugin.version')
+def ccudPluginVersion = getInputParam('develocity.ccud-plugin.version')
 
 def atLeastGradle4 = GradleVersion.current() >= GradleVersion.version('4.0')
 
@@ -103,7 +103,7 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
                 }
                 if (!scanPluginComponent) {
                     logger.quiet("Applying $BUILD_SCAN_PLUGIN_CLASS via init script")
-                    logger.quiet("Connection to Gradle Enterprise: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
+                    logger.quiet("Connection to Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
                     applyPluginExternally(pluginManager, BUILD_SCAN_PLUGIN_CLASS)
                     buildScan.server = geUrl
                     buildScan.allowUntrustedServer = geAllowUntrustedServer
@@ -115,7 +115,7 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
                 if (geUrl && geEnforceUrl) {
                     pluginManager.withPlugin(BUILD_SCAN_PLUGIN_ID) {
                         afterEvaluate {
-                            logger.quiet("Enforcing Gradle Enterprise: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
+                            logger.quiet("Enforcing Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
                             buildScan.server = geUrl
                             buildScan.allowUntrustedServer = geAllowUntrustedServer
                         }
@@ -137,11 +137,11 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
 } else {
     gradle.settingsEvaluated { settings ->
         if (gePluginVersion) {
-            if (!settings.pluginManager.hasPlugin(GRADLE_ENTERPRISE_PLUGIN_ID)) {
-                logger.quiet("Applying $GRADLE_ENTERPRISE_PLUGIN_CLASS via init script")
-                logger.quiet("Connection to Gradle Enterprise: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
-                applyPluginExternally(settings.pluginManager, GRADLE_ENTERPRISE_PLUGIN_CLASS)
-                extensionsWithPublicType(settings, GRADLE_ENTERPRISE_EXTENSION_CLASS).collect { settings[it.name] }.each { ext ->
+            if (!settings.pluginManager.hasPlugin(DEVELOCITY_PLUGIN_ID)) {
+                logger.quiet("Applying $DEVELOCITY_PLUGIN_CLASS via init script")
+                logger.quiet("Connection to Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
+                applyPluginExternally(settings.pluginManager, DEVELOCITY_PLUGIN_CLASS)
+                extensionsWithPublicType(settings, DEVELOCITY_EXTENSION_CLASS).collect { settings[it.name] }.each { ext ->
                     ext.server = geUrl
                     ext.allowUntrustedServer = geAllowUntrustedServer
                     ext.buildScan.publishAlways()
@@ -151,8 +151,8 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
             }
 
             if (geUrl && geEnforceUrl) {
-                extensionsWithPublicType(settings, GRADLE_ENTERPRISE_EXTENSION_CLASS).collect { settings[it.name] }.each { ext ->
-                    logger.quiet("Enforcing Gradle Enterprise: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
+                extensionsWithPublicType(settings, DEVELOCITY_EXTENSION_CLASS).collect { settings[it.name] }.each { ext ->
+                    logger.quiet("Enforcing Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
                     ext.server = geUrl
                     ext.allowUntrustedServer = geAllowUntrustedServer
                 }
@@ -169,7 +169,7 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
 }
 
 void applyPluginExternally(def pluginManager, String pluginClassName) {
-    def externallyApplied = 'gradle.enterprise.externally-applied'
+    def externallyApplied = 'develocity.externally-applied'
     def oldValue = System.getProperty(externallyApplied)
     System.setProperty(externallyApplied, 'true')
     try {

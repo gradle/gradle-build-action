@@ -783,27 +783,26 @@ To reduce storage costs for these artifacts, you can set the `artifact-retention
 
 
 
-# Gradle Enterprise plugin injection
+# Develocity plugin injection
 
-The `gradle-build-action` provides support for injecting and configuring the Gradle Enterprise Gradle plugin into any Gradle build, without any modification to the project sources.
+The `gradle-build-action` provides support for injecting and configuring the Develocity Gradle plugin into any Gradle build, without any modification to the project sources.
 This is achieved via an init-script installed into Gradle User Home, which is enabled and parameterized via environment variables.
 
 The same auto-injection behavior is available for the Common Custom User Data Gradle plugin, which enriches any build scans published with additional useful information.
 
-## Enabling Gradle Enterprise injection
+## Enabling Develocity injection
 
-In order to enable Gradle Enterprise for your build, you must provide the required configuration via environment variables. 
+In order to enable Develocity injection for your build, you must provide the required configuration via environment variables. 
 
 Here's a minimal example:
 
 ```yaml
-name: Run build with Gradle Enterprise injection
+name: Run build with Develocity injection
   
 env:
-  GRADLE_ENTERPRISE_INJECTION_ENABLED: true
-  GRADLE_ENTERPRISE_URL: https://ge.gradle.org
-  GRADLE_ENTERPRISE_PLUGIN_VERSION: 3.16.1
-  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GE_ACCESS_KEY }} # Required to publish scans to ge.gradle.org
+  DEVELOCITY_INJECTION_ENABLED: true
+  DEVELOCITY_URL: https://develocity.your-server.com
+  DEVELOCITY_PLUGIN_VERSION: 3.16.1
 
 jobs:
   build:
@@ -812,36 +811,37 @@ jobs:
     - uses: actions/checkout@v4
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v2
-    - name: Run a Gradle build with Gradle Enterprise injection enabled
+    - name: Run a Gradle build with Develocity injection enabled
       run: ./gradlew build
 ```
 
-This configuration will automatically apply `v3.16.1` of the [Gradle Enterprise Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/), and publish build scans to https://ge.gradle.org.
+This configuration will automatically apply `v3.16.1` of the [Develocity Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/), and publish build scans to https://develocity.your-server.com.
 
-Note that the `ge.gradle.org` server requires authentication in order to publish scans. The provided `GRADLE_ENTERPRISE_ACCESS_KEY` isn't required by the Gradle Enterprise injection script, 
-but will be used by the GE plugin in order to authenticate with the server.
+This example assumes that the `develocity.your-server.com` server allows anonymous publishing of build scans.
+In the likely scenario that your Develocity server requires authentication, you will also need to configure an addition environment variable
+with a valid [Develocity access key](https://docs.gradle.com/enterprise/gradle-plugin/#via_environment_variable).
 
-## Configuring Gradle Enterprise injection
+## Configuring Develocity injection
 
 The `init-script` supports a number of additional configuration parameters that you may fine useful. All configuration options (required and optional) are detailed below:
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| GRADLE_ENTERPRISE_INJECTION_ENABLED | :white_check_mark: | enables Gradle Enterprise injection |
-| GRADLE_ENTERPRISE_URL | :white_check_mark: | the URL of the Gradle Enterprise server |
-| GRADLE_ENTERPRISE_ALLOW_UNTRUSTED_SERVER | | allow communication with an untrusted server; set to _true_ if your Gradle Enterprise instance is using a self-signed certificate |
-| GRADLE_ENTERPRISE_ENFORCE_URL | | enforce the configured Gradle Enterprise URL over a URL configured in the project's build; set to _true_ to enforce publication of build scans to the configured Gradle Enterprise URL |
-| GRADLE_ENTERPRISE_PLUGIN_VERSION | :white_check_mark: | the version of the [Gradle Enterprise Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/) to apply |
-| GRADLE_ENTERPRISE_CCUD_PLUGIN_VERSION |  | the version of the [Common Custom User Data Gradle plugin](https://github.com/gradle/common-custom-user-data-gradle-plugin) to apply, if any |
-| GRADLE_ENTERPRISE_PLUGIN_REPOSITORY_URL |  | the URL of the repository to use when resolving the GE and CCUD plugins; the Gradle Plugin Portal is used by default |
+| Variable                          | Required | Description |
+|-----------------------------------| --- | --- |
+| DEVELOCITY_INJECTION_ENABLED      | :white_check_mark: | enables Develocity injection |
+| DEVELOCITY_URL                    | :white_check_mark: | the URL of the Develocity server |
+| DEVELOCITY_ALLOW_UNTRUSTED_SERVER | | allow communication with an untrusted server; set to _true_ if your Develocity instance is using a self-signed certificate |
+| DEVELOCITY_ENFORCE_URL            | | enforce the configured Develocity URL over a URL configured in the project's build; set to _true_ to enforce publication of build scans to the configured Develocity URL |
+| DEVELOCITY_PLUGIN_VERSION         | :white_check_mark: | the version of the [Develocity Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/) to apply |
+| DEVELOCITY_CCUD_PLUGIN_VERSION    |  | the version of the [Common Custom User Data Gradle plugin](https://github.com/gradle/common-custom-user-data-gradle-plugin) to apply, if any |
+| GRADLE_PLUGIN_REPOSITORY_URL      |  | the URL of the repository to use when resolving the Develocity and CCUD plugins; the Gradle Plugin Portal is used by default |
 
 ## Publishing to scans.gradle.com
 
-Gradle Enterprise injection is designed to enable publishing of build scans to a Gradle Enterprise instance,
+Develocity injection is designed to enable publishing of build scans to a Develocity instance,
 and is not suitable for publishing to the public Build Scans instance (https://scans.gradle.com).
 
 In order to publish Build Scans to scans.gradle.com, you need to:
-- Apply the Gradle Enterprise plugin to your build configuration ([see docs](https://docs.gradle.com/enterprise/get-started/#applying_the_plugin))
+- Apply the Develocity plugin to your build configuration ([see docs](https://docs.gradle.com/enterprise/get-started/#applying_the_plugin))
 - Programmatically accept the Terms of Service for scans.gradle.com ([see docs](https://docs.gradle.com/enterprise/gradle-plugin/#connecting_to_scans_gradle_com))
 - Execute the build with `--scan` or configure your build with `publishAlways()` ([see docs](https://docs.gradle.com/enterprise/get-started/#always_publishing_a_build_scan))
 
