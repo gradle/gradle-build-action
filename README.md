@@ -792,7 +792,7 @@ The same auto-injection behavior is available for the Common Custom User Data Gr
 
 ## Enabling Develocity injection
 
-In order to enable Develocity for your build, you must provide the required configuration via environment variables. 
+In order to enable Develocity injection for your build, you must provide the required configuration via environment variables. 
 
 Here's a minimal example:
 
@@ -803,7 +803,6 @@ env:
   DEVELOCITY_INJECTION_ENABLED: true
   DEVELOCITY_URL: https://develocity.your-server.com
   DEVELOCITY_PLUGIN_VERSION: 3.16.1
-  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }} # Required to publish scans to develocity.gradle.org
 
 jobs:
   build:
@@ -816,10 +815,11 @@ jobs:
       run: ./gradlew build
 ```
 
-This configuration will automatically apply `v3.16.1` of the [Develocity Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/), and publish build scans to https://develocity.gradle.org.
+This configuration will automatically apply `v3.16.1` of the [Develocity Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/), and publish build scans to https://develocity.your-server.com.
 
-Note that the `develocity.gradle.org` server requires authentication in order to publish scans. The provided `DEVELOCITY_ACCESS_KEY` isn't required by the Develocity injection script, 
-but will be used by the GE plugin in order to authenticate with the server.
+This example assumes that the `develocity.your-server.com` server allows anonymous publishing of build scans.
+In the likely scenario that your Develocity server requires authentication, you will also need to configure an addition environment variable
+with a valid [Develocity access key](https://docs.gradle.com/enterprise/gradle-plugin/#via_environment_variable).
 
 ## Configuring Develocity injection
 
