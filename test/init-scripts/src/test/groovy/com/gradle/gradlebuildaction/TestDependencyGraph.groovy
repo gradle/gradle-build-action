@@ -29,7 +29,6 @@ class TestDependencyGraph extends BaseInitScriptTest {
 
         then:
         assert reportFile.exists()
-        assert gitHubOutputFile.text == "dependency-graph-file=${reportFile.absolutePath}\n"
 
         where:
         testGradleVersion << [GRADLE_8_X]
@@ -116,7 +115,6 @@ class TestDependencyGraph extends BaseInitScriptTest {
             GITHUB_DEPENDENCY_GRAPH_SHA: "123456",
             GITHUB_DEPENDENCY_GRAPH_WORKSPACE: testProjectDir.absolutePath,
             DEPENDENCY_GRAPH_REPORT_DIR: reportsDir.absolutePath,
-            GITHUB_OUTPUT: gitHubOutputFile.absolutePath
         ]
     }
 
@@ -126,9 +124,5 @@ class TestDependencyGraph extends BaseInitScriptTest {
 
     def getReportFile() {
         return new File(reportsDir, "CORRELATOR.json")
-    }
-
-    def getGitHubOutputFile() {
-        return new File(testProjectDir, "GITHUB_OUTPUT")
     }
 }

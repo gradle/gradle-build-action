@@ -90,11 +90,15 @@ jobs:
     - id: gradle-build
       run: ./gradlew build
       working-directory: .github/workflow-samples/groovy-dsl
+    - id: gradle-build-again
+      run: ./gradlew build
+      working-directory: .github/workflow-samples/groovy-dsl
     - name: Check generated dependency graphs
       shell: bash
       run: |
         echo "gradle-assemble report file: ${{ steps.gradle-assemble.outputs.dependency-graph-file }}"
         echo "gradle-build report file: ${{ steps.gradle-build.outputs.dependency-graph-file }}"
+        echo "gradle-build-again report file: ${{ steps.gradle-build-again.outputs.dependency-graph-file }}"
         ls -l dependency-graph-reports
         if [ ! -e "${{ steps.gradle-assemble.outputs.dependency-graph-file }}" ]; then
             echo "Did not find gradle-assemble dependency graph file"
@@ -104,3 +108,41 @@ jobs:
             echo "Did not find gradle-build dependency graph files"
             exit 1
         fi
+        if [ ! -e "${{ steps.gradle-build-again.outputs.dependency-graph-file }}" ]; then
+            echo "Did not find gradle-build-again dependency graph files"
+            exit 1
+        fi
+        
+  config-cache:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v4
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
+    - name: Setup Gradle for dependency-graph generate
+      uses: ./
+      with:
+        dependency-graph: generate-and-submit
+    - id: config-cache-store
+      run: ./gradlew assemble --configuration-cache
+      working-directory: .github/workflow-samples/groovy-dsl
+    - name: Check and delete generated dependency graph
+      shell: bash
+      run: |
+        if [ ! -e "${{ steps.config-cache-store.outputs.dependency-graph-file }}" ]; then
+            echo "Did not find config-cache-store dependency graph files"
+            exit 1
+        fi
+        rm ${{ steps.config-cache-store.outputs.dependency-graph-file }}
+    - id: config-cache-reuse
+      run: ./gradlew assemble --configuration-cache
+      working-directory: .github/workflow-samples/groovy-dsl
+    - name: Check no dependency graph is generated
+      shell: bash
+      run: |
+        if [ ! -z "$(ls -A dependency-graph-reports)" ]; then
+            echo "Expected no dependency graph files to be generated"
+            ls -l dependency-graph-reports
+            exit 1
+        fi        

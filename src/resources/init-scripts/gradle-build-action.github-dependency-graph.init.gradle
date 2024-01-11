@@ -22,11 +22,6 @@ if (isTopLevelBuild) {
     return
   }
 
-  def githubOutput = System.getenv("GITHUB_OUTPUT")
-  if (githubOutput) {
-      new File(githubOutput) << "dependency-graph-file=${reportFile.absolutePath}\n"
-  }
-
   println "Generating dependency graph into '${reportFile}'"
 }
 
