@@ -9,6 +9,9 @@ if (getVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED') != "true") {
 def gradleVersion = GradleVersion.current().baseVersion
 if (gradleVersion < GradleVersion.version("5.2") ||
     (gradleVersion >= GradleVersion.version("7.0") && gradleVersion < GradleVersion.version("7.1"))) {
+  if (getVariable('GITHUB_DEPENDENCY_GRAPH_CONTINUE_ON_FAILURE') != "true") {
+    throw new GradleException("Dependency Graph is not supported for ${gradleVersion}. No dependency snapshot will be generated.")
+  }
   println "::warning::Dependency Graph is not supported for ${gradleVersion}. No dependency snapshot will be generated."
   return
 }

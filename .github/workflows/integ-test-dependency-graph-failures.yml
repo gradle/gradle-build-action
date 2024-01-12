@@ -20,8 +20,6 @@ env:
 jobs:
   unsupported-gradle-version-failure:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
@@ -32,6 +30,7 @@ jobs:
       with:
         gradle-version: 7.0.1
         dependency-graph: generate
+        dependency-graph-continue-on-failure: false
     - name: Run with unsupported Gradle version
       working-directory: .github/workflow-samples/groovy-dsl
       run: |
@@ -42,8 +41,6 @@ jobs:
 
   unsupported-gradle-version-warning:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
@@ -54,11 +51,7 @@ jobs:
       with:
         gradle-version: 7.0.1
         dependency-graph: generate
-    - name: Run with unsupported Gradle version
-      working-directory: .github/workflow-samples/groovy-dsl
-      run: |
-        gradle help
-
+        dependency-graph-continue-on-failure: true
     - name: Run with unsupported Gradle version
       working-directory: .github/workflow-samples/groovy-dsl
       run: |

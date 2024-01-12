@@ -61,7 +61,23 @@ class TestDependencyGraph extends BaseInitScriptTest {
 
         then:
         assert !reportsDir.exists()
-        assert result.output.contains("::warning::Dependency Graph is not supported")
+        assert result.output.contains("::warning::Dependency Graph is not supported for ${testGradleVersion}")
+
+        where:
+        testGradleVersion << NO_DEPENDENCY_GRAPH_VERSIONS
+    }
+
+    def "fails build when enabled for older Gradle versions if continue-on-failure is false"() {
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
+
+        when:
+        def vars = envVars
+        vars.put('GITHUB_DEPENDENCY_GRAPH_CONTINUE_ON_FAILURE', 'false')
+        def result = runAndFail(['help'], initScript, testGradleVersion.gradleVersion, [], vars)
+
+        then:
+        assert !reportsDir.exists()
+        assert result.output.contains("Dependency Graph is not supported for ${testGradleVersion}")
 
         where:
         testGradleVersion << NO_DEPENDENCY_GRAPH_VERSIONS
@@ -114,6 +130,7 @@ class TestDependencyGraph extends BaseInitScriptTest {
     def getEnvVars() {
         return [
             GITHUB_DEPENDENCY_GRAPH_ENABLED: "true",
+            GITHUB_DEPENDENCY_GRAPH_CONTINUE_ON_FAILURE: "true",
             GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR: "CORRELATOR",
             GITHUB_DEPENDENCY_GRAPH_JOB_ID: "1",
             GITHUB_DEPENDENCY_GRAPH_REF: "main",
