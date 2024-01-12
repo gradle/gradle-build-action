@@ -59,6 +59,13 @@ jobs:
       runner-os: '["ubuntu-latest"]'
       download-dist: true
 
+  dependency-graph-failures:
+    needs: build-distribution
+    uses: ./.github/workflows/integ-test-dependency-graph-failures.yml
+    with:
+      runner-os: '["ubuntu-latest"]'
+      download-dist: true
+
   execution-with-caching:
     needs: build-distribution
     uses: ./.github/workflows/integ-test-execution-with-caching.yml
