@@ -512,6 +512,22 @@ Depending on [repository settings](https://docs.github.com/en/actions/security-g
 > for a PR submitted from a forked repository.
 > For a configuration that supports this setup, see [Dependency Graphs for pull request workflows](#dependency-graphs-for-pull-request-workflows).
 
+### Making dependency graph failures cause Job failures
+
+By default, if a failure is encountered when generating or submitting the dependency graph, the action will log the failure as a warning and continue.
+This allows your workflow to be resilient to dependency graph failures, in case dependency graph production is a side-effect rather than the primary purpose of a workflow.
+
+If instead you have a workflow that has a primary purpose to generate and submit a dependency graph, then it makes sense for this workflow to fail if the dependency
+graph cannot be generated or submitted. You can enable this behaviour with the `dependency-graph-continue-on-failure` parameter, which defaults to `true`.
+
+```yaml
+# Ensure that the workflow Job will fail if the dependency graph cannot be submitted
+- uses: gradle/gradle-build-action@v3
+  with:
+    dependency-graph: generate-and-submit
+    dependency-graph-continue-on-failure: false
+```
+
 ### Using a custom plugin repository
 
 By default, the action downloads the `github-dependency-graph-gradle-plugin` from the Gradle Plugin Portal (https://plugins.gradle.org). If your GitHub Actions environment does not have access to this URL, you can specify a custom plugin repository to use. 
