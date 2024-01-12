@@ -18,27 +18,6 @@ env:
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
-  unsupported-gradle-version-failure:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-    - name: Download distribution if required
-      uses: ./.github/actions/download-dist
-    - name: Setup Gradle for dependency-graph generate
-      uses: ./
-      with:
-        gradle-version: 7.0.1
-        dependency-graph: generate
-        dependency-graph-continue-on-failure: false
-    - name: Run with unsupported Gradle version
-      working-directory: .github/workflow-samples/groovy-dsl
-      run: |
-        if gradle help; then
-          echo "Expected build to fail with Gradle 7.0.1"
-          exit 1
-        fi
-
   unsupported-gradle-version-warning:
     runs-on: ubuntu-latest
     steps:
@@ -63,11 +42,8 @@ jobs:
           exit 1
         fi
 
-  insufficient-permissions-failure:
+  unsupported-gradle-version-failure:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    continue-on-error: true
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
@@ -76,11 +52,16 @@ jobs:
     - name: Setup Gradle for dependency-graph generate
       uses: ./
       with:
-        dependency-graph: generate-and-submit
-    - name: Run with insufficient permissions
+        gradle-version: 7.0.1
+        dependency-graph: generate
+        dependency-graph-continue-on-failure: false
+    - name: Run with unsupported Gradle version
       working-directory: .github/workflow-samples/groovy-dsl
-      run: ./gradlew help
-      # TODO unclear how to check for failure in post action
+      run: |
+        if gradle help; then
+          echo "Expected build to fail with Gradle 7.0.1"
+          exit 1
+        fi
 
   insufficient-permissions-warning:
     runs-on: ubuntu-latest
@@ -95,7 +76,28 @@ jobs:
       uses: ./
       with:
         dependency-graph: generate-and-submit
+        dependency-graph-continue-on-failure: true
     - name: Run with insufficient permissions
       working-directory: .github/workflow-samples/groovy-dsl
       run: ./gradlew help
-      # TODO unclear how to check for warning in post action
+      # This test is primarily for demonstration: it's unclear how to check for warnings emitted in the post-action
+
+  SHOULD_FAIL-insufficient-permissions-failure:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    continue-on-error: true
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v4
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
+    - name: Setup Gradle for dependency-graph generate
+      uses: ./
+      with:
+        dependency-graph: generate-and-submit
+        dependency-graph-continue-on-failure: false
+    - name: Run with insufficient permissions
+      working-directory: .github/workflow-samples/groovy-dsl
+      run: ./gradlew help
+      # This test is primarily for demonstration: it's unclear how to check for a failure in the post-action
