@@ -1,11 +1,16 @@
 package com.gradle.gradlebuildaction
 
+import org.gradle.util.GradleVersion
+
 import static org.junit.Assume.assumeTrue
 
 class TestDependencyGraph extends BaseInitScriptTest {
     def initScript = 'gradle-build-action.github-dependency-graph.init.gradle'
 
-    static final List<TestGradleVersion> NO_DEPENDENCY_GRAPH_VERSIONS = [GRADLE_3_X, GRADLE_4_X]
+    static final TestGradleVersion GRADLE_5_1 = new TestGradleVersion(GradleVersion.version('5.1.1'), 8, 12)
+    static final TestGradleVersion GRADLE_7_0 = new TestGradleVersion(GradleVersion.version('7.0.1'), 8, 12)
+
+    static final List<TestGradleVersion> NO_DEPENDENCY_GRAPH_VERSIONS = [GRADLE_3_X, GRADLE_4_X, GRADLE_5_1, GRADLE_7_0]
     static final List<TestGradleVersion> DEPENDENCY_GRAPH_VERSIONS = ALL_VERSIONS - NO_DEPENDENCY_GRAPH_VERSIONS
 
     def "does not produce dependency graph when not enabled"() {
