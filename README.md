@@ -476,9 +476,10 @@ You enable GitHub Dependency Graph support by setting the `dependency-graph` act
 | Option | Behaviour |
 | --- | --- |
 | `disabled`            | Do not generate a dependency graph for any build invocations.<p>This is the default. |
-| `generate`            | Generate a dependency graph snapshot for each build invocation, saving as a workflow artifact. |
-| `generate-and-submit` | As per `generate`, but any generated dependency graph snapshots will be submitted at the end of the job. |
-| `download-and-submit` | Download any previously saved dependency graph snapshots, submitting them via the Dependency Submission API. This can be useful to collect all snapshots in a matrix of builds and submit them in one step. |
+| `generate`            | Generate a dependency graph snapshot for each build invocation. |
+| `generate-and-submit` | Generate a dependency graph snapshot for each build invocation, and submit these via the Dependency Submission API on completion of the job. |
+| `generate-and-upload` | Generate a dependency graph snapshot for each build invocation, saving as a workflow artifact. |
+| `download-and-submit` | Download any previously saved dependency graph snapshots, and submit them via the Dependency Submission API. This can be useful to submit [dependency graphs for pull requests submitted from a repository forks](#dependency-graphs-for-pull-request-workflows). |
 
 Example of a CI workflow that generates and submits a dependency graph:
 ```yaml
@@ -704,6 +705,9 @@ name: run-build-and-generate-dependency-snapshot
 on:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -712,7 +716,7 @@ jobs:
     - name: Setup Gradle to generate and submit dependency graphs
       uses: gradle/gradle-build-action@v2
       with:
-        dependency-graph: generate # Only generate in this job
+        dependency-graph: generate-and-upload # Generate graphs and save as workflow artifacts
     - name: Run a build, generating the dependency graph snapshot which will be submitted
       run: ./gradlew build
 ```
@@ -726,6 +730,9 @@ on:
     workflows: ['run-build-and-generate-dependency-snapshot']
     types: [completed]
 
+permissions:
+  contents: write
+
 jobs:
   submit-dependency-graph:
     runs-on: ubuntu-latest
@@ -733,7 +740,7 @@ jobs:
     - name: Retrieve dependency graph artifact and submit
       uses: gradle/gradle-build-action@v2
       with:
-        dependency-graph: download-and-submit
+        dependency-graph: download-and-submit # Download saved workflow artifacts and submit
 ```
 
 ### Integrating `dependency-review-action` for pull request workflows
