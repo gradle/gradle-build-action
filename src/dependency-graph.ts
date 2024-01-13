@@ -10,7 +10,13 @@ import * as path from 'path'
 import fs from 'fs'
 
 import * as layout from './repository-layout'
-import {DependencyGraphOption, getJobMatrix, getArtifactRetentionDays} from './input-params'
+import {PostActionJobFailure} from './errors'
+import {
+    DependencyGraphOption,
+    getDependencyGraphContinueOnFailure,
+    getJobMatrix,
+    getArtifactRetentionDays
+} from './input-params'
 
 const DEPENDENCY_GRAPH_PREFIX = 'dependency-graph_'
 
@@ -26,6 +32,7 @@ export async function setup(option: DependencyGraphOption): Promise<void> {
 
     core.info('Enabling dependency graph generation')
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED', 'true')
+    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_CONTINUE_ON_FAILURE', getDependencyGraphContinueOnFailure())
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR', getJobCorrelator())
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_ID', github.context.runId)
     core.exportVariable('GITHUB_DEPENDENCY_GRAPH_REF', github.context.ref)
@@ -51,7 +58,7 @@ export async function complete(option: DependencyGraphOption): Promise<void> {
                 await uploadDependencyGraphs(await findGeneratedDependencyGraphFiles())
         }
     } catch (e) {
-        core.warning(`Failed to ${option} dependency graph. Will continue. ${String(e)}`)
+        warnOrFail(option, e)
     }
 }
 
@@ -78,7 +85,7 @@ async function downloadAndSubmitDependencyGraphs(): Promise<void> {
     try {
         await submitDependencyGraphs(await downloadDependencyGraphs())
     } catch (e) {
-        core.warning(`Download and submit dependency graph failed. Will continue. ${String(e)}`)
+        warnOrFail(DependencyGraphOption.DownloadAndSubmit, e)
     }
 }
 
@@ -88,7 +95,7 @@ async function submitDependencyGraphs(dependencyGraphFiles: string[]): Promise<v
             await submitDependencyGraphFile(jsonFile)
         } catch (error) {
             if (error instanceof RequestError) {
-                core.warning(buildWarningMessage(jsonFile, error))
+                throw new Error(translateErrorMessage(jsonFile, error))
             } else {
                 throw error
             }
@@ -96,9 +103,9 @@ async function submitDependencyGraphs(dependencyGraphFiles: string[]): Promise<v
     }
 }
 
-function buildWarningMessage(jsonFile: string, error: RequestError): string {
+function translateErrorMessage(jsonFile: string, error: RequestError): string {
     const relativeJsonFile = getRelativePathFromWorkspace(jsonFile)
-    const mainWarning = `Failed to submit dependency graph ${relativeJsonFile}.\n${String(error)}`
+    const mainWarning = `Dependency submission failed for ${relativeJsonFile}.\n${String(error)}`
     if (error.message === 'Resource not accessible by integration') {
         return `${mainWarning}
 Please ensure that the 'contents: write' permission is available for the workflow job.
@@ -158,6 +165,14 @@ async function findDependencyGraphFiles(dir: string): Promise<string[]> {
     const globber = await glob.create(`${dir}/dependency-graph-reports/*.json`)
     const graphFiles = globber.glob()
     return graphFiles
+}
+
+function warnOrFail(option: String, error: unknown): void {
+    if (!getDependencyGraphContinueOnFailure()) {
+        throw new PostActionJobFailure(error)
+    }
+
+    core.warning(`Failed to ${option} dependency graph. Will continue.\n${String(error)}`)
 }
 
 function getOctokit(): InstanceType<typeof GitHub> {

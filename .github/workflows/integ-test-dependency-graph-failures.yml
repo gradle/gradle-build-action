@@ -1,0 +1,103 @@
+name: Test dependency graph
+
+on:
+  workflow_call:
+    inputs:
+      cache-key-prefix:
+        type: string
+      runner-os:
+        type: string
+        default: '["ubuntu-latest"]'
+      download-dist:
+        type: boolean
+        default: false
+
+env:
+  DOWNLOAD_DIST: ${{ inputs.download-dist }}
+  GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: dependency-graph-${{ inputs.cache-key-prefix }}
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+
+jobs:
+  unsupported-gradle-version-warning:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v4
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
+    - name: Setup Gradle for dependency-graph generate
+      uses: ./
+      with:
+        gradle-version: 7.0.1
+        dependency-graph: generate
+        dependency-graph-continue-on-failure: true
+    - name: Run with unsupported Gradle version
+      working-directory: .github/workflow-samples/groovy-dsl
+      run: |
+        if gradle help | grep -q 'warning::Dependency Graph is not supported for Gradle 7.0.1. No dependency snapshot will be generated.';
+        then
+          echo "Got the expected warning"
+        else
+          echo "Did not get the expected warning"
+          exit 1
+        fi
+
+  unsupported-gradle-version-failure:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v4
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
+    - name: Setup Gradle for dependency-graph generate
+      uses: ./
+      with:
+        gradle-version: 7.0.1
+        dependency-graph: generate
+        dependency-graph-continue-on-failure: false
+    - name: Run with unsupported Gradle version
+      working-directory: .github/workflow-samples/groovy-dsl
+      run: |
+        if gradle help; then
+          echo "Expected build to fail with Gradle 7.0.1"
+          exit 1
+        fi
+
+  insufficient-permissions-warning:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v4
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
+    - name: Setup Gradle for dependency-graph generate
+      uses: ./
+      with:
+        dependency-graph: generate-and-submit
+        dependency-graph-continue-on-failure: true
+    - name: Run with insufficient permissions
+      working-directory: .github/workflow-samples/groovy-dsl
+      run: ./gradlew help
+      # This test is primarily for demonstration: it's unclear how to check for warnings emitted in the post-action
+
+  SHOULD_FAIL-insufficient-permissions-failure:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    continue-on-error: true
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v4
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
+    - name: Setup Gradle for dependency-graph generate
+      uses: ./
+      with:
+        dependency-graph: generate-and-submit
+        dependency-graph-continue-on-failure: false
+    - name: Run with insufficient permissions
+      working-directory: .github/workflow-samples/groovy-dsl
+      run: ./gradlew help
+      # This test is primarily for demonstration: it's unclear how to check for a failure in the post-action

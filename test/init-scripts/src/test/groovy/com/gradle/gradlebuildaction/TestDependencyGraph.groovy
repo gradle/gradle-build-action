@@ -1,11 +1,16 @@
 package com.gradle.gradlebuildaction
 
+import org.gradle.util.GradleVersion
+
 import static org.junit.Assume.assumeTrue
 
 class TestDependencyGraph extends BaseInitScriptTest {
     def initScript = 'gradle-build-action.github-dependency-graph.init.gradle'
 
-    static final List<TestGradleVersion> NO_DEPENDENCY_GRAPH_VERSIONS = [GRADLE_3_X, GRADLE_4_X]
+    static final TestGradleVersion GRADLE_5_1 = new TestGradleVersion(GradleVersion.version('5.1.1'), 8, 12)
+    static final TestGradleVersion GRADLE_7_0 = new TestGradleVersion(GradleVersion.version('7.0.1'), 8, 12)
+
+    static final List<TestGradleVersion> NO_DEPENDENCY_GRAPH_VERSIONS = [GRADLE_3_X, GRADLE_4_X, GRADLE_5_1, GRADLE_7_0]
     static final List<TestGradleVersion> DEPENDENCY_GRAPH_VERSIONS = ALL_VERSIONS - NO_DEPENDENCY_GRAPH_VERSIONS
 
     def "does not produce dependency graph when not enabled"() {
@@ -56,7 +61,23 @@ class TestDependencyGraph extends BaseInitScriptTest {
 
         then:
         assert !reportsDir.exists()
-        assert result.output.contains("::warning::Dependency Graph is not supported")
+        assert result.output.contains("::warning::Dependency Graph is not supported for ${testGradleVersion}")
+
+        where:
+        testGradleVersion << NO_DEPENDENCY_GRAPH_VERSIONS
+    }
+
+    def "fails build when enabled for older Gradle versions if continue-on-failure is false"() {
+        assumeTrue testGradleVersion.compatibleWithCurrentJvm
+
+        when:
+        def vars = envVars
+        vars.put('GITHUB_DEPENDENCY_GRAPH_CONTINUE_ON_FAILURE', 'false')
+        def result = runAndFail(['help'], initScript, testGradleVersion.gradleVersion, [], vars)
+
+        then:
+        assert !reportsDir.exists()
+        assert result.output.contains("Dependency Graph is not supported for ${testGradleVersion}")
 
         where:
         testGradleVersion << NO_DEPENDENCY_GRAPH_VERSIONS
@@ -109,6 +130,7 @@ class TestDependencyGraph extends BaseInitScriptTest {
     def getEnvVars() {
         return [
             GITHUB_DEPENDENCY_GRAPH_ENABLED: "true",
+            GITHUB_DEPENDENCY_GRAPH_CONTINUE_ON_FAILURE: "true",
             GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR: "CORRELATOR",
             GITHUB_DEPENDENCY_GRAPH_JOB_ID: "1",
             GITHUB_DEPENDENCY_GRAPH_REF: "main",

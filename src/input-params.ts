@@ -107,6 +107,10 @@ export function getDependencyGraphOption(): DependencyGraphOption {
     )
 }
 
+export function getDependencyGraphContinueOnFailure(): boolean {
+    return getBooleanInput('dependency-graph-continue-on-failure', true)
+}
+
 export function getArtifactRetentionDays(): number {
     const val = core.getInput('artifact-retention-days')
     return parseNumericInput('artifact-retention-days', val, 0)

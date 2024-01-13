@@ -24,6 +24,7 @@ class BaseInitScriptTest extends Specification {
     static final TestGradleVersion GRADLE_5_X = new TestGradleVersion(GradleVersion.version('5.6.4'), 8, 12)
     static final TestGradleVersion GRADLE_6_NO_BUILD_SERVICE = new TestGradleVersion(GradleVersion.version('6.5.1'), 8, 14)
     static final TestGradleVersion GRADLE_6_X = new TestGradleVersion(GradleVersion.version('6.9.4'), 8, 15)
+    static final TestGradleVersion GRADLE_7_1 = new TestGradleVersion(GradleVersion.version('7.6.2'), 8, 19)
     static final TestGradleVersion GRADLE_7_X = new TestGradleVersion(GradleVersion.version('7.6.2'), 8, 19)
     static final TestGradleVersion GRADLE_8_0 = new TestGradleVersion(GradleVersion.version('8.0.2'), 8, 19)
     static final TestGradleVersion GRADLE_8_X = new TestGradleVersion(GradleVersion.version('8.5'), 8, 19)
