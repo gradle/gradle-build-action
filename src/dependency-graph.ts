@@ -31,17 +31,23 @@ export async function setup(option: DependencyGraphOption): Promise<void> {
     }
 
     core.info('Enabling dependency graph generation')
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED', 'true')
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_CONTINUE_ON_FAILURE', getDependencyGraphContinueOnFailure())
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR', getJobCorrelator())
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_ID', github.context.runId)
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_REF', github.context.ref)
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_SHA', getShaFromContext())
-    core.exportVariable('GITHUB_DEPENDENCY_GRAPH_WORKSPACE', layout.workspaceDirectory())
-    core.exportVariable(
+    maybeExportVariable('GITHUB_DEPENDENCY_GRAPH_ENABLED', 'true')
+    maybeExportVariable('GITHUB_DEPENDENCY_GRAPH_CONTINUE_ON_FAILURE', getDependencyGraphContinueOnFailure())
+    maybeExportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR', getJobCorrelator())
+    maybeExportVariable('GITHUB_DEPENDENCY_GRAPH_JOB_ID', github.context.runId)
+    maybeExportVariable('GITHUB_DEPENDENCY_GRAPH_REF', github.context.ref)
+    maybeExportVariable('GITHUB_DEPENDENCY_GRAPH_SHA', getShaFromContext())
+    maybeExportVariable('GITHUB_DEPENDENCY_GRAPH_WORKSPACE', layout.workspaceDirectory())
+    maybeExportVariable(
         'DEPENDENCY_GRAPH_REPORT_DIR',
         path.resolve(layout.workspaceDirectory(), 'dependency-graph-reports')
     )
+}
+
+function maybeExportVariable(variableName: string, value: unknown): void {
+    if (!process.env[variableName]) {
+        core.exportVariable(variableName, value)
+    }
 }
 
 export async function complete(option: DependencyGraphOption): Promise<void> {
