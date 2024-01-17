@@ -21,6 +21,9 @@ export async function run(): Promise<void> {
 
         handleFailure(error)
     }
+
+    // Explicit process.exit() to prevent waiting for promises left hanging by `@actions/cache` on save.
+    process.exit()
 }
 
 function handleFailure(error: unknown): void {
@@ -29,5 +32,3 @@ function handleFailure(error: unknown): void {
         core.info(error.stack)
     }
 }
-
-run()
