@@ -29,6 +29,9 @@ export async function run(): Promise<void> {
             core.info(error.stack)
         }
     }
+
+    // Explicit process.exit() to prevent waiting for hanging promises.
+    process.exit()
 }
 
 run()

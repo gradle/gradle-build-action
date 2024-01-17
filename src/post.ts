@@ -16,11 +16,13 @@ export async function run(): Promise<void> {
     } catch (error) {
         if (error instanceof PostActionJobFailure) {
             core.setFailed(String(error))
-            return
+        } else {
+            handleFailure(error)
         }
-
-        handleFailure(error)
     }
+
+    // Explicit process.exit() to prevent waiting for promises left hanging by `@actions/cache` on save.
+    process.exit()
 }
 
 function handleFailure(error: unknown): void {
