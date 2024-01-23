@@ -3,7 +3,9 @@ name: CI-quick-check
 on:
   workflow_dispatch:
   push:
-    branches-ignore: main
+    branches-ignore: 
+    - main
+    - release/**
 
 jobs:
   build-distribution:
