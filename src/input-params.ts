@@ -101,9 +101,11 @@ export function getDependencyGraphOption(): DependencyGraphOption {
             return DependencyGraphOption.GenerateAndUpload
         case 'download-and-submit':
             return DependencyGraphOption.DownloadAndSubmit
+        case 'clear':
+            return DependencyGraphOption.Clear
     }
     throw TypeError(
-        `The value '${val}' is not valid for 'dependency-graph'. Valid values are: [disabled, generate, generate-and-submit, generate-and-upload, download-and-submit]. The default value is 'disabled'.`
+        `The value '${val}' is not valid for 'dependency-graph'. Valid values are: [disabled, generate, generate-and-submit, generate-and-upload, download-and-submit, clear]. The default value is 'disabled'.`
     )
 }
 
@@ -146,7 +148,8 @@ export enum DependencyGraphOption {
     Generate = 'generate',
     GenerateAndSubmit = 'generate-and-submit',
     GenerateAndUpload = 'generate-and-upload',
-    DownloadAndSubmit = 'download-and-submit'
+    DownloadAndSubmit = 'download-and-submit',
+    Clear = 'clear'
 }
 
 export enum JobSummaryOption {

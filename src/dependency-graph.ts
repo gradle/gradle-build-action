@@ -42,6 +42,12 @@ export async function setup(option: DependencyGraphOption): Promise<void> {
         'DEPENDENCY_GRAPH_REPORT_DIR',
         path.resolve(layout.workspaceDirectory(), 'dependency-graph-reports')
     )
+
+    // To clear the dependency graph, we generate an empty graph by excluding all projects and configurations
+    if (option === DependencyGraphOption.Clear) {
+        core.exportVariable('DEPENDENCY_GRAPH_INCLUDE_PROJECTS', '')
+        core.exportVariable('DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS', '')
+    }
 }
 
 function maybeExportVariable(variableName: string, value: unknown): void {
@@ -58,6 +64,7 @@ export async function complete(option: DependencyGraphOption): Promise<void> {
             case DependencyGraphOption.DownloadAndSubmit: // Performed in setup
                 return
             case DependencyGraphOption.GenerateAndSubmit:
+            case DependencyGraphOption.Clear: // Submit the empty dependency graph
                 await submitDependencyGraphs(await findGeneratedDependencyGraphFiles())
                 return
             case DependencyGraphOption.GenerateAndUpload:
