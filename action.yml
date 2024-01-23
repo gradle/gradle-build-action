@@ -69,7 +69,7 @@ inputs:
     default: true
 
   dependency-graph:
-    description: Specifies if a GitHub dependency snapshot should be generated for each Gradle build, and if so, how. Valid values are 'disabled' (default), 'generate', 'generate-and-submit' and 'download-and-submit'.
+    description: Specifies if a GitHub dependency snapshot should be generated for each Gradle build, and if so, how. Valid values are 'disabled' (default), 'generate', 'generate-and-submit', 'download-and-submit' and 'clear'.
     required: false
     default: 'disabled'
 

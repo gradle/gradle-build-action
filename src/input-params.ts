@@ -82,6 +82,8 @@ export function getDependencyGraphOption(): DependencyGraphOption {
             return DependencyGraphOption.GenerateAndSubmit
         case 'download-and-submit':
             return DependencyGraphOption.DownloadAndSubmit
+        case 'clear':
+            return DependencyGraphOption.Clear
     }
     throw TypeError(
         `The value '${val} is not valid for 'dependency-graph. Valid values are: [disabled, generate-and-upload, generate-and-submit, download-and-submit]. The default value is 'disabled'.`
@@ -122,5 +124,6 @@ export enum DependencyGraphOption {
     Disabled,
     Generate,
     GenerateAndSubmit,
-    DownloadAndSubmit
+    DownloadAndSubmit,
+    Clear
 }
