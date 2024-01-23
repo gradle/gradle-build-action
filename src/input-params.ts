@@ -75,6 +75,18 @@ export function getPRCommentOption(): JobSummaryOption {
     return parseJobSummaryOption('add-job-summary-as-pr-comment')
 }
 
+export function getBuildScanPublishEnabled(): boolean {
+    return getBooleanInput('build-scan-publish')
+}
+
+export function getBuildScanTermsOfServiceUrl(): string {
+    return core.getInput('build-scan-terms-of-service-url')
+}
+
+export function getBuildScanTermsOfServiceAgree(): string {
+    return core.getInput('build-scan-terms-of-service-agree')
+}
+
 function parseJobSummaryOption(paramName: string): JobSummaryOption {
     const val = core.getInput(paramName)
     switch (val.toLowerCase().trim()) {

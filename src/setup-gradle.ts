@@ -7,6 +7,7 @@ import * as layout from './repository-layout'
 import * as params from './input-params'
 import * as dependencyGraph from './dependency-graph'
 import * as jobSummary from './job-summary'
+import * as buildScan from './build-scan'
 
 import {loadBuildResults} from './build-results'
 import {CacheListener} from './cache-reporting'
@@ -41,6 +42,8 @@ export async function setup(): Promise<void> {
     core.saveState(CACHE_LISTENER, cacheListener.stringify())
 
     await dependencyGraph.setup(params.getDependencyGraphOption())
+
+    buildScan.setup()
 }
 
 export async function complete(): Promise<void> {
