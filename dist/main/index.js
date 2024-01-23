@@ -93650,6 +93650,10 @@ function setup(option) {
         core.exportVariable('GITHUB_DEPENDENCY_GRAPH_SHA', getShaFromContext());
         core.exportVariable('GITHUB_DEPENDENCY_GRAPH_WORKSPACE', layout.workspaceDirectory());
         core.exportVariable('DEPENDENCY_GRAPH_REPORT_DIR', path.resolve(layout.workspaceDirectory(), 'dependency-graph-reports'));
+        if (option === input_params_1.DependencyGraphOption.Clear) {
+            core.exportVariable('DEPENDENCY_GRAPH_INCLUDE_PROJECTS', '');
+            core.exportVariable('DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS', '');
+        }
     });
 }
 exports.setup = setup;
@@ -93663,6 +93667,7 @@ function complete(option) {
                 yield uploadDependencyGraphs();
                 return;
             case input_params_1.DependencyGraphOption.GenerateAndSubmit:
+            case input_params_1.DependencyGraphOption.Clear:
                 yield submitDependencyGraphs(yield uploadDependencyGraphs());
                 return;
         }
@@ -94077,6 +94082,8 @@ function getDependencyGraphOption() {
             return DependencyGraphOption.GenerateAndSubmit;
         case 'download-and-submit':
             return DependencyGraphOption.DownloadAndSubmit;
+        case 'clear':
+            return DependencyGraphOption.Clear;
     }
     throw TypeError(`The value '${val} is not valid for 'dependency-graph. Valid values are: [disabled, generate-and-upload, generate-and-submit, download-and-submit]. The default value is 'disabled'.`);
 }
@@ -94115,6 +94122,7 @@ var DependencyGraphOption;
     DependencyGraphOption[DependencyGraphOption["Generate"] = 1] = "Generate";
     DependencyGraphOption[DependencyGraphOption["GenerateAndSubmit"] = 2] = "GenerateAndSubmit";
     DependencyGraphOption[DependencyGraphOption["DownloadAndSubmit"] = 3] = "DownloadAndSubmit";
+    DependencyGraphOption[DependencyGraphOption["Clear"] = 4] = "Clear";
 })(DependencyGraphOption || (exports.DependencyGraphOption = DependencyGraphOption = {}));
 
 
