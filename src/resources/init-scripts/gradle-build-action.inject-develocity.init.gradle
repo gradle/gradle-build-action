@@ -110,9 +110,6 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
                         logger.quiet("Connection to Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
                         buildScan.server = geUrl
                         buildScan.allowUntrustedServer = geAllowUntrustedServer
-                    } else if (buildScanTermsOfServiceUrl && buildScanTermsOfServiceAgree) {
-                        buildScan.termsOfServiceUrl = buildScanTermsOfServiceUrl
-                        buildScan.termsOfServiceAgree = buildScanTermsOfServiceAgree
                     }
                     buildScan.publishAlways()
                     if (buildScan.metaClass.respondsTo(buildScan, 'setUploadInBackground', Boolean)) buildScan.uploadInBackground = buildScanUploadInBackground  // uploadInBackground not available for build-scan-plugin 1.16
@@ -127,6 +124,11 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
                             buildScan.allowUntrustedServer = geAllowUntrustedServer
                         }
                     }
+                }
+
+                if (buildScanTermsOfServiceUrl && buildScanTermsOfServiceAgree) {
+                    buildScan.termsOfServiceUrl = buildScanTermsOfServiceUrl
+                    buildScan.termsOfServiceAgree = buildScanTermsOfServiceAgree
                 }
             }
 
@@ -147,14 +149,11 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
             if (!settings.pluginManager.hasPlugin(DEVELOCITY_PLUGIN_ID)) {
                 logger.quiet("Applying $DEVELOCITY_PLUGIN_CLASS via init script")
                 applyPluginExternally(settings.pluginManager, DEVELOCITY_PLUGIN_CLASS)
-                extensionsWithPublicType(settings, DEVELOCITY_EXTENSION_CLASS).collect { settings[it.name] }.each { ext ->
+                eachDevelocityExtension(settings, DEVELOCITY_EXTENSION_CLASS) { ext ->
                     if (geUrl) {
                         logger.quiet("Connection to Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
                         ext.server = geUrl
                         ext.allowUntrustedServer = geAllowUntrustedServer
-                    } else if (buildScanTermsOfServiceUrl && buildScanTermsOfServiceAgree) {
-                        ext.buildScan.termsOfServiceUrl = buildScanTermsOfServiceUrl
-                        ext.buildScan.termsOfServiceAgree = buildScanTermsOfServiceAgree
                     }
                     ext.buildScan.publishAlways()
                     ext.buildScan.uploadInBackground = buildScanUploadInBackground
@@ -163,10 +162,17 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
             }
 
             if (geUrl && geEnforceUrl) {
-                extensionsWithPublicType(settings, DEVELOCITY_EXTENSION_CLASS).collect { settings[it.name] }.each { ext ->
+                eachDevelocityExtension(settings, DEVELOCITY_EXTENSION_CLASS) { ext ->
                     logger.quiet("Enforcing Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
                     ext.server = geUrl
                     ext.allowUntrustedServer = geAllowUntrustedServer
+                }
+            }
+
+            if (buildScanTermsOfServiceUrl && buildScanTermsOfServiceAgree) {
+                eachDevelocityExtension(settings, DEVELOCITY_EXTENSION_CLASS) { ext ->
+                    ext.buildScan.termsOfServiceUrl = buildScanTermsOfServiceUrl
+                    ext.buildScan.termsOfServiceAgree = buildScanTermsOfServiceAgree
                 }
             }
         }
@@ -195,8 +201,9 @@ void applyPluginExternally(def pluginManager, String pluginClassName) {
     }
 }
 
-static def extensionsWithPublicType(def container, String publicType) {
-    container.extensions.extensionsSchema.elements.findAll { it.publicType.concreteClass.name == publicType }
+static def eachDevelocityExtension(def settings, def publicType, def action) {
+    settings.extensions.extensionsSchema.elements.findAll { it.publicType.concreteClass.name == publicType }
+        .collect { settings[it.name] }.each(action)
 }
 
 static boolean isNotAtLeast(String versionUnderTest, String referenceVersion) {
