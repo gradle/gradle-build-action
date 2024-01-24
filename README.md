@@ -861,10 +861,26 @@ The `init-script` supports a number of additional configuration parameters that 
 ## Publishing to scans.gradle.com
 
 Develocity injection is designed to enable publishing of build scans to a Develocity instance,
-and is not suitable for publishing to the public Build Scans instance (https://scans.gradle.com).
+but is also useful for publishing to the public Build Scans instance (https://scans.gradle.com).
 
-In order to publish Build Scans to scans.gradle.com, you need to:
-- Apply the Develocity plugin to your build configuration ([see docs](https://docs.gradle.com/enterprise/get-started/#applying_the_plugin))
-- Programmatically accept the Terms of Service for scans.gradle.com ([see docs](https://docs.gradle.com/enterprise/gradle-plugin/#connecting_to_scans_gradle_com))
-- Execute the build with `--scan` or configure your build with `publishAlways()` ([see docs](https://docs.gradle.com/enterprise/get-started/#always_publishing_a_build_scan))
+To publish to https://scans.gradle.com, you must specify in your workflow that you accept the [Gradle Terms of Service](https://gradle.com/terms-of-service).
+
+```yaml
+name: Run build and publish Build Scan
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Gradle to publish build scans
+      uses: gradle/gradle-build-action@v2
+      with:
+        build-scan-publish: true
+        build-scan-terms-of-service-url: "https://gradle.com/terms-of-service"
+        build-scan-terms-of-service-agree: "yes"
+
+    - name: Run a Gradle build - a build scan will be published automatically
+      run: ./gradlew build
+```
 
