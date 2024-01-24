@@ -3,14 +3,18 @@ name: 'Build and upload distribution'
 runs:
   using: "composite"
   steps: 
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
     - name: Build distribution
       shell: bash
       run: |
+        npm -v
+        node -v
         npm install
         npm run build
     - name: Upload distribution
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: dist
         path: dist/
-
