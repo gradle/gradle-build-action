@@ -82,6 +82,8 @@ def geEnforceUrl = Boolean.parseBoolean(getInputParam('develocity.enforce-url'))
 def buildScanUploadInBackground = Boolean.parseBoolean(getInputParam('develocity.build-scan.upload-in-background'))
 def gePluginVersion = getInputParam('develocity.plugin.version')
 def ccudPluginVersion = getInputParam('develocity.ccud-plugin.version')
+def buildScanTermsOfServiceUrl = getInputParam('build-scan.terms-of-service.url')
+def buildScanTermsOfServiceAgree = getInputParam('build-scan.terms-of-service.agree')
 
 def atLeastGradle4 = GradleVersion.current() >= GradleVersion.version('4.0')
 
@@ -103,10 +105,12 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
                 }
                 if (!scanPluginComponent) {
                     logger.quiet("Applying $BUILD_SCAN_PLUGIN_CLASS via init script")
-                    logger.quiet("Connection to Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
                     applyPluginExternally(pluginManager, BUILD_SCAN_PLUGIN_CLASS)
-                    buildScan.server = geUrl
-                    buildScan.allowUntrustedServer = geAllowUntrustedServer
+                    if (geUrl) {
+                        logger.quiet("Connection to Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
+                        buildScan.server = geUrl
+                        buildScan.allowUntrustedServer = geAllowUntrustedServer
+                    }
                     buildScan.publishAlways()
                     if (buildScan.metaClass.respondsTo(buildScan, 'setUploadInBackground', Boolean)) buildScan.uploadInBackground = buildScanUploadInBackground  // uploadInBackground not available for build-scan-plugin 1.16
                     buildScan.value CI_AUTO_INJECTION_CUSTOM_VALUE_NAME, CI_AUTO_INJECTION_CUSTOM_VALUE_VALUE
@@ -120,6 +124,11 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
                             buildScan.allowUntrustedServer = geAllowUntrustedServer
                         }
                     }
+                }
+
+                if (buildScanTermsOfServiceUrl && buildScanTermsOfServiceAgree) {
+                    buildScan.termsOfServiceUrl = buildScanTermsOfServiceUrl
+                    buildScan.termsOfServiceAgree = buildScanTermsOfServiceAgree
                 }
             }
 
@@ -139,11 +148,13 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
         if (gePluginVersion) {
             if (!settings.pluginManager.hasPlugin(DEVELOCITY_PLUGIN_ID)) {
                 logger.quiet("Applying $DEVELOCITY_PLUGIN_CLASS via init script")
-                logger.quiet("Connection to Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
                 applyPluginExternally(settings.pluginManager, DEVELOCITY_PLUGIN_CLASS)
-                extensionsWithPublicType(settings, DEVELOCITY_EXTENSION_CLASS).collect { settings[it.name] }.each { ext ->
-                    ext.server = geUrl
-                    ext.allowUntrustedServer = geAllowUntrustedServer
+                eachDevelocityExtension(settings, DEVELOCITY_EXTENSION_CLASS) { ext ->
+                    if (geUrl) {
+                        logger.quiet("Connection to Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
+                        ext.server = geUrl
+                        ext.allowUntrustedServer = geAllowUntrustedServer
+                    }
                     ext.buildScan.publishAlways()
                     ext.buildScan.uploadInBackground = buildScanUploadInBackground
                     ext.buildScan.value CI_AUTO_INJECTION_CUSTOM_VALUE_NAME, CI_AUTO_INJECTION_CUSTOM_VALUE_VALUE
@@ -151,10 +162,17 @@ if (GradleVersion.current() < GradleVersion.version('6.0')) {
             }
 
             if (geUrl && geEnforceUrl) {
-                extensionsWithPublicType(settings, DEVELOCITY_EXTENSION_CLASS).collect { settings[it.name] }.each { ext ->
+                eachDevelocityExtension(settings, DEVELOCITY_EXTENSION_CLASS) { ext ->
                     logger.quiet("Enforcing Develocity: $geUrl, allowUntrustedServer: $geAllowUntrustedServer")
                     ext.server = geUrl
                     ext.allowUntrustedServer = geAllowUntrustedServer
+                }
+            }
+
+            if (buildScanTermsOfServiceUrl && buildScanTermsOfServiceAgree) {
+                eachDevelocityExtension(settings, DEVELOCITY_EXTENSION_CLASS) { ext ->
+                    ext.buildScan.termsOfServiceUrl = buildScanTermsOfServiceUrl
+                    ext.buildScan.termsOfServiceAgree = buildScanTermsOfServiceAgree
                 }
             }
         }
@@ -183,8 +201,9 @@ void applyPluginExternally(def pluginManager, String pluginClassName) {
     }
 }
 
-static def extensionsWithPublicType(def container, String publicType) {
-    container.extensions.extensionsSchema.elements.findAll { it.publicType.concreteClass.name == publicType }
+static def eachDevelocityExtension(def settings, def publicType, def action) {
+    settings.extensions.extensionsSchema.elements.findAll { it.publicType.concreteClass.name == publicType }
+        .collect { settings[it.name] }.each(action)
 }
 
 static boolean isNotAtLeast(String versionUnderTest, String referenceVersion) {

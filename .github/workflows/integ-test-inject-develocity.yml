@@ -19,14 +19,15 @@ env:
   DOWNLOAD_DIST: ${{ inputs.download-dist }}
   GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: provision-gradle-versions-${{ inputs.cache-key-prefix }}
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
-  DEVELOCITY_INJECTION_ENABLED: true
-  DEVELOCITY_URL: https://ge.solutions-team.gradle.com
-  DEVELOCITY_PLUGIN_VERSION: 3.16.1
-  DEVELOCITY_CCUD_PLUGIN_VERSION: 1.12.1
-  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }} # This env var has not (yet) been renamed/aliased in GE plugin 3.16.1
 
 jobs:
   inject-develocity:
+    env:
+      DEVELOCITY_INJECTION_ENABLED: true
+      DEVELOCITY_URL: https://ge.solutions-team.gradle.com
+      DEVELOCITY_PLUGIN_VERSION: 3.16.1
+      DEVELOCITY_CCUD_PLUGIN_VERSION: 1.12.1
+      GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }} # This env var has not (yet) been renamed/aliased in GE plugin 3.16.1
     strategy:
       matrix:
         gradle: [current, 7.6.2, 6.9.4, 5.6.4]
@@ -58,3 +59,39 @@ jobs:
       with:
         script: |
           core.setFailed('No Build Scan detected')   
+
+  build-scan-publish:
+    strategy:
+      matrix:
+        gradle: [current, 7.6.2, 6.9.4, 5.6.4]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v4
+    - name: Download distribution if required
+      uses: ./.github/actions/download-dist
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 8
+    - name: Setup Gradle
+      id: setup-gradle
+      uses: ./
+      with:
+        cache-read-only: false # For testing, allow writing cache entries on non-default branches
+        gradle-version: ${{ matrix.gradle }}
+        build-scan-publish: true
+        build-scan-terms-of-service-url: "https://gradle.com/terms-of-service"
+        build-scan-terms-of-service-agree: "yes"
+    - name: Run Gradle build
+      id: gradle
+      working-directory: .github/workflow-samples/no-ge
+      run: gradle help
+    - name: Check Build Scan url
+      if: ${{ !steps.gradle.outputs.build-scan-url }}
+      uses: actions/github-script@v7
+      with:
+        script: |
+          core.setFailed('No Build Scan detected')   
+
