@@ -588,7 +588,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     - name: Perform dependency review
-      uses: actions/dependency-review-action@v3
+      uses: actions/dependency-review-action@v4
 ```
 
 See [Dependency Graphs for pull request workflows](#dependency-graphs-for-pull-request-workflows) for a more complex
@@ -768,7 +768,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: 'Dependency Review'
-      uses: actions/dependency-review-action@v3
+      uses: actions/dependency-review-action@v4
       with:
         retry-on-snapshot-warnings: true
         retry-on-snapshot-warnings-timeout: 600
