@@ -841,7 +841,7 @@ name: Run build with Develocity injection
 env:
   DEVELOCITY_INJECTION_ENABLED: true
   DEVELOCITY_URL: https://develocity.your-server.com
-  DEVELOCITY_PLUGIN_VERSION: 3.16.1
+  DEVELOCITY_PLUGIN_VERSION: 3.16.2
 
 jobs:
   build:
@@ -854,7 +854,7 @@ jobs:
       run: ./gradlew build
 ```
 
-This configuration will automatically apply `v3.16.1` of the [Develocity Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/), and publish build scans to https://develocity.your-server.com.
+This configuration will automatically apply `v3.16.2` of the [Develocity Gradle plugin](https://docs.gradle.com/enterprise/gradle-plugin/), and publish build scans to https://develocity.your-server.com.
 
 This example assumes that the `develocity.your-server.com` server allows anonymous publishing of build scans.
 In the likely scenario that your Develocity server requires authentication, you will also need to configure an addition environment variable
