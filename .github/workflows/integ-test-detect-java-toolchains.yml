@@ -8,12 +8,8 @@ on:
       runner-os:
         type: string
         default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
-      download-dist:
-        type: boolean
-        default: false
 
 env:
-  DOWNLOAD_DIST: ${{ inputs.download-dist }}
   GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: detect-java-toolchain-${{ inputs.cache-key-prefix }}
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
@@ -28,8 +24,6 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
-    - name: Download distribution if required
-      uses: ./.github/actions/download-dist
     - name: Setup Gradle
       uses: ./
     - name: List detected toolchains
@@ -57,8 +51,6 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
-    - name: Download distribution if required
-      uses: ./.github/actions/download-dist
     - name: Setup Java 20
       uses: actions/setup-java@v4
       with:

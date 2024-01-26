@@ -7,13 +7,9 @@ on:
         type: string
       runner-os:
         type: string
-        default: '["ubuntu-latest"]'
-      download-dist:
-        type: boolean
-        default: false
+        default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
 
 env:
-  DOWNLOAD_DIST: ${{ inputs.download-dist }}
   GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: dependency-graph-${{ inputs.cache-key-prefix }}
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
@@ -23,8 +19,6 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
-    - name: Download distribution if required
-      uses: ./.github/actions/download-dist
     - name: Setup Gradle for dependency-graph generate
       uses: ./
       with:
@@ -47,8 +41,6 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
-    - name: Download distribution if required
-      uses: ./.github/actions/download-dist
     - name: Setup Gradle for dependency-graph generate
       uses: ./
       with:
@@ -70,8 +62,6 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
-    - name: Download distribution if required
-      uses: ./.github/actions/download-dist
     - name: Setup Gradle for dependency-graph generate
       uses: ./
       with:
@@ -90,8 +80,6 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
-    - name: Download distribution if required
-      uses: ./.github/actions/download-dist
     - name: Setup Gradle for dependency-graph generate
       uses: ./
       with:

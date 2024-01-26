@@ -15,18 +15,6 @@ updates:
         patterns:
         - "*"
 
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    ignore:
-      - dependency-name: "@types/node" # Breaking change: update with next major release
-      - dependency-name: "@octokit/rest" # Tied to node version
-    groups:
-      npm-dependencies:
-        patterns:
-        - "*"
-      
   - package-ecosystem: "gradle"
     directory: ".github/workflow-samples/gradle-plugin"
     registries:
@@ -59,12 +47,6 @@ updates:
       interval: "daily"
   - package-ecosystem: "gradle"
     directory: ".github/workflow-samples/no-wrapper-gradle-5"
-    registries:
-      - gradle-plugin-portal
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "gradle"
-    directory: "test/init-scripts"
     registries:
       - gradle-plugin-portal
     schedule:
