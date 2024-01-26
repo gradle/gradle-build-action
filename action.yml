@@ -149,7 +149,7 @@ runs:
   steps:
     - name: Setup Gradle
       id: setup-gradle
-      uses: gradle/actions/setup-gradle@v3.0.0-beta.6
+      uses: gradle/actions/setup-gradle@v3.0.0-rc.1
       with:
         gradle-version: ${{ inputs.gradle-version }}
         cache-disabled: ${{ inputs.cache-disabled }}
