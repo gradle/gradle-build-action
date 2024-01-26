@@ -13,11 +13,6 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
-    - name: Build distribution
-      shell: bash
-      run: |
-        npm install
-        npm run build
     - name: Setup Gradle
       uses: ./
     - name: Build kotlin-dsl project
@@ -47,11 +42,6 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
-    - name: Build distribution
-      shell: bash
-      run: |
-        npm install
-        npm run build
     - name: Setup Gradle
       uses: ./
       with:
@@ -68,11 +58,6 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
-    - name: Build distribution
-      shell: bash
-      run: |
-        npm install
-        npm run build
     - name: Pre-create Gradle User Home
       shell: bash
       run: |
