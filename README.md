@@ -12,7 +12,7 @@
 > uses: gradle/actions/setup-gradle@v3
 > ```
 >
-> See the [setup-gradle documentation](https://github.com/gradle/actions/tree/main/setup-gradle) for up-to-date documentation for `gradle/actons/setup-gradle`. 
+> See the [setup-gradle documentation](https://github.com/gradle/actions/tree/main/setup-gradle) for up-to-date documentation for `gradle/actions/setup-gradle`. 
 
 # Execute Gradle builds in GitHub Actions workflows
 
