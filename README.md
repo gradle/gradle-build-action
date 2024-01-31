@@ -58,7 +58,7 @@ jobs:
         java-version: 11
         
     - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2
+      uses: gradle/gradle-build-action@v3
     
     - name: Execute Gradle build
       run: ./gradlew build
@@ -70,7 +70,7 @@ The `gradle-build-action` can download and install a specified Gradle version, a
 Downloaded Gradle versions are stored in the GitHub Actions cache, to avoid requiring downloading again later.
 
 ```yaml
- - uses: gradle/gradle-build-action@v2
+ - uses: gradle/gradle-build-action@v3
    with:
      gradle-version: 6.5
 ```
@@ -105,7 +105,7 @@ jobs:
       with:
         distribution: temurin
         java-version: 11
-    - uses: gradle/gradle-build-action@v2
+    - uses: gradle/gradle-build-action@v3
       id: setup-gradle
       with:
         gradle-version: release-candidate
@@ -450,7 +450,7 @@ jobs:
     - name: Checkout project sources
       uses: actions/checkout@v4
     - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2
+      uses: gradle/gradle-build-action@v3
     - name: Run build with Gradle wrapper
       run: ./gradlew build --scan
     - name: Upload build reports
@@ -516,7 +516,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2
+      uses: gradle/gradle-build-action@v3
     - name: Run a Gradle build with Develocity injection enabled
       run: ./gradlew build
 ```
@@ -557,7 +557,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Setup Gradle to publish build scans
-      uses: gradle/gradle-build-action@v2
+      uses: gradle/gradle-build-action@v3
       with:
         build-scan-publish: true
         build-scan-terms-of-service-url: "https://gradle.com/terms-of-service"
