@@ -2,17 +2,10 @@ name: CI-full-check
 
 on:
   workflow_dispatch:
-  pull_request:
-    types:
-      - assigned
-      - review_requested
   push:
     branches: 
       - main
       - release/**
-    paths:
-      - '.github/**'
-      - 'action.yml'
 
 jobs:
   action-inputs:
