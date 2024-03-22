@@ -22,7 +22,7 @@ jobs:
       DEVELOCITY_INJECTION_ENABLED: true
       DEVELOCITY_URL: https://ge.solutions-team.gradle.com
       DEVELOCITY_PLUGIN_VERSION: 3.16.2
-      DEVELOCITY_CCUD_PLUGIN_VERSION: 1.12.1
+      DEVELOCITY_CCUD_PLUGIN_VERSION: 1.13
       GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }} # This env var has not (yet) been renamed/aliased in GE plugin 3.16.2
     strategy:
       matrix:
