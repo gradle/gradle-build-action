@@ -85,19 +85,29 @@ inputs:
   build-scan-publish:
     description: |
       Set to 'true' to automatically publish build results as a Build Scan on scans.gradle.com.
-      For publication to succeed without user input, you must also provide values for `build-scan-terms-of-service-url` and 'build-scan-terms-of-service-agree'.
+      For publication to succeed without user input, you must also provide values for `build-scan-terms-of-use-url` and 'build-scan-terms-of-use-agree'.
     required: false
     default: false
 
-  build-scan-terms-of-service-url:
-    description: The URL to the Build Scan® terms of service. This input must be set to 'https://gradle.com/terms-of-service'.
+  build-scan-terms-of-use-url:
+    description: The URL to the Build Scan® terms of use. This input must be set to 'https://gradle.com/terms-of-service' or 'https://gradle.com/help/legal-terms-of-use'.
     required: false
   
-  build-scan-terms-of-service-agree:
-    description: Indicate that you agree to the Build Scan® terms of service. This input value must be "yes".
+  build-scan-terms-of-use-agree:
+    description: Indicate that you agree to the Build Scan® terms of use. This input value must be "yes".
     required: false
 
   # DEPRECATED ACTION INPUTS
+  build-scan-terms-of-service-url:
+    description: The URL to the Build Scan® terms of use. This input must be set to 'https://gradle.com/terms-of-service'.
+    required: false
+    deprecation-message: The input has been renamed to align with the Develocity API. Use 'build-scan-terms-of-use-url' instead.
+
+  build-scan-terms-of-service-agree:
+    description: Indicate that you agree to the Build Scan® terms of use. This input value must be "yes".
+    required: false
+    deprecation-message: The input has been renamed to align with the Develocity API. Use 'build-scan-terms-of-use-agree' instead.
+
   arguments:
     description: Gradle command line arguments (supports multi-line input)
     required: false
@@ -149,7 +159,7 @@ runs:
   steps:
     - name: Setup Gradle
       id: setup-gradle
-      uses: gradle/actions/setup-gradle@v3.1.0
+      uses: gradle/actions/setup-gradle@v3.2.0
       with:
         gradle-version: ${{ inputs.gradle-version }}
         cache-disabled: ${{ inputs.cache-disabled }}
@@ -166,8 +176,8 @@ runs:
         dependency-graph-continue-on-failure: ${{ inputs.dependency-graph-continue-on-failure }}
         artifact-retention-days: ${{ inputs.artifact-retention-days }}
         build-scan-publish: ${{ inputs.build-scan-publish }}
-        build-scan-terms-of-service-url: ${{ inputs.build-scan-terms-of-service-url }}
-        build-scan-terms-of-service-agree: ${{ inputs.build-scan-terms-of-service-agree }}
+        build-scan-terms-of-use-url: ${{ inputs.build-scan-terms-of-use-url || inputs.build-scan-terms-of-service-url }}
+        build-scan-terms-of-use-agree: ${{ inputs.build-scan-terms-of-use-agree || inputs.build-scan-terms-of-service-agree }}
         arguments: ${{ inputs.arguments }}
         build-root-directory: ${{ inputs.build-root-directory }}
         generate-job-summary: ${{ inputs.generate-job-summary }}
