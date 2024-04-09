@@ -176,14 +176,18 @@ runs:
         dependency-graph-continue-on-failure: ${{ inputs.dependency-graph-continue-on-failure }}
         artifact-retention-days: ${{ inputs.artifact-retention-days }}
         build-scan-publish: ${{ inputs.build-scan-publish }}
-        build-scan-terms-of-use-url: ${{ inputs.build-scan-terms-of-use-url || inputs.build-scan-terms-of-service-url }}
-        build-scan-terms-of-use-agree: ${{ inputs.build-scan-terms-of-use-agree || inputs.build-scan-terms-of-service-agree }}
+        build-scan-terms-of-use-url: ${{ inputs.build-scan-terms-of-use-url }}
+        build-scan-terms-of-use-agree: ${{ inputs.build-scan-terms-of-use-agree }}
+        build-scan-terms-of-service-url: ${{ inputs.build-scan-terms-of-service-url }}
+        build-scan-terms-of-service-agree: ${{ inputs.build-scan-terms-of-service-agree }}
         arguments: ${{ inputs.arguments }}
         build-root-directory: ${{ inputs.build-root-directory }}
         generate-job-summary: ${{ inputs.generate-job-summary }}
         gradle-home-cache-strict-match: ${{ inputs.gradle-home-cache-strict-match }}
         workflow-job-context: ${{ inputs.workflow-job-context }}
         github-token: ${{ inputs.github-token }}
+      env:
+        GRADLE_ACTION_ID: gradle/gradle-build-action
 
 branding:
   icon: 'box'
