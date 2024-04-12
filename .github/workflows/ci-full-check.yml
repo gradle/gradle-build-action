@@ -2,10 +2,6 @@ name: CI-full-check
 
 on:
   workflow_dispatch:
-  push:
-    branches: 
-      - main
-      - release/**
 
 jobs:
   action-inputs:

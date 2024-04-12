@@ -3,9 +3,6 @@ name: CI-quick-check
 on:
   workflow_dispatch:
   push:
-    branches-ignore: 
-    - main
-    - release/**
 
 jobs:
   action-inputs:
