@@ -23,7 +23,7 @@ inputs:
 
   cache-write-only:
     description: |
-      When 'true', entries will not be restored from the cache but will be saved at the end of the Job. 
+      When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
       Setting this to 'true' implies cache-read-only will be 'false'.
     required: false
     default: false
@@ -35,7 +35,7 @@ inputs:
 
   cache-encryption-key:
     description: |
-      A base64 encoded AES key used to encrypt the configuration-cache data. The key is exported as 'GRADLE_ENCRYPTION_KEY' for later steps. 
+      A base64 encoded AES key used to encrypt the configuration-cache data. The key is exported as 'GRADLE_ENCRYPTION_KEY' for later steps.
       A suitable key can be generated with `openssl rand -base64 16`.
       Configuration-cache data will not be saved/restored without an encryption key being provided.
     required: false
@@ -70,7 +70,7 @@ inputs:
   # Dependency Graph configuration
   dependency-graph:
     description: |
-      Specifies if a GitHub dependency snapshot should be generated for each Gradle build, and if so, how. 
+      Specifies if a GitHub dependency snapshot should be generated for each Gradle build, and if so, how.
       Valid values are 'disabled' (default), 'generate', 'generate-and-submit', 'generate-and-upload', 'download-and-submit' and 'clear'.
     required: false
     default: 'disabled'
@@ -95,9 +95,57 @@ inputs:
   build-scan-terms-of-use-url:
     description: The URL to the Build Scan® terms of use. This input must be set to 'https://gradle.com/terms-of-service' or 'https://gradle.com/help/legal-terms-of-use'.
     required: false
-  
+
   build-scan-terms-of-use-agree:
     description: Indicate that you agree to the Build Scan® terms of use. This input value must be "yes".
+    required: false
+
+  develocity-access-key:
+    description: Develocity access key. Should be set to a secret containing the Develocity Access key.
+    required: false
+
+  develocity-token-expiry:
+    description: The Develocity short-lived access tokens expiry in hours. Default is 2 hours.
+    required: false
+
+  develocity-injection-enabled:
+    description: Enables Develocity injection.
+    required: false
+
+  develocity-url:
+    description: The URL for the Develocity server.
+    required: false
+
+  develocity-allow-untrusted-server:
+    description: Allow communication with an untrusted server; set to _true_ if your Develocity instance is using a self-signed.
+    required: false
+
+  develocity-capture-file-fingerprints:
+    description: Enables capturing the paths and content hashes of each individual input file.
+    required: false
+
+  develocity-enforce-url:
+    description: Enforce the configured Develocity URL over a URL configured in the project's build; set to _true_ to enforce publication of build scans to the configured Develocity URL.
+    required: false
+
+  develocity-plugin-version:
+    description: The version of the Develocity Gradle plugin to apply.
+    required: false
+
+  develocity-ccud-plugin-version:
+    description: The version of the Common Custom User Data Gradle plugin to apply, if any.
+    required: false
+
+  gradle-plugin-repository-url:
+    description: The URL of the repository to use when resolving the Develocity and CCUD plugins; the Gradle Plugin Portal is used by default.
+    required: false
+
+  gradle-plugin-repository-username:
+    description: The username for the repository URL to use when resolving the Develocity and CCUD.
+    required: false
+
+  gradle-plugin-repository-password:
+    description: The password for the repository URL to use when resolving the Develocity and CCUD plugins; Consider using secrets to pass the value to this variable.
     required: false
 
   # Wrapper validation configuration
@@ -143,7 +191,7 @@ inputs:
     description: When 'true', the action will not attempt to restore the Gradle User Home entries from other Jobs.
     required: false
     default: false
-    
+
   # INTERNAL ACTION INPUTS
   # These inputs should not be configured directly, and are only used to pass environmental information to the action
   workflow-job-context:
@@ -172,7 +220,7 @@ runs:
   steps:
     - name: Setup Gradle
       id: setup-gradle
-      uses: gradle/actions/setup-gradle@v3.3.2
+      uses: gradle/actions/setup-gradle@v3.4.0
       with:
         gradle-version: ${{ inputs.gradle-version }}
         cache-disabled: ${{ inputs.cache-disabled }}
@@ -200,6 +248,19 @@ runs:
         gradle-home-cache-strict-match: ${{ inputs.gradle-home-cache-strict-match }}
         workflow-job-context: ${{ inputs.workflow-job-context }}
         github-token: ${{ inputs.github-token }}
+        develocity-access-key: ${{ inputs.develocity-access-key }}
+        develocity-token-expiry: ${{ inputs.develocity-token-expiry }}
+        develocity-injection-enabled: ${{ inputs.develocity-injection-enabled }}
+        develocity-url: ${{ inputs.develocity-url }}
+        develocity-allow-untrusted-server: ${{ inputs.develocity-allow-untrusted-server }}
+        develocity-capture-file-fingerprints: ${{ inputs.develocity-capture-file-fingerprints }}
+        develocity-enforce-url: ${{ inputs.develocity-enforce-url }}
+        develocity-plugin-version: ${{ inputs.develocity-plugin-version }}
+        develocity-ccud-plugin-version: ${{ inputs.develocity-ccud-plugin-version }}
+        gradle-plugin-repository-url: ${{ inputs.gradle-plugin-repository-url }}
+        gradle-plugin-repository-username: ${{ inputs.gradle-plugin-repository-username }}
+        gradle-plugin-repository-password: ${{ inputs.gradle-plugin-repository-password }}
+
       env:
         GRADLE_ACTION_ID: gradle/gradle-build-action
 
