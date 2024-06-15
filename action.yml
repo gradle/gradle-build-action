@@ -220,7 +220,7 @@ runs:
   steps:
     - name: Setup Gradle
       id: setup-gradle
-      uses: gradle/actions/setup-gradle@v3.4.0
+      uses: gradle/actions/setup-gradle@v3.4.1
       with:
         gradle-version: ${{ inputs.gradle-version }}
         cache-disabled: ${{ inputs.cache-disabled }}
