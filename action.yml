@@ -1,4 +1,4 @@
-name: "Gradle Build Action"
+name: setup-gradle
 description: 'Configures Gradle for GitHub actions, caching state and generating a dependency graph via Dependency Submission.'
 
 inputs:
