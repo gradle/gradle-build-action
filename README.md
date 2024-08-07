@@ -14,9 +14,9 @@
 >
 > See the [setup-gradle documentation](https://github.com/gradle/actions/tree/main/setup-gradle) for up-to-date documentation for `gradle/actions/setup-gradle`. 
 
-# Execute Gradle builds in GitHub Actions workflows
+# Setup Gradle for use in GitHub Actions workflows
 
-This GitHub Action can be used to configure Gradle and optionally execute a Gradle build on any platform supported by GitHub Actions.
+This GitHub Action can be used to configure Gradle on any platform supported by GitHub Actions.
 
 ## Example usage
 
@@ -32,12 +32,9 @@ jobs:
     - name: Checkout sources
       uses: actions/checkout@v4
     - name: Setup Gradle
-      uses: gradle/gradle-build-action@v3
+      uses: gradle/actions/setup-gradle@v3
     - name: Build with Gradle
       run: ./gradlew build
 ```
-
-As of `v3`, the `gradle/gradle-build-action` action delegates to `gradle/actions/setup-gradle` with the same version.
-Configuration and usage of these actions is identical for releases with the same version number.
 
 See the [full setup-gradle documentation](https://github.com/gradle/actions/tree/main/setup-gradle) for more advanced usage scenarios. 
